@@ -11,11 +11,15 @@ export interface RenderJob {
 	precisionMode: PrecisionMode;
 	colorConfig: ColorConfig;
 	priority: number; // lower = higher priority
+	// For color-only redraws: skip WASM and recolorize from provided iters
+	recolorOnly?: true;
+	iters?: Float32Array;
 }
 
 export interface TileResult {
 	id: string;
 	imageData: ImageData;
+	iters?: Float32Array; // absent for recolor-only jobs
 }
 
 type JobCallback = (result: TileResult) => void;
@@ -76,7 +80,8 @@ export class WorkerPool {
 			}
 
 			this.callbacks.set(job.id, resolve);
-			worker.postMessage(job);
+			const transfer = job.iters ? [job.iters.buffer] : [];
+			worker.postMessage(job, { transfer });
 		}
 	}
 

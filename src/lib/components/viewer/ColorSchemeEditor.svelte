@@ -76,7 +76,16 @@
 				oninput={onCyclePeriodChange}
 				class="flex-1 accent-blue-500"
 			/>
-			<span class="font-mono text-white w-8 text-right text-xs">{viewerState.colors.cyclePeriod}</span>
+			<input
+				type="text"
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				value={viewerState.colors.cyclePeriod}
+				onblur={(e) => {
+					const v = parseInt((e.target as HTMLInputElement).value);
+					if (!isNaN(v) && v > 0) onCyclePeriodChange(e);
+				}}
+				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+			/>
 		</div>
 	</div>
 
@@ -92,6 +101,16 @@
 				value={viewerState.colors.offset}
 				oninput={onOffsetChange}
 				class="flex-1 accent-blue-500"
+			/>
+			<input
+				type="text"
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				value={viewerState.colors.offset.toFixed(2)}
+				onblur={(e) => {
+					const v = parseFloat((e.target as HTMLInputElement).value);
+					if (!isNaN(v)) viewerState.colors = { ...viewerState.colors, offset: Math.max(0, Math.min(1, v)) };
+				}}
+				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 			/>
 		</div>
 	</div>

@@ -58,8 +58,8 @@ void main() {
       iter = i;
       // Smooth iteration count
       float log_zn = log(zr2 + zi2) * 0.5;
-      float smooth = float(iter) + 1.0 - log2(log_zn / log(2.0));
-      float t = mod(smooth / u_cyclePeriod, 1.0);
+      float smoothVal = float(iter) + 1.0 - log2(log_zn / log(2.0));
+      float t = mod(smoothVal / u_cyclePeriod, 1.0);
       fragColor = vec4(samplePalette(t), 1.0);
       return;
     }

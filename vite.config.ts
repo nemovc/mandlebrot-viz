@@ -14,6 +14,7 @@ export default defineConfig({
 		format: 'es'
 	},
 	optimizeDeps: {
-		exclude: ['wasm']
-	}
+		exclude: ['$lib/wasm/mandelbrot.js']
+	},
+	assetsInclude: ['**/*.wasm']
 });

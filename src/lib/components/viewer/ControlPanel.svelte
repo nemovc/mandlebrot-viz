@@ -1,39 +1,121 @@
 <script lang="ts">
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 
-	let iterInput = $derived(viewerState.maxIter);
+	let { onNavigate }: { onNavigate: (re: number, im: number, zoom?: number) => void } = $props();
 
-	function onIterChange(e: Event) {
-		viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
+	// Local editable copies — only sync from store when not focused
+	let reInput = $state(viewerState.cx);
+	let imInput = $state(viewerState.cy);
+	let zoomInput = $state(viewerState.zoom.toString());
+	let iterInput = $state(viewerState.maxIter.toString());
+	let reFocused = false;
+	let imFocused = false;
+	let zoomFocused = false;
+	let iterFocused = false;
+
+	// Always read the store value to maintain reactivity dependency,
+	// then conditionally apply it so we don't clobber an in-progress edit.
+	$effect(() => {
+		const val = (+viewerState.cx).toPrecision(8).replace(/\.?0+$/, '');
+		if (!reFocused) reInput = val;
+	});
+	$effect(() => {
+		const val = (+viewerState.cy).toPrecision(8).replace(/\.?0+$/, '');
+		if (!imFocused) imInput = val;
+	});
+	$effect(() => {
+		const val = viewerState.zoom.toString();
+		if (!zoomFocused) zoomInput = val;
+	});
+	$effect(() => {
+		const val = viewerState.maxIter.toString();
+		if (!iterFocused) iterInput = val;
+	});
+
+	function commitCoords() {
+		const re = parseFloat(reInput);
+		const im = parseFloat(imInput);
+		if (!isNaN(re) && !isNaN(im)) onNavigate(re, im);
+	}
+
+	function commitZoom() {
+		const z = parseInt(zoomInput);
+		if (!isNaN(z) && z >= 0) onNavigate(parseFloat(reInput), parseFloat(imInput), z);
+	}
+
+	function commitIter() {
+		const v = parseInt(iterInput);
+		if (!isNaN(v) && v > 0) viewerState.maxIter = v;
+	}
+
+	function onKeydown(e: KeyboardEvent, commit: () => void) {
+		if (e.key === 'Enter') { commit(); (e.target as HTMLElement).blur(); }
 	}
 </script>
 
-<div class="flex flex-col gap-3 p-3 text-sm bg-neutral-900 rounded-lg border border-neutral-800 min-w-48">
+<div class="flex flex-col gap-3 p-3 text-sm bg-neutral-900 rounded-lg border border-neutral-800 min-w-52">
 	<div>
-		<div class="text-neutral-400 text-xs mb-1">Zoom</div>
-		<div class="font-mono text-white">{viewerState.zoom}</div>
+		<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
+		<input
+			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+			type="text"
+			value={zoomInput}
+			onfocus={() => (zoomFocused = true)}
+			onblur={() => { zoomFocused = false; commitZoom(); }}
+			oninput={(e) => (zoomInput = (e.target as HTMLInputElement).value)}
+			onkeydown={(e) => onKeydown(e, commitZoom)}
+		/>
 	</div>
 
 	<div>
-		<div class="text-neutral-400 text-xs mb-1">Center</div>
-		<div class="font-mono text-white text-xs break-all">{viewerState.cx}</div>
-		<div class="font-mono text-white text-xs break-all">{viewerState.cy}i</div>
+		<div class="text-neutral-400 text-xs mb-1">Center (Re)</div>
+		<input
+			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+			type="text"
+			value={reInput}
+			onfocus={() => (reFocused = true)}
+			onblur={() => { reFocused = false; commitCoords(); }}
+			oninput={(e) => (reInput = (e.target as HTMLInputElement).value)}
+			onkeydown={(e) => onKeydown(e, commitCoords)}
+		/>
 	</div>
 
 	<div>
-		<label class="text-neutral-400 text-xs" for="maxIter">Max Iterations</label>
-		<div class="flex items-center gap-2 mt-1">
+		<div class="text-neutral-400 text-xs mb-1">Center (Im)</div>
+		<input
+			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+			type="text"
+			value={imInput}
+			onfocus={() => (imFocused = true)}
+			onblur={() => { imFocused = false; commitCoords(); }}
+			oninput={(e) => (imInput = (e.target as HTMLInputElement).value)}
+			onkeydown={(e) => onKeydown(e, commitCoords)}
+		/>
+	</div>
+
+	<div>
+		<div class="text-neutral-400 text-xs mb-1">Max Iterations</div>
+		<div class="flex items-center gap-2">
 			<input
-				id="maxIter"
 				type="range"
 				min="64"
 				max="4096"
 				step="64"
-				value={iterInput}
-				oninput={onIterChange}
+				value={viewerState.maxIter}
+				oninput={(e) => {
+					viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
+				}}
 				class="flex-1 accent-blue-500"
 			/>
-			<span class="font-mono text-white w-12 text-right">{viewerState.maxIter}</span>
+			<input
+				class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				type="text"
+				value={iterInput}
+				onfocus={() => (iterFocused = true)}
+				onblur={() => { iterFocused = false; commitIter(); }}
+				oninput={(e) => (iterInput = (e.target as HTMLInputElement).value)}
+				onkeydown={(e) => onKeydown(e, commitIter)}
+			/>
 		</div>
 	</div>
 </div>

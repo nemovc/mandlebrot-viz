@@ -9,6 +9,7 @@
 	import { encodeState, decodeState } from '$lib/utils/urlSerializer';
 
 	let showExport = $state(false);
+	let mapComponent: MandelbrotMap;
 
 	// Load state from URL hash on mount
 	onMount(() => {
@@ -18,11 +19,13 @@
 		}
 	});
 
-	// Sync state to URL hash whenever it changes
+	// Sync state to URL hash whenever it changes.
+	// Use location.hash directly — SvelteKit only manages pathname,
+	// not hash, so this doesn't conflict with its router.
 	$effect(() => {
 		if (!browser) return;
 		const encoded = encodeState(viewerState.toJSON());
-		history.replaceState(null, '', `#${encoded}`);
+		location.hash = encoded;
 	});
 </script>
 
@@ -31,18 +34,24 @@
 </svelte:head>
 
 <div class="relative w-full h-full">
-	<MandelbrotMap />
+	<MandelbrotMap bind:this={mapComponent} />
 
 	<!-- HUD overlays -->
-	<div class="absolute top-3 left-3 z-10 flex flex-col gap-2">
-		<ControlPanel />
+	<div class="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
+		<ControlPanel onNavigate={(re, im, zoom) => mapComponent.panTo(re, im, zoom)} />
 	</div>
 
-	<div class="absolute top-3 right-3 z-10 flex flex-col gap-2">
+	<div class="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
 		<ColorSchemeEditor />
 	</div>
 
-	<div class="absolute bottom-3 right-3 z-10">
+	<div class="absolute bottom-3 right-3 z-[1000] flex gap-2">
+		<button
+			class="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
+			onclick={() => mapComponent.resetView()}
+		>
+			Reset
+		</button>
 		<button
 			class="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
 			onclick={() => (showExport = true)}
