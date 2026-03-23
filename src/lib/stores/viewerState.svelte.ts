@@ -1,0 +1,56 @@
+import { DEFAULT_PALETTE } from '$lib/utils/colorPalettes';
+
+export interface ColorStop {
+	stop: number;
+	color: string;
+}
+
+export interface ColorConfig {
+	algorithm: 'smooth' | 'escape_time' | 'distance_estimation';
+	palette: ColorStop[];
+	cyclePeriod: number;
+	offset: number;
+}
+
+export interface ViewerState {
+	cx: string;
+	cy: string;
+	zoom: number;
+	maxIter: number;
+	colors: ColorConfig;
+}
+
+function createViewerState() {
+	let cx = $state('-0.5');
+	let cy = $state('0.0');
+	let zoom = $state(3);
+	let maxIter = $state(256);
+	let colors = $state<ColorConfig>(DEFAULT_PALETTE);
+
+	return {
+		get cx() { return cx; },
+		set cx(v) { cx = v; },
+		get cy() { return cy; },
+		set cy(v) { cy = v; },
+		get zoom() { return zoom; },
+		set zoom(v) { zoom = v; },
+		get maxIter() { return maxIter; },
+		set maxIter(v) { maxIter = v; },
+		get colors() { return colors; },
+		set colors(v) { colors = v; },
+
+		toJSON(): ViewerState {
+			return { cx, cy, zoom, maxIter, colors };
+		},
+
+		loadFrom(s: Partial<ViewerState>) {
+			if (s.cx !== undefined) cx = s.cx;
+			if (s.cy !== undefined) cy = s.cy;
+			if (s.zoom !== undefined) zoom = s.zoom;
+			if (s.maxIter !== undefined) maxIter = s.maxIter;
+			if (s.colors !== undefined) colors = s.colors;
+		}
+	};
+}
+
+export const viewerState = createViewerState();

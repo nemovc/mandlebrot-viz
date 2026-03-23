@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+/* Leaflet overrides */
+.leaflet-container {
+	background: #000;
+}
+.leaflet-tile-pane {
+	opacity: 1;
+}
