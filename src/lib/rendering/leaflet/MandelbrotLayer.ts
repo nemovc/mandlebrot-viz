@@ -6,9 +6,14 @@ import { buildImageData } from '$lib/utils/colorPalettes';
 const TILE_SIZE = 256;
 const STAGE2_SIZE = 64; // low-res quick pass
 
-/** Returns a unique job id for a tile */
-function tileId(x: number, y: number, z: number, stage: 2 | 3): string {
-	return `${z}/${x}/${y}/s${stage}`;
+let _tileSeq = 0;
+/** Returns a unique pair of job ids for a tile's two rendering stages. */
+function tileIds(x: number, y: number, z: number): { s2id: string; s3id: string } {
+	const seq = ++_tileSeq;
+	return {
+		s2id: `${z}/${x}/${y}/s2-${seq}`,
+		s3id: `${z}/${x}/${y}/s3-${seq}`,
+	};
 }
 
 export function createMandelbrotLayer(L: typeof import('leaflet')) {
@@ -48,8 +53,9 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
 			const maxIter = this.maxIter;
 
+			const { s2id, s3id } = tileIds(x, y, z);
+
 			// Stage 2: low-res quick tile
-			const s2id = tileId(x, y, z, 2);
 			pool.submit(
 				{
 					id: s2id,
@@ -74,7 +80,6 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					done(null, canvas);
 
 					// Stage 3: full-res refinement
-					const s3id = tileId(x, y, z, 3);
 					pool.submit(
 						{
 							id: s3id,
@@ -96,7 +101,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			);
 
 			// Attach cleanup to canvas for cancellation
-			(canvas as any)._tileIds = [s2id, tileId(x, y, z, 3)];
+			(canvas as any)._tileIds = [s2id, s3id];
 			return canvas;
 		},
 
@@ -146,7 +151,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				const cy = (-4 + (y + 0.5) * tileUnits).toString();
 				const precisionMode = getPrecisionMode(z);
 
-				const s3id = tileId(x, y, z, 3) + '-r' + Date.now();
+				const { s3id } = tileIds(x, y, z);
 				pool.submit(
 					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0, stage: 3 },
 					(result) => {

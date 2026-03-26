@@ -121,6 +121,11 @@ export class WorkerPool {
 
 			if (this.cancelled.has(job.id)) {
 				this.cancelled.delete(job.id);
+				const s = this.jobStages.get(job.id) ?? 3;
+				this.jobStages.delete(job.id);
+				this.pending[s]--;
+				this.batchCompleted[s]++;
+				this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
 				this.idle.push(worker);
 				continue;
 			}
