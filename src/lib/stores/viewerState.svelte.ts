@@ -23,7 +23,7 @@ export interface ViewerState {
 
 function createViewerState() {
 	const initial = (typeof window !== 'undefined' && window.location.hash)
-		? (decodeState(window.location.hash) ?? {})
+		? (decodeState(window.location.hash)?.viewer ?? {})
 		: {};
 
 	let cx = $state(initial.cx ?? '-0.5');

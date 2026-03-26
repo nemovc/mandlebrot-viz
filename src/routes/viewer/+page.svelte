@@ -7,7 +7,7 @@
   import ExportDialog from "$lib/components/viewer/ExportDialog.svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
-  import { encodeState } from "$lib/utils/urlSerializer";
+  import { encodeState, decodeState } from "$lib/utils/urlSerializer";
   import { getWorkerPool, getRecolorPool } from "$lib/rendering/worker/workerPool";
   import { getPrecisionMode } from "$lib/utils/precision";
 
@@ -29,6 +29,12 @@
   // Memory snapshot (Chrome only)
   let memUsed = $state<number | null>(null);
   let memTotal = $state<number | null>(null);
+
+  // Restore debug state from URL on load
+  if (browser && window.location.hash) {
+    const decoded = decodeState(window.location.hash);
+    if (decoded?.debug) debugState.loadFrom(decoded.debug);
+  }
 
   onMount(() => {
     const renderPool = getWorkerPool();
@@ -54,7 +60,7 @@
   });
 
   function shareLink() {
-    const encoded = encodeState(viewerState.toJSON());
+    const encoded = encodeState(viewerState.toJSON(), debugState.toJSON());
     navigator.clipboard.writeText(`${location.origin}${location.pathname}#${encoded}`);
     shareCopied = true;
     setTimeout(() => (shareCopied = false), 2000);
@@ -63,7 +69,7 @@
   // Sync state to URL hash whenever it changes.
   $effect(() => {
     if (!browser) return;
-    const encoded = encodeState(viewerState.toJSON());
+    const encoded = encodeState(viewerState.toJSON(), debugState.toJSON());
     location.hash = encoded;
   });
 
