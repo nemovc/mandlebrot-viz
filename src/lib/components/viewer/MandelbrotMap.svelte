@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { Stage1Renderer } from '$lib/rendering/webgl/stage1Renderer';
 	import { getWorkerPool } from '$lib/rendering/worker/workerPool';
@@ -113,16 +113,24 @@
 		drawGL();
 	}
 
-	// React to store changes (color/iter updates from control panel)
+	// Recolor in-place when only the palette changes — no WASM needed
 	$effect(() => {
-		viewerState.colors; // track
-		viewerState.maxIter;
+		viewerState.colors;
 		if (mandelbrotLayer) {
 			mandelbrotLayer.colorConfig = viewerState.colors;
-			mandelbrotLayer.maxIter = viewerState.maxIter;
-			mandelbrotLayer.softRedraw();
+			mandelbrotLayer.recolor();
 		}
-		drawGL();
+		untrack(() => drawGL());
+	});
+
+	// Recompute via workers when maxIter changes
+	$effect(() => {
+		viewerState.maxIter;
+		if (mandelbrotLayer) {
+			mandelbrotLayer.maxIter = viewerState.maxIter;
+			mandelbrotLayer.recompute();
+		}
+		untrack(() => drawGL());
 	});
 </script>
 

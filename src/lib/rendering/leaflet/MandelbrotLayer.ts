@@ -1,18 +1,18 @@
 import type { ColorConfig } from '$lib/stores/viewerState.svelte';
-import { getWorkerPool } from '$lib/rendering/worker/workerPool';
+import { getWorkerPool, getRecolorPool } from '$lib/rendering/worker/workerPool';
 import { getPrecisionMode, scaleForZoom } from '$lib/utils/precision';
-import { buildImageData } from '$lib/utils/colorPalettes';
 
 const TILE_SIZE = 256;
 const STAGE2_SIZE = 64; // low-res quick pass
 
 let _tileSeq = 0;
-/** Returns a unique pair of job ids for a tile's two rendering stages. */
-function tileIds(x: number, y: number, z: number): { s2id: string; s3id: string } {
+/** Returns unique job ids for a tile's rendering stages. */
+function tileIds(x: number, y: number, z: number): { s2id: string; s3id: string; rcId: string } {
 	const seq = ++_tileSeq;
 	return {
 		s2id: `${z}/${x}/${y}/s2-${seq}`,
 		s3id: `${z}/${x}/${y}/s3-${seq}`,
+		rcId: `${z}/${x}/${y}/rc-${seq}`,
 	};
 }
 
@@ -105,43 +105,65 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			return canvas;
 		},
 
-		/** Re-render all visible tiles in-place without removing them (no grey flash). */
-		softRedraw() {
+		/** Recolor all visible tiles via the dedicated recolor worker pool. */
+		recolor() {
+			const pool = getRecolorPool();
+			if ((this as any)._recolorTimer) clearTimeout((this as any)._recolorTimer);
+
+			(this as any)._recolorTimer = setTimeout(() => {
+				(this as any)._recolorTimer = null;
+				// Clear any queued recolor jobs — pool is exclusively for recolor so this is safe
+				pool.cancelAll();
+
+				const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
+				const maxIter = this.maxIter;
+				const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+				const itersCache: Map<string, { iters: Float32Array; maxIter: number }> = (this as any)._itersCache;
+				const tileCount = Object.keys(tiles).length;
+				let submittedCount = 0;
+				let skippedNoCache = 0;
+				let skippedMaxIterMismatch = 0;
+
+				const t0 = performance.now();
+				for (const tile of Object.values(tiles)) {
+					const { x, y, z } = tile.coords;
+					const canvas = tile.el;
+					const cached = itersCache.get(`${z}/${x}/${y}`);
+					if (!cached) { skippedNoCache++; continue; }
+					if (cached.maxIter !== maxIter) { skippedMaxIterMismatch++; continue; }
+
+					const { rcId } = tileIds(x, y, z);
+					pool.submit(
+						{ id: rcId, recolorOnly: true, iters: new Float32Array(cached.iters), tileSize: TILE_SIZE, maxIter, colorConfig,
+						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3 },
+						(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
+					);
+					(canvas as any)._tileIds = [rcId];
+					submittedCount++;
+				}
+				console.log(
+					`[recolor] submitted ${submittedCount}/${tileCount}, ` +
+					`skipped ${skippedNoCache} no-cache, ${skippedMaxIterMismatch} maxIter-mismatch ` +
+					`(${(performance.now() - t0).toFixed(1)}ms to submit)`
+				);
+			}, 50);
+		},
+
+		/** Recompute all visible tiles via workers (used when maxIter changes). */
+		recompute() {
 			const pool = getWorkerPool();
 			const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
 			const maxIter = this.maxIter;
 			const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
 			const itersCache: Map<string, { iters: Float32Array; maxIter: number }> = (this as any)._itersCache;
 			const tileCount = Object.keys(tiles).length;
-			let fastCount = 0;
-			let fullCount = 0;
 
 			const t0 = performance.now();
-			console.log(`[softRedraw] ${tileCount} tiles, maxIter=${maxIter}`);
-
 			for (const tile of Object.values(tiles)) {
 				const { x, y, z } = tile.coords;
 				const canvas = tile.el;
-				const ctx = canvas.getContext('2d')!;
 				const key = `${z}/${x}/${y}`;
 
-				// Fast path: color-only change — copy cached iters to a worker, skip WASM
-				const cached = itersCache.get(key);
-				if (cached && cached.maxIter === maxIter) {
-					const itersCopy = new Float32Array(cached.iters); // copy preserves cache
-					const rcId = `${key}-rc-${Date.now()}`;
-					pool.submit(
-						{ id: rcId, recolorOnly: true, iters: itersCopy, tileSize: TILE_SIZE, maxIter, colorConfig,
-						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3 },
-						(result) => { ctx.putImageData(result.imageData, 0, 0); }
-					);
-					(canvas as any)._tileIds = [rcId];
-					fastCount++;
-					continue;
-				}
-
-				fullCount++;
-				// Cancel any in-flight jobs for this tile
 				const oldIds: string[] = (canvas as any)._tileIds || [];
 				for (const id of oldIds) pool.cancel(id);
 
@@ -155,13 +177,13 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				pool.submit(
 					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0, stage: 3 },
 					(result) => {
-						if (result.iters) itersCache.set(key, { iters: result.iters, maxIter }); // update cache with new maxIter
-						ctx.putImageData(result.imageData, 0, 0);
+						if (result.iters) itersCache.set(key, { iters: result.iters, maxIter });
+						canvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
 					}
 				);
 				(canvas as any)._tileIds = [s3id];
 			}
-			console.log(`[softRedraw] fast=${fastCount} full=${fullCount} (${(performance.now() - t0).toFixed(1)}ms)`);
+			console.log(`[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
 		},
 
 		_removeTile(key: string) {

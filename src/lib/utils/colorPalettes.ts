@@ -78,19 +78,6 @@ function hexToRgb(hex: string): [number, number, number] {
 	return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
-/** Map a smooth iteration value to an RGBA pixel using ColorConfig */
-export function iterToColor(
-	smooth: number,
-	maxIter: number,
-	config: ColorConfig
-): [number, number, number, number] {
-	if (smooth >= maxIter) return [0, 0, 0, 255]; // in-set: black
-
-	const t = ((smooth / config.cyclePeriod + config.offset) % 1 + 1) % 1;
-	const [r, g, b] = samplePalette(config.palette, t);
-	return [r, g, b, 255];
-}
-
 /** Build a flat RGBA Uint8ClampedArray from smooth iteration values */
 export function buildImageData(
 	iters: Float32Array,
@@ -100,12 +87,32 @@ export function buildImageData(
 	config: ColorConfig
 ): ImageData {
 	const data = new Uint8ClampedArray(width * height * 4);
+	// Cache palette lookups — many adjacent pixels share nearly identical smooth values.
+	// Key is the palette t value quantized to 1/4000 resolution.
+	const colorCache = new Map<number, [number, number, number]>();
+	const { cyclePeriod, offset, palette } = config;
+
 	for (let i = 0; i < iters.length; i++) {
-		const [r, g, b, a] = iterToColor(iters[i], maxIter, config);
-		data[i * 4] = r;
-		data[i * 4 + 1] = g;
-		data[i * 4 + 2] = b;
-		data[i * 4 + 3] = a;
+		const smooth = iters[i];
+		let r: number, g: number, b: number;
+
+		if (smooth >= maxIter) {
+			r = g = b = 0;
+		} else {
+			const t = ((smooth / cyclePeriod + offset) % 1 + 1) % 1;
+			const key = Math.round(t * 4000);
+			let cached = colorCache.get(key);
+			if (!cached) {
+				cached = samplePalette(palette, key / 4000);
+				colorCache.set(key, cached);
+			}
+			[r, g, b] = cached;
+		}
+
+		data[i * 4]     = r!;
+		data[i * 4 + 1] = g!;
+		data[i * 4 + 2] = b!;
+		data[i * 4 + 3] = 255;
 	}
 	return new ImageData(data, width, height);
 }

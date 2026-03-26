@@ -60,9 +60,12 @@ export class WorkerPool {
 		};
 	}
 
-	constructor(private size: number = navigator.hardwareConcurrency || 4) {
+	constructor(
+		private size: number = navigator.hardwareConcurrency || 4,
+		private workerUrl: URL = new URL('./mandelbrot.worker.ts', import.meta.url)
+	) {
 		for (let i = 0; i < size; i++) {
-			const w = new Worker(new URL('./mandelbrot.worker.ts', import.meta.url), { type: 'module' });
+			const w = new Worker(this.workerUrl, { type: 'module' });
 			w.onmessage = (e) => this.onResult(w, e.data as TileResult);
 			w.onerror = (e) => this.onWorkerError(w, e.message);
 			w.onmessageerror = () => this.onWorkerError(w, 'message deserialization error');
@@ -110,7 +113,14 @@ export class WorkerPool {
 	}
 
 	cancelAll() {
-		for (const p of this.queue) this.cancelled.add(p.job.id);
+		for (const p of this.queue) {
+			this.cancelled.add(p.job.id);
+			const s = this.jobStages.get(p.job.id)!;
+			this.jobStages.delete(p.job.id);
+			this.pending[s]--;
+			this.batchCompleted[s]++;
+			this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
+		}
 		this.queue = [];
 	}
 
@@ -181,4 +191,14 @@ let pool: WorkerPool | null = null;
 export function getWorkerPool(): WorkerPool {
 	if (!pool) pool = new WorkerPool();
 	return pool;
+}
+
+// Small dedicated pool for recolor-only jobs — keeps them off the WASM pool
+let recolorPool: WorkerPool | null = null;
+export function getRecolorPool(): WorkerPool {
+	if (!recolorPool) recolorPool = new WorkerPool(
+		Math.max(2, Math.floor((navigator.hardwareConcurrency || 4) / 2)),
+		new URL('./recolor.worker.ts', import.meta.url)
+	);
+	return recolorPool;
 }
