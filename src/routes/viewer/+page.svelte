@@ -89,13 +89,13 @@
 <div class="relative w-full h-full">
   <MandelbrotMap bind:this={mapComponent} />
 
-  <!-- Render progress bars -->
-  {#if s2Total > 0 && s2Completed < s2Total}
+  <!-- Render progress bars (hidden during export, which has its own progress UI) -->
+  {#if !showExport && s2Total > 0 && s2Completed < s2Total}
     <div class="absolute top-0 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none">
       <div class="h-full bg-blue-400 transition-all duration-150" style="width:{bar(s2Completed,s2Total)}%"></div>
     </div>
   {/if}
-  {#if s3Total > 0 && s3Completed < s3Total}
+  {#if !showExport && s3Total > 0 && s3Completed < s3Total}
     <div class="absolute top-1 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none">
       <div class="h-full bg-green-500 transition-all duration-150" style="width:{bar(s3Completed,s3Total)}%"></div>
     </div>
