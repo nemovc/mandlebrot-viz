@@ -123,8 +123,8 @@
 
 				for (let ty = 0; ty < tilesY; ty++) {
 					for (let tx = 0; tx < tilesX; tx++) {
-						const tileCx = (cxCenter + (tx - tilesX / 2 + 0.5) * scale * TILE).toString();
-						const tileCy = (cyCenter + (ty - tilesY / 2 + 0.5) * scale * TILE).toString();
+						const tileCx = (cxCenter + (tx * TILE + TILE / 2 - w / 2) * scale).toString();
+						const tileCy = (cyCenter + (ty * TILE + TILE / 2 - h / 2) * scale).toString();
 						const id = `export-${exportId}-${tx}-${ty}`;
 						jobIds.push(id);
 
@@ -190,6 +190,12 @@
 						<option value={i}>{r.label}</option>
 					{/each}
 				</select>
+
+				{#if selectedRes === 1}
+					<p class="text-xs text-neutral-400">Pixel-exact match of the current view.</p>
+				{:else}
+					<p class="text-xs text-neutral-400">Centered on the current view, but the field of view will differ due to the different aspect ratio and resolution.</p>
+				{/if}
 
 				<label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
 					<input type="checkbox" bind:checked={showOverlay} disabled={phase === 'exporting'} class="accent-blue-500" />
