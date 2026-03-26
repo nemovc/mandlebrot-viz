@@ -2,10 +2,13 @@
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { PRESETS } from '$lib/utils/colorPalettes';
 
-	let selectedPreset = $state('Classic Blue-Gold');
+	const selectedPreset = $derived(
+		Object.entries(PRESETS).find(([, preset]) =>
+			JSON.stringify(preset) === JSON.stringify(viewerState.colors)
+		)?.[0] ?? null
+	);
 
 	function applyPreset(name: string) {
-		selectedPreset = name;
 		viewerState.colors = { ...PRESETS[name] };
 	}
 
@@ -52,7 +55,7 @@
 			{#each Object.keys(PRESETS) as name}
 				<button
 					class="text-left px-2 py-1 rounded text-xs transition-colors
-						{selectedPreset === name
+						{selectedPreset !== null && selectedPreset === name
 						? 'bg-blue-700 text-white'
 						: 'text-neutral-300 hover:bg-neutral-800'}"
 					onclick={() => applyPreset(name)}

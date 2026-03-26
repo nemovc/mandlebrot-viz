@@ -1,72 +1,103 @@
-import type { RenderJob, TileResult } from './workerPool';
-import { buildImageData } from '$lib/utils/colorPalettes';
-import { getPrecisionBits } from '$lib/utils/precision';
+import type { RenderJob, TileResult } from "./workerPool";
+import { buildImageData } from "$lib/utils/colorPalettes";
+import { getPrecisionBits } from "$lib/utils/precision";
 import init, {
-	compute_tile_f64,
-	compute_tile_dd,
-	compute_tile_arb
-} from '$lib/wasm/mandelbrot.js';
-import wasmUrl from '$lib/wasm/mandelbrot_bg.wasm?url';
+  compute_tile_f64,
+  compute_tile_dd,
+  compute_tile_arb,
+} from "$lib/wasm/mandelbrot.js";
+import wasmUrl from "$lib/wasm/mandelbrot_bg.wasm?url";
 
-const DEBUG_SLOW_TILES = true; // set true to add artificial delay (100ms s2, 300ms s3)
+const DEBUG_SLOW_TILES = false; // set true to add artificial delay (100ms s2, 300ms s3)
 
-console.log('[worker] initialising, loading WASM from', wasmUrl);
+console.log("[worker] initialising, loading WASM from", wasmUrl);
 const wasmReady = init(wasmUrl).then(() => {
-	console.log('[worker] WASM ready');
+  console.log("[worker] WASM ready");
 });
 
 /** Split a float64 into high/low parts (Veltkamp) */
 function split(x: number): [number, number] {
-	const hi = Math.fround(x);
-	const lo = x - hi;
-	return [hi, lo];
+  const hi = Math.fround(x);
+  const lo = x - hi;
+  return [hi, lo];
 }
 
 self.onmessage = async (e: MessageEvent<RenderJob>) => {
-	try {
-		await wasmReady;
-		if (DEBUG_SLOW_TILES) await new Promise(r => setTimeout(r, e.data.stage === 2 ? 100 : 300));
+  try {
+    await wasmReady;
+    if (DEBUG_SLOW_TILES)
+      await new Promise((r) => setTimeout(r, e.data.stage === 2 ? 100 : 300));
 
-	const { id, tileSize, maxIter, colorConfig, recolorOnly } = e.data;
+    const { id, tileSize, maxIter, colorConfig, recolorOnly } = e.data;
 
-	if (recolorOnly) {
-		const imageData = buildImageData(e.data.iters!, tileSize, tileSize, maxIter, colorConfig);
-		(self as unknown as Worker).postMessage({ id, imageData } satisfies TileResult, { transfer: [imageData.data.buffer] });
-		return;
-	}
+    if (recolorOnly) {
+      const imageData = buildImageData(
+        e.data.iters!,
+        tileSize,
+        tileSize,
+        maxIter,
+        colorConfig,
+      );
+      (self as unknown as Worker).postMessage(
+        { id, imageData } satisfies TileResult,
+        { transfer: [imageData.data.buffer] },
+      );
+      return;
+    }
 
-	const { cx, cy, scale, precisionMode } = e.data;
-	const sz = tileSize;
+    const { cx, cy, scale, precisionMode } = e.data;
+    const sz = tileSize;
 
-	console.log(`[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter}`);
-	const t0 = performance.now();
+    console.log(
+      `[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter}`,
+    );
+    const t0 = performance.now();
 
-	let iters: Float32Array;
+    let iters: Float32Array;
 
-	if (precisionMode === 'f64') {
-		iters = compute_tile_f64(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter);
-	} else if (precisionMode === 'double_double') {
-		const [cxHi, cxLo] = split(parseFloat(cx));
-		const [cyHi, cyLo] = split(parseFloat(cy));
-		const [sHi, sLo] = split(parseFloat(scale));
-		iters = compute_tile_dd(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter);
-	} else {
-		const bits = getPrecisionBits(Math.round(-Math.log2(parseFloat(scale))));
-		console.log(`[worker] arb precision: ${bits} bits`);
-		iters = compute_tile_arb(cx, cy, scale, bits, sz, sz, maxIter);
-	}
+    if (precisionMode === "f64") {
+      iters = compute_tile_f64(
+        parseFloat(cx),
+        parseFloat(cy),
+        parseFloat(scale),
+        sz,
+        sz,
+        maxIter,
+      );
+    } else if (precisionMode === "double_double") {
+      const [cxHi, cxLo] = split(parseFloat(cx));
+      const [cyHi, cyLo] = split(parseFloat(cy));
+      const [sHi, sLo] = split(parseFloat(scale));
+      iters = compute_tile_dd(
+        cxHi,
+        cxLo,
+        cyHi,
+        cyLo,
+        sHi,
+        sLo,
+        sz,
+        sz,
+        maxIter,
+      );
+    } else {
+      const bits = getPrecisionBits(Math.round(-Math.log2(parseFloat(scale))));
+      console.log(`[worker] arb precision: ${bits} bits`);
+      iters = compute_tile_arb(cx, cy, scale, bits, sz, sz, maxIter);
+    }
 
-	const elapsed = (performance.now() - t0).toFixed(1);
-	console.log(`[worker] job ${id} done in ${elapsed}ms`);
+    const elapsed = (performance.now() - t0).toFixed(1);
+    console.log(`[worker] job ${id} done in ${elapsed}ms`);
 
-	const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig);
-	const result: TileResult = { id, imageData, iters };
-	(self as unknown as Worker).postMessage(result, { transfer: [imageData.data.buffer, iters.buffer] });
-	} catch (err) {
-		console.error('[worker] unhandled error:', err);
-		// reportError() fires onerror on the main thread's Worker object,
-		// which is what our pool's error handler listens to.
-		// A bare throw inside an async handler only rejects the promise and never reaches onerror.
-		self.reportError(err);
-	}
+    const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig);
+    const result: TileResult = { id, imageData, iters };
+    (self as unknown as Worker).postMessage(result, {
+      transfer: [imageData.data.buffer, iters.buffer],
+    });
+  } catch (err) {
+    console.error("[worker] unhandled error:", err);
+    // reportError() fires onerror on the main thread's Worker object,
+    // which is what our pool's error handler listens to.
+    // A bare throw inside an async handler only rejects the promise and never reaches onerror.
+    self.reportError(err);
+  }
 };

@@ -1,4 +1,5 @@
 import { DEFAULT_PALETTE } from '$lib/utils/colorPalettes';
+import { decodeState } from '$lib/utils/urlSerializer';
 
 export interface ColorStop {
 	stop: number;
@@ -21,11 +22,15 @@ export interface ViewerState {
 }
 
 function createViewerState() {
-	let cx = $state('-0.5');
-	let cy = $state('0.0');
-	let zoom = $state(3);
-	let maxIter = $state(256);
-	let colors = $state<ColorConfig>(DEFAULT_PALETTE);
+	const initial = (typeof window !== 'undefined' && window.location.hash)
+		? (decodeState(window.location.hash) ?? {})
+		: {};
+
+	let cx = $state(initial.cx ?? '-0.5');
+	let cy = $state(initial.cy ?? '0.0');
+	let zoom = $state(initial.zoom ?? 3);
+	let maxIter = $state(initial.maxIter ?? 256);
+	let colors = $state<ColorConfig>(initial.colors ?? DEFAULT_PALETTE);
 
 	return {
 		get cx() { return cx; },

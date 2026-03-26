@@ -1,23 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import MandelbrotMap from '$lib/components/viewer/MandelbrotMap.svelte';
 	import ControlPanel from '$lib/components/viewer/ControlPanel.svelte';
 	import ColorSchemeEditor from '$lib/components/viewer/ColorSchemeEditor.svelte';
 	import ExportDialog from '$lib/components/viewer/ExportDialog.svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
-	import { encodeState, decodeState } from '$lib/utils/urlSerializer';
+	import { encodeState } from '$lib/utils/urlSerializer';
 
 	let showExport = $state(false);
 	let mapComponent: MandelbrotMap;
-
-	// Load state from URL hash on mount
-	onMount(() => {
-		if (browser && location.hash) {
-			const loaded = decodeState(location.hash);
-			if (loaded) viewerState.loadFrom(loaded);
-		}
-	});
 
 	// Sync state to URL hash whenever it changes.
 	// Use location.hash directly — SvelteKit only manages pathname,
