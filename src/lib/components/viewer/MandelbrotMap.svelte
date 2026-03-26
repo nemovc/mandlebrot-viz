@@ -1,24 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from "svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
+  import { debugState } from "$lib/stores/debugState.svelte";
   import { getWorkerPool } from "$lib/rendering/worker/workerPool";
 
   let mapContainer: HTMLDivElement;
   let leafletMap: import("leaflet").Map | null = null;
   let mandelbrotLayer: any = null;
-
-  let s2Completed = $state(0);
-  let s2Total = $state(0);
-  let s3Completed = $state(0);
-  let s3Total = $state(0);
-
-  let poolDebug = $state({
-    poolSize: 0,
-    idle: 0,
-    activeS2: 0,
-    activeS3: 0,
-    queued: 0,
-  });
 
   // CRS.Simple uses pixel units. Our world [-4,4] maps to [0,256] at zoom 0.
   // Scale = 256/8 = 32 pixels per complex unit.
@@ -70,18 +58,6 @@
       viewerState.cy = latToIm(center.lat).toString();
       viewerState.zoom = leafletMap.getZoom();
     });
-
-    const pool = getWorkerPool();
-    pool.onProgress = (stage, completed, total) => {
-      if (stage === 2) {
-        s2Completed = completed;
-        s2Total = total;
-      } else {
-        s3Completed = completed;
-        s3Total = total;
-      }
-      poolDebug = pool.debugState;
-    };
   });
 
   onDestroy(() => {
@@ -125,36 +101,17 @@
 </script>
 
 <div class="relative w-full h-full" bind:this={mapContainer}>
-  <!-- Render progress bars: stage 2 (low-res) on top, stage 3 (full-res) below -->
-  {#if s2Total > 0 && s2Completed < s2Total}
-    <div
-      class="absolute top-0 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none"
-    >
-      <div
-        class="h-full bg-blue-400 transition-all duration-150"
-        style="width: {(s2Completed / s2Total) * 100}%"
-      ></div>
-    </div>
-  {/if}
-  {#if s3Total > 0 && s3Completed < s3Total}
-    <div
-      class="absolute top-1 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none"
-    >
-      <div
-        class="h-full bg-green-500 transition-all duration-150"
-        style="width: {(s3Completed / s3Total) * 100}%"
-      ></div>
-    </div>
-  {/if}
-
-  <!-- Worker pool debug overlay -->
-  <div
-    class="absolute bottom-2 left-2 z-[2000] pointer-events-none flex flex-col gap-2 p-3 bg-neutral-900 border border-neutral-800 rounded-lg"
-  >
-    <div class="text-neutral-400 text-xs font-medium uppercase tracking-wider">Workers</div>
-    <div class="font-mono text-xs text-neutral-300 leading-5">
-      <div>{poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3} s3</div>
-      <div>queued: {poolDebug.queued}</div>
-    </div>
+  <div class="absolute inset-0 flex items-center justify-center z-[2000] pointer-events-none">
+    {#if debugState.showTileSquare}
+      <div class="absolute w-64 h-64" style="box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.5); outline: 1px solid rgba(255,255,255,0.6);"></div>
+    {/if}
+    {#if debugState.showCrosshair}
+      <div class="relative w-16 h-16">
+        <div class="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-black/50"></div>
+        <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 bg-black/50"></div>
+        <div class="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/80"></div>
+        <div class="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/80"></div>
+      </div>
+    {/if}
   </div>
 </div>

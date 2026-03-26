@@ -1,5 +1,6 @@
 import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 import { getWorkerPool, getRecolorPool } from '$lib/rendering/worker/workerPool';
+import { debugLog, debugState } from '$lib/stores/debugState.svelte';
 import { getPrecisionMode, scaleForZoom } from '$lib/utils/precision';
 
 const TILE_SIZE = 256;
@@ -66,7 +67,9 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					precisionMode,
 					colorConfig,
 					priority: 0,
-					stage: 2
+					stage: 2,
+					debug: debugState.debugLogging,
+					slow: debugState.slowMode,
 				},
 				(result) => {
 					// Upscale 64→256 via drawImage
@@ -90,7 +93,9 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 							precisionMode,
 							colorConfig,
 							priority: 1,
-							stage: 3
+							stage: 3,
+							debug: debugState.debugLogging,
+							slow: debugState.slowMode,
 						},
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter });
@@ -135,13 +140,13 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					const { rcId } = tileIds(x, y, z);
 					pool.submit(
 						{ id: rcId, recolorOnly: true, iters: new Float32Array(cached.iters), tileSize: TILE_SIZE, maxIter, colorConfig,
-						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3 },
+						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3, slow: debugState.slowMode },
 						(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
 					);
 					(canvas as any)._tileIds = [rcId];
 					submittedCount++;
 				}
-				console.log(
+				debugLog(() =>
 					`[recolor] submitted ${submittedCount}/${tileCount}, ` +
 					`skipped ${skippedNoCache} no-cache, ${skippedMaxIterMismatch} maxIter-mismatch ` +
 					`(${(performance.now() - t0).toFixed(1)}ms to submit)`
@@ -175,7 +180,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 
 				const { s3id } = tileIds(x, y, z);
 				pool.submit(
-					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0, stage: 3 },
+					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0, stage: 3, debug: debugState.debugLogging, slow: debugState.slowMode },
 					(result) => {
 						if (result.iters) itersCache.set(key, { iters: result.iters, maxIter });
 						canvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
@@ -183,7 +188,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				);
 				(canvas as any)._tileIds = [s3id];
 			}
-			console.log(`[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
+			debugLog(() => `[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
 		},
 
 		_removeTile(key: string) {

@@ -8,7 +8,6 @@ import init, {
 } from "$lib/wasm/mandelbrot.js";
 import wasmUrl from "$lib/wasm/mandelbrot_bg.wasm?url";
 
-const DEBUG_SLOW_TILES = false; // set true to add artificial delay (100ms s2, 300ms s3)
 
 console.log("[worker] initialising, loading WASM from", wasmUrl);
 const wasmReady = init(wasmUrl).then(() => {
@@ -25,7 +24,7 @@ function split(x: number): [number, number] {
 self.onmessage = async (e: MessageEvent<RenderJob>) => {
   try {
     await wasmReady;
-    if (DEBUG_SLOW_TILES)
+    if (e.data.slow)
       await new Promise((r) => setTimeout(r, e.data.stage === 2 ? 100 : 300));
 
     const { id, tileSize, maxIter, colorConfig, recolorOnly } = e.data;
@@ -45,10 +44,10 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
       return;
     }
 
-    const { cx, cy, scale, precisionMode } = e.data;
+    const { cx, cy, scale, precisionMode, debug } = e.data;
     const sz = tileSize;
 
-    console.log(
+    if (debug) console.log(
       `[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter}`,
     );
     const t0 = performance.now();
@@ -86,7 +85,7 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
     }
 
     const elapsed = (performance.now() - t0).toFixed(1);
-    console.log(`[worker] job ${id} done in ${elapsed}ms`);
+    if (debug) console.log(`[worker] job ${id} done in ${elapsed}ms`);
 
     const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig);
     const result: TileResult = { id, imageData, iters };
