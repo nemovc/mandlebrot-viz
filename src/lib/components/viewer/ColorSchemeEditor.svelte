@@ -4,7 +4,8 @@
 
 	const selectedPreset = $derived(
 		Object.entries(PRESETS).find(([, preset]) =>
-			JSON.stringify(preset) === JSON.stringify(viewerState.colors)
+			preset.algorithm === viewerState.colors.algorithm &&
+			JSON.stringify(preset.palette) === JSON.stringify(viewerState.colors.palette)
 		)?.[0] ?? null
 	);
 
