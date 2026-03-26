@@ -36,19 +36,20 @@
 		<ColorSchemeEditor />
 	</div>
 
-	<div class="absolute bottom-3 right-3 z-[1000] flex gap-2">
-		<button
-			class="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
-			onclick={() => mapComponent.resetView()}
-		>
-			Reset
-		</button>
-		<button
-			class="px-3 py-1.5 text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
-			onclick={() => (showExport = true)}
-		>
-			Export / Share
-		</button>
+	<div class="absolute bottom-3 right-3 z-[1000]">
+		<div class="flex flex-col gap-3 p-3 bg-neutral-900 border border-neutral-800 rounded-lg min-w-36">
+			<div class="text-neutral-400 text-xs font-medium uppercase tracking-wider">Actions</div>
+			<div class="flex flex-col gap-1.5">
+				<button
+					class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
+					onclick={() => mapComponent.resetView()}
+				>Reset View</button>
+				<button
+					class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
+					onclick={() => (showExport = true)}
+				>Export / Share</button>
+			</div>
+		</div>
 	</div>
 </div>
 

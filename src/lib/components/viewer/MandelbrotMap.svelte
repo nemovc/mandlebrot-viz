@@ -149,11 +149,12 @@
 
   <!-- Worker pool debug overlay -->
   <div
-    class="absolute bottom-2 left-2 z-[2000] pointer-events-none font-mono text-xs text-white/70 bg-black/50 rounded px-2 py-1 leading-5"
+    class="absolute bottom-2 left-2 z-[2000] pointer-events-none flex flex-col gap-2 p-3 bg-neutral-900 border border-neutral-800 rounded-lg"
   >
-    <div>
-      workers: {poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3} s3
+    <div class="text-neutral-400 text-xs font-medium uppercase tracking-wider">Workers</div>
+    <div class="font-mono text-xs text-neutral-300 leading-5">
+      <div>{poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3} s3</div>
+      <div>queued: {poolDebug.queued}</div>
     </div>
-    <div>queued: {poolDebug.queued}</div>
   </div>
 </div>

@@ -54,6 +54,7 @@
 </script>
 
 <div class="flex flex-col gap-3 p-3 text-sm bg-neutral-900 rounded-lg border border-neutral-800 min-w-52">
+	<div class="text-neutral-400 text-xs font-medium uppercase tracking-wider">Position</div>
 	<div>
 		<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
 		<input
