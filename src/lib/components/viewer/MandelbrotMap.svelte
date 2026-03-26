@@ -15,6 +15,8 @@
 	let s3Completed = $state(0);
 	let s3Total = $state(0);
 
+	let poolDebug = $state({ poolSize: 0, idle: 0, activeS2: 0, activeS3: 0, queued: 0 });
+
 	// CRS.Simple uses pixel units. Our world [-4,4] maps to [0,256] at zoom 0.
 	// Scale = 256/8 = 32 pixels per complex unit.
 	const S = 32;
@@ -69,9 +71,11 @@
 			drawGL();
 		});
 
-		getWorkerPool().onProgress = (stage, completed, total) => {
+		const pool = getWorkerPool();
+		pool.onProgress = (stage, completed, total) => {
 			if (stage === 2) { s2Completed = completed; s2Total = total; }
 			else             { s3Completed = completed; s3Total = total; }
+			poolDebug = pool.debugState;
 		};
 
 		drawGL();
@@ -150,4 +154,10 @@
 			></div>
 		</div>
 	{/if}
+
+	<!-- Worker pool debug overlay -->
+	<div class="absolute bottom-2 left-2 z-[2000] pointer-events-none font-mono text-xs text-white/70 bg-black/50 rounded px-2 py-1 leading-5">
+		<div>workers: {poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3} s3</div>
+		<div>queued: {poolDebug.queued}</div>
+	</div>
 </div>

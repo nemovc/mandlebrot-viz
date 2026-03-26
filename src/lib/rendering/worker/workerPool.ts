@@ -36,6 +36,7 @@ export class WorkerPool {
 	private queue: PendingJob[] = [];
 	private callbacks = new Map<string, JobCallback>();
 	private cancelled = new Set<string>();
+	private workerJobs = new Map<Worker, string>(); // worker → currently-running job id
 
 	// Per-stage progress tracking — each stage resets independently when it goes idle→busy
 	private pending:        Record<2 | 3, number> = { 2: 0, 3: 0 };
@@ -44,10 +45,27 @@ export class WorkerPool {
 	private jobStages = new Map<string, 2 | 3>(); // id → stage, for lookup in onResult/cancel
 	onProgress?: (stage: 2 | 3, completed: number, total: number) => void;
 
+	get debugState() {
+		let activeS2 = 0, activeS3 = 0;
+		for (const [worker, jobId] of this.workerJobs) {
+			if (this.jobStages.get(jobId) === 2) activeS2++;
+			else activeS3++;
+		}
+		return {
+			poolSize: this.size,
+			idle: this.idle.length,
+			activeS2,
+			activeS3,
+			queued: this.queue.length,
+		};
+	}
+
 	constructor(private size: number = navigator.hardwareConcurrency || 4) {
 		for (let i = 0; i < size; i++) {
 			const w = new Worker(new URL('./mandelbrot.worker.ts', import.meta.url), { type: 'module' });
 			w.onmessage = (e) => this.onResult(w, e.data as TileResult);
+			w.onerror = (e) => this.onWorkerError(w, e.message);
+			w.onmessageerror = () => this.onWorkerError(w, 'message deserialization error');
 			this.workers.push(w);
 			this.idle.push(w);
 		}
@@ -108,12 +126,31 @@ export class WorkerPool {
 			}
 
 			this.callbacks.set(job.id, resolve);
+			this.workerJobs.set(worker, job.id);
 			const transfer = job.iters ? [job.iters.buffer] : [];
 			worker.postMessage(job, { transfer });
 		}
 	}
 
+	private onWorkerError(worker: Worker, message: string) {
+		console.error('[WorkerPool] worker error:', message);
+		const jobId = this.workerJobs.get(worker);
+		this.workerJobs.delete(worker);
+		if (jobId) {
+			this.callbacks.delete(jobId);
+			this.cancelled.delete(jobId);
+			const s = this.jobStages.get(jobId) ?? 3;
+			this.jobStages.delete(jobId);
+			this.pending[s]--;
+			this.batchCompleted[s]++;
+			this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
+		}
+		this.idle.push(worker);
+		this.dispatch();
+	}
+
 	private onResult(worker: Worker, result: TileResult) {
+		this.workerJobs.delete(worker);
 		this.idle.push(worker);
 		const cb = this.callbacks.get(result.id);
 		if (cb && !this.cancelled.has(result.id)) {

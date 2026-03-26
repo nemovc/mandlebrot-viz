@@ -8,6 +8,8 @@ import init, {
 } from '$lib/wasm/mandelbrot.js';
 import wasmUrl from '$lib/wasm/mandelbrot_bg.wasm?url';
 
+const DEBUG_SLOW_TILES = true; // set true to add artificial delay (100ms s2, 300ms s3)
+
 console.log('[worker] initialising, loading WASM from', wasmUrl);
 const wasmReady = init(wasmUrl).then(() => {
 	console.log('[worker] WASM ready');
@@ -21,7 +23,9 @@ function split(x: number): [number, number] {
 }
 
 self.onmessage = async (e: MessageEvent<RenderJob>) => {
-	await wasmReady;
+	try {
+		await wasmReady;
+		if (DEBUG_SLOW_TILES) await new Promise(r => setTimeout(r, e.data.stage === 2 ? 100 : 300));
 
 	const { id, tileSize, maxIter, colorConfig, recolorOnly } = e.data;
 
@@ -58,4 +62,11 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
 	const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig);
 	const result: TileResult = { id, imageData, iters };
 	(self as unknown as Worker).postMessage(result, { transfer: [imageData.data.buffer, iters.buffer] });
+	} catch (err) {
+		console.error('[worker] unhandled error:', err);
+		// reportError() fires onerror on the main thread's Worker object,
+		// which is what our pool's error handler listens to.
+		// A bare throw inside an async handler only rejects the promise and never reaches onerror.
+		self.reportError(err);
+	}
 };
