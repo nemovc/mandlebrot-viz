@@ -1,12 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy, untrack } from "svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
-  import { Stage1Renderer } from "$lib/rendering/webgl/stage1Renderer";
   import { getWorkerPool } from "$lib/rendering/worker/workerPool";
 
   let mapContainer: HTMLDivElement;
-  let glCanvas: HTMLCanvasElement;
-  let renderer: Stage1Renderer | null = null;
   let leafletMap: import("leaflet").Map | null = null;
   let mandelbrotLayer: any = null;
 
@@ -38,11 +35,6 @@
       "$lib/rendering/leaflet/MandelbrotLayer"
     );
 
-    // Init WebGL stage 1 canvas
-    renderer = new Stage1Renderer(glCanvas);
-    resizeGl();
-
-    // Bounds in CRS.Simple lat/lng space, converted from our complex plane [-4,4]×[-4i,4i]
     const worldBounds = L.latLngBounds(
       [imToLat(-2), reToLng(-4)],
       [imToLat(2), reToLng(4)],
@@ -65,21 +57,18 @@
       maxBoundsViscosity: 1.0,
     });
 
-    // Create tile layer
     const LayerClass = createMandelbrotLayer(L);
     mandelbrotLayer = new LayerClass();
     mandelbrotLayer.maxIter = viewerState.maxIter;
     mandelbrotLayer.colorConfig = viewerState.colors;
     mandelbrotLayer.addTo(leafletMap);
 
-    // Sync map events back to store
     leafletMap.on("moveend zoomend", () => {
       if (!leafletMap) return;
       const center = leafletMap.getCenter();
       viewerState.cx = lngToRe(center.lng).toString();
       viewerState.cy = latToIm(center.lat).toString();
       viewerState.zoom = leafletMap.getZoom();
-      drawGL();
     });
 
     const pool = getWorkerPool();
@@ -93,24 +82,29 @@
       }
       poolDebug = pool.debugState;
     };
-
-    drawGL();
   });
 
   onDestroy(() => {
     leafletMap?.remove();
-    renderer?.destroy();
   });
 
-  function resizeGl() {
-    if (!renderer || !mapContainer) return;
-    renderer.resize(mapContainer.clientWidth, mapContainer.clientHeight);
-  }
+  // Recolor in-place when only the palette changes — no WASM needed
+  $effect(() => {
+    viewerState.colors;
+    if (mandelbrotLayer) {
+      mandelbrotLayer.colorConfig = viewerState.colors;
+      untrack(() => mandelbrotLayer.recolor());
+    }
+  });
 
-  function drawGL() {
-    if (!renderer) return;
-    renderer.draw(viewerState.toJSON());
-  }
+  // Recompute via workers when maxIter changes
+  $effect(() => {
+    viewerState.maxIter;
+    if (mandelbrotLayer) {
+      mandelbrotLayer.maxIter = viewerState.maxIter;
+      untrack(() => mandelbrotLayer.recompute());
+    }
+  });
 
   export function panTo(re: number, im: number, zoom?: number) {
     viewerState.cx = re.toString();
@@ -119,7 +113,6 @@
     leafletMap?.setView([imToLat(im), reToLng(re)], viewerState.zoom, {
       animate: true,
     });
-    drawGL();
   }
 
   export function resetView() {
@@ -128,42 +121,10 @@
     viewerState.zoom = 3;
     viewerState.maxIter = 256;
     leafletMap?.setView([imToLat(0.0), reToLng(-0.5)], 3, { animate: true });
-    drawGL();
   }
-
-  // Recolor in-place when only the palette changes — no WASM needed
-  $effect(() => {
-    viewerState.colors;
-    if (mandelbrotLayer) {
-      mandelbrotLayer.colorConfig = viewerState.colors;
-      mandelbrotLayer.recolor();
-    }
-    untrack(() => drawGL());
-  });
-
-  // Recompute via workers when maxIter changes
-  $effect(() => {
-    viewerState.maxIter;
-    if (mandelbrotLayer) {
-      mandelbrotLayer.maxIter = viewerState.maxIter;
-      mandelbrotLayer.recompute();
-    }
-    untrack(() => drawGL());
-  });
 </script>
 
-<svelte:window on:resize={resizeGl} />
-
 <div class="relative w-full h-full" bind:this={mapContainer}>
-  <!-- Stage 1: WebGL preview — temporarily disabled for debugging -->
-  <canvas
-    bind:this={glCanvas}
-    class="absolute inset-0 z-0 pointer-events-none"
-    style="width:100%;height:100%"
-    id="#glCanvas"
-  ></canvas>
-  <!-- Leaflet mounts into mapContainer itself -->
-
   <!-- Render progress bars: stage 2 (low-res) on top, stage 3 (full-res) below -->
   {#if s2Total > 0 && s2Completed < s2Total}
     <div
@@ -191,8 +152,7 @@
     class="absolute bottom-2 left-2 z-[2000] pointer-events-none font-mono text-xs text-white/70 bg-black/50 rounded px-2 py-1 leading-5"
   >
     <div>
-      workers: {poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3}
-      s3
+      workers: {poolDebug.idle} idle / {poolDebug.activeS2} s2 / {poolDebug.activeS3} s3
     </div>
     <div>queued: {poolDebug.queued}</div>
   </div>
