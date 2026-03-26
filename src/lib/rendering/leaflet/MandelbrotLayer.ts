@@ -59,7 +59,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					maxIter,
 					precisionMode,
 					colorConfig,
-					priority: 0
+					priority: 0,
+					stage: 2
 				},
 				(result) => {
 					// Upscale 64→256 via drawImage
@@ -83,7 +84,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 							maxIter,
 							precisionMode,
 							colorConfig,
-							priority: 1
+							priority: 1,
+							stage: 3
 						},
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter });
@@ -125,7 +127,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					const rcId = `${key}-rc-${Date.now()}`;
 					pool.submit(
 						{ id: rcId, recolorOnly: true, iters: itersCopy, tileSize: TILE_SIZE, maxIter, colorConfig,
-						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0 },
+						  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3 },
 						(result) => { ctx.putImageData(result.imageData, 0, 0); }
 					);
 					(canvas as any)._tileIds = [rcId];
@@ -146,7 +148,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 
 				const s3id = tileId(x, y, z, 3) + '-r' + Date.now();
 				pool.submit(
-					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0 },
+					{ id: s3id, cx, cy, scale: scale.toString(), tileSize: TILE_SIZE, maxIter, precisionMode, colorConfig, priority: 0, stage: 3 },
 					(result) => {
 						if (result.iters) itersCache.set(key, { iters: result.iters, maxIter }); // update cache with new maxIter
 						ctx.putImageData(result.imageData, 0, 0);

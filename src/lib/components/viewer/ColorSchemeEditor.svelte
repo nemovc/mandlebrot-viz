@@ -71,7 +71,7 @@
 				type="range"
 				min="4"
 				max="256"
-				step="4"
+				step="1"
 				value={viewerState.colors.cyclePeriod}
 				oninput={onCyclePeriodChange}
 				class="flex-1 accent-blue-500"

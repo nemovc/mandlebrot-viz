@@ -11,6 +11,7 @@ export interface RenderJob {
 	precisionMode: PrecisionMode;
 	colorConfig: ColorConfig;
 	priority: number; // lower = higher priority
+	stage: 2 | 3;    // which rendering pass this belongs to
 	// For color-only redraws: skip WASM and recolorize from provided iters
 	recolorOnly?: true;
 	iters?: Float32Array;
@@ -36,6 +37,13 @@ export class WorkerPool {
 	private callbacks = new Map<string, JobCallback>();
 	private cancelled = new Set<string>();
 
+	// Per-stage progress tracking — each stage resets independently when it goes idle→busy
+	private pending:        Record<2 | 3, number> = { 2: 0, 3: 0 };
+	private batchTotal:     Record<2 | 3, number> = { 2: 0, 3: 0 };
+	private batchCompleted: Record<2 | 3, number> = { 2: 0, 3: 0 };
+	private jobStages = new Map<string, 2 | 3>(); // id → stage, for lookup in onResult/cancel
+	onProgress?: (stage: 2 | 3, completed: number, total: number) => void;
+
 	constructor(private size: number = navigator.hardwareConcurrency || 4) {
 		for (let i = 0; i < size; i++) {
 			const w = new Worker(new URL('./mandelbrot.worker.ts', import.meta.url), { type: 'module' });
@@ -46,6 +54,17 @@ export class WorkerPool {
 	}
 
 	submit(job: RenderJob, callback: JobCallback) {
+		const s = job.stage;
+		if (this.pending[s] === 0) {
+			// Starting a new batch for this stage from idle — reset its counters
+			this.batchTotal[s] = 0;
+			this.batchCompleted[s] = 0;
+		}
+		this.pending[s]++;
+		this.batchTotal[s]++;
+		this.jobStages.set(job.id, s);
+		this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
+
 		// Insert in priority order (stable sort by priority)
 		const pending: PendingJob = { job, resolve: callback };
 		const idx = this.queue.findIndex((p) => p.job.priority > job.priority);
@@ -59,8 +78,17 @@ export class WorkerPool {
 
 	cancel(id: string) {
 		this.cancelled.add(id);
+		const wasQueued = this.queue.some((p) => p.job.id === id);
 		// Remove from queue if not yet dispatched
 		this.queue = this.queue.filter((p) => p.job.id !== id);
+		if (wasQueued) {
+			// Job never ran — count it as done now; dispatched cancels are handled in onResult
+			const s = this.jobStages.get(id)!;
+			this.jobStages.delete(id);
+			this.pending[s]--;
+			this.batchCompleted[s]++;
+			this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
+		}
 	}
 
 	cancelAll() {
@@ -93,6 +121,11 @@ export class WorkerPool {
 		}
 		this.callbacks.delete(result.id);
 		this.cancelled.delete(result.id);
+		const s = this.jobStages.get(result.id) ?? 3;
+		this.jobStages.delete(result.id);
+		this.pending[s]--;
+		this.batchCompleted[s]++;
+		this.onProgress?.(s, this.batchCompleted[s], this.batchTotal[s]);
 		this.dispatch();
 	}
 

@@ -2,12 +2,18 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { Stage1Renderer } from '$lib/rendering/webgl/stage1Renderer';
+	import { getWorkerPool } from '$lib/rendering/worker/workerPool';
 
 	let mapContainer: HTMLDivElement;
 	let glCanvas: HTMLCanvasElement;
 	let renderer: Stage1Renderer | null = null;
 	let leafletMap: import('leaflet').Map | null = null;
 	let mandelbrotLayer: any = null;
+
+	let s2Completed = $state(0);
+	let s2Total = $state(0);
+	let s3Completed = $state(0);
+	let s3Total = $state(0);
 
 	// CRS.Simple uses pixel units. Our world [-4,4] maps to [0,256] at zoom 0.
 	// Scale = 256/8 = 32 pixels per complex unit.
@@ -62,6 +68,11 @@
 			viewerState.zoom = leafletMap.getZoom();
 			drawGL();
 		});
+
+		getWorkerPool().onProgress = (stage, completed, total) => {
+			if (stage === 2) { s2Completed = completed; s2Total = total; }
+			else             { s3Completed = completed; s3Total = total; }
+		};
 
 		drawGL();
 	});
@@ -121,4 +132,22 @@
 		style="width:100%;height:100%"
 	></canvas>
 	<!-- Leaflet mounts into mapContainer itself -->
+
+	<!-- Render progress bars: stage 2 (low-res) on top, stage 3 (full-res) below -->
+	{#if s2Total > 0 && s2Completed < s2Total}
+		<div class="absolute top-0 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none">
+			<div
+				class="h-full bg-blue-400 transition-all duration-150"
+				style="width: {(s2Completed / s2Total) * 100}%"
+			></div>
+		</div>
+	{/if}
+	{#if s3Total > 0 && s3Completed < s3Total}
+		<div class="absolute top-1 left-0 right-0 z-[2000] h-1 bg-neutral-800 pointer-events-none">
+			<div
+				class="h-full bg-green-500 transition-all duration-150"
+				style="width: {(s3Completed / s3Total) * 100}%"
+			></div>
+		</div>
+	{/if}
 </div>

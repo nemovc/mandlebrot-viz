@@ -100,7 +100,7 @@
 				type="range"
 				min="64"
 				max="4096"
-				step="64"
+				step="4"
 				value={viewerState.maxIter}
 				oninput={(e) => {
 					viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
