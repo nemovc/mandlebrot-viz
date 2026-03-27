@@ -2,6 +2,7 @@
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { PRESETS, samplePalette } from '$lib/utils/colorPalettes';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
+	import ToggleButton from './ToggleButton.svelte';
 
 	const gradientCss = $derived((() => {
 		const { palette, offset, reverse } = viewerState.colors;
@@ -97,14 +98,11 @@
 
 		<div class="flex items-center gap-2">
 			<div class="h-4 rounded flex-1" style="background: {gradientCss}"></div>
-			<button
-				class="text-xs px-2 py-0.5 rounded border transition-colors
-					{viewerState.colors.reverse
-					? 'bg-blue-700 border-blue-600 text-white'
-					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+			<ToggleButton
+				active={viewerState.colors.reverse}
 				onclick={() => viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }}
 				title="Reverse palette"
-			>⇄</button>
+			>⇄</ToggleButton>
 		</div>
 
 		<div>

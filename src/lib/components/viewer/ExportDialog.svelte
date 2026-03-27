@@ -5,6 +5,7 @@
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
   import { PRESETS } from "$lib/utils/colorPalettes";
   import type { ColorConfig } from "$lib/stores/viewerState.svelte";
+  import ToggleButton from "./ToggleButton.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -216,11 +217,13 @@
           <div class="text-neutral-400 text-xs">Resolution</div>
           <div class="grid grid-cols-2 gap-1">
             {#each resolutions as r, i}
-              <button
-                class="py-1 px-2 text-xs rounded border transition-colors text-left {r.wide ? 'col-span-2' : ''} {selectedRes === i ? 'bg-neutral-600 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white'}"
-                disabled={phase === "exporting"}
+              <ToggleButton
+                active={selectedRes === i}
                 onclick={() => selectedRes = i}
-              >{r.label}</button>
+                disabled={phase === "exporting"}
+                variant="neutral"
+                class={r.wide ? 'col-span-2' : ''}
+              >{r.label}</ToggleButton>
             {/each}
           </div>
           {#if selectedRes === 0}
@@ -234,21 +237,25 @@
           <div class="text-neutral-400 text-xs">Format</div>
           <div class="flex gap-1">
             {#each formats as f, i}
-              <button
-                class="flex-1 py-1 text-xs rounded border transition-colors {selectedFormat === i ? 'bg-neutral-600 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white'}"
-                disabled={phase === "exporting"}
+              <ToggleButton
+                active={selectedFormat === i}
                 onclick={() => selectedFormat = i}
-              >{f.label}</button>
+                disabled={phase === "exporting"}
+                variant="neutral"
+                class="flex-1"
+              >{f.label}</ToggleButton>
             {/each}
           </div>
         </div>
 
         <div class="flex flex-col gap-2">
           <div class="text-neutral-400 text-xs">Options</div>
-          <label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
-            <input type="checkbox" bind:checked={showOverlay} disabled={phase === "exporting"} class="accent-blue-500" />
-            Include info overlay
-          </label>
+          <ToggleButton
+            active={showOverlay}
+            onclick={() => showOverlay = !showOverlay}
+            disabled={phase === "exporting"}
+            variant="neutral"
+          >Include info overlay</ToggleButton>
         </div>
 
         {#if phase === "exporting"}

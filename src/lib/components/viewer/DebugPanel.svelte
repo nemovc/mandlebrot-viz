@@ -4,6 +4,7 @@
 	import { debugState } from '$lib/stores/debugState.svelte';
 	import { getPrecisionMode } from '$lib/utils/precision';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
+	import ToggleButton from './ToggleButton.svelte';
 
 	type PoolDebug = {
 		poolSize: number;
@@ -60,22 +61,10 @@
 	<div class="flex flex-col gap-4 px-3 pb-3 min-w-52">
 		<!-- Toggles -->
 		<div class="flex flex-col gap-1.5 pt-3">
-			<label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
-				<input type="checkbox" bind:checked={debugState.debugLogging} class="accent-blue-500" />
-				Debug logging
-			</label>
-			<label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
-				<input type="checkbox" bind:checked={debugState.showCrosshair} class="accent-blue-500" />
-				Show crosshair
-			</label>
-			<label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
-				<input type="checkbox" bind:checked={debugState.showTileSquare} class="accent-blue-500" />
-				Show tile square
-			</label>
-			<label class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none">
-				<input type="checkbox" bind:checked={debugState.slowMode} class="accent-blue-500" />
-				Slow mode
-			</label>
+			<ToggleButton active={debugState.debugLogging} onclick={() => debugState.debugLogging = !debugState.debugLogging}>Debug logging</ToggleButton>
+			<ToggleButton active={debugState.showCrosshair} onclick={() => debugState.showCrosshair = !debugState.showCrosshair}>Show crosshair</ToggleButton>
+			<ToggleButton active={debugState.showTileSquare} onclick={() => debugState.showTileSquare = !debugState.showTileSquare}>Show tile square</ToggleButton>
+			<ToggleButton active={debugState.slowMode} onclick={() => debugState.slowMode = !debugState.slowMode}>Slow mode</ToggleButton>
 		</div>
 
 		<!-- Render pool -->
