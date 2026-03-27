@@ -5,6 +5,7 @@
   import ControlPanel from "$lib/components/viewer/ControlPanel.svelte";
   import ColorSchemeEditor from "$lib/components/viewer/ColorSchemeEditor.svelte";
   import ExportDialog from "$lib/components/viewer/ExportDialog.svelte";
+  import CollapsiblePanel from "$lib/components/viewer/CollapsiblePanel.svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
   import { encodeState, decodeState } from "$lib/utils/urlSerializer";
@@ -17,7 +18,6 @@
   let showExport = $state(false);
   let mapComponent: MandelbrotMap;
   let shareCopied = $state(false);
-  let debugOpen = $state(false);
 
   // Pool progress
   let s2Completed = $state(0),
@@ -74,9 +74,8 @@
       recolorPoolDebug = rcPool.debugState;
     };
 
-    // Refresh memory every 2s when debug panel is open
+    // Refresh memory every 2s (only updates memUsed/memTotal when shown)
     const memInterval = setInterval(() => {
-      if (!debugOpen) return;
       const mem = (performance as any).memory;
       if (mem) {
         memUsed = mem.usedJSHeapSize;
@@ -153,15 +152,8 @@
 
   <!-- Actions -->
   <div class="absolute bottom-3 right-3 z-[1000]">
-    <div
-      class="flex flex-col gap-3 p-3 bg-neutral-900 border border-neutral-800 rounded-lg min-w-36"
-    >
-      <div
-        class="text-neutral-400 text-xs font-medium uppercase tracking-wider"
-      >
-        Actions
-      </div>
-      <div class="flex flex-col gap-1.5">
+    <CollapsiblePanel title="Actions" position="bottom-right">
+      <div class="flex flex-col gap-1.5 p-3 min-w-36">
         <button
           class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
           onclick={() => mapComponent.resetView()}>Reset View</button
@@ -177,195 +169,183 @@
           onclick={() => (showExport = true)}>Export Image</button
         >
       </div>
-    </div>
+    </CollapsiblePanel>
   </div>
 
   <!-- Debug panel -->
   <div class="absolute bottom-3 left-3 z-[1000]">
-    <div
-      class="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden min-w-52"
-    >
-      <button
-        class="w-full flex items-center justify-between px-3 py-2 text-neutral-400 text-xs font-medium uppercase tracking-wider hover:text-white transition-colors"
-        onclick={() => (debugOpen = !debugOpen)}
-      >
-        Debug
-        <span class="text-neutral-600">{debugOpen ? "▲" : "▼"}</span>
-      </button>
+    <CollapsiblePanel title="Debug" defaultOpen={false} position="bottom-left">
+      <div class="flex flex-col gap-4 px-3 pb-3 min-w-52">
+        <!-- Toggles -->
+        <div class="flex flex-col gap-1.5 pt-3">
+          <label
+            class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              bind:checked={debugState.debugLogging}
+              class="accent-blue-500"
+            />
+            Debug logging
+          </label>
+          <label
+            class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              bind:checked={debugState.showCrosshair}
+              class="accent-blue-500"
+            />
+            Show crosshair
+          </label>
+          <label
+            class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              bind:checked={debugState.showTileSquare}
+              class="accent-blue-500"
+            />
+            Show tile square
+          </label>
+          <label
+            class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              bind:checked={debugState.slowMode}
+              class="accent-blue-500"
+            />
+            Slow mode
+          </label>
+        </div>
 
-      {#if debugOpen}
-        <div class="flex flex-col gap-4 px-3 pb-3 border-t border-neutral-800">
-          <!-- Toggles -->
-          <div class="flex flex-col gap-1.5 pt-3">
-            <label
-              class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
-            >
-              <input
-                type="checkbox"
-                bind:checked={debugState.debugLogging}
-                class="accent-blue-500"
-              />
-              Debug logging
-            </label>
-            <label
-              class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
-            >
-              <input
-                type="checkbox"
-                bind:checked={debugState.showCrosshair}
-                class="accent-blue-500"
-              />
-              Show crosshair
-            </label>
-            <label
-              class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
-            >
-              <input
-                type="checkbox"
-                bind:checked={debugState.showTileSquare}
-                class="accent-blue-500"
-              />
-              Show tile square
-            </label>
-            <label
-              class="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer select-none"
-            >
-              <input
-                type="checkbox"
-                bind:checked={debugState.slowMode}
-                class="accent-blue-500"
-              />
-              Slow mode
-            </label>
+        <!-- Render pool -->
+        <div class="flex flex-col gap-1.5">
+          <div
+            class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
+          >
+            Render Pool ({renderPoolDebug.poolSize})
           </div>
-
-          <!-- Render pool -->
-          <div class="flex flex-col gap-1.5">
-            <div
-              class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
-            >
-              Render Pool ({renderPoolDebug.poolSize})
+          <div class="font-mono text-xs text-neutral-300 leading-5">
+            <div class="flex gap-3">
+              <span
+                >idle <span class="text-white">{renderPoolDebug.idle}</span
+                ></span
+              >
+              <span
+                >S2 <span class="text-blue-400"
+                  >{renderPoolDebug.activeS2}</span
+                ></span
+              >
+              <span
+                >S3 <span class="text-green-400"
+                  >{renderPoolDebug.activeS3}</span
+                ></span
+              >
+              <span
+                >q <span class="text-white">{renderPoolDebug.queued}</span
+                ></span
+              >
             </div>
-            <div class="font-mono text-xs text-neutral-300 leading-5">
-              <div class="flex gap-3">
-                <span
-                  >idle <span class="text-white">{renderPoolDebug.idle}</span
-                  ></span
-                >
-                <span
-                  >S2 <span class="text-blue-400"
-                    >{renderPoolDebug.activeS2}</span
-                  ></span
-                >
-                <span
-                  >S3 <span class="text-green-400"
-                    >{renderPoolDebug.activeS3}</span
-                  ></span
-                >
-                <span
-                  >q <span class="text-white">{renderPoolDebug.queued}</span
-                  ></span
-                >
-              </div>
-            </div>
-            {#if s2Total > 0}
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-neutral-500 w-4">S2</span>
-                <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-                  <div
-                    class="h-full bg-blue-400 transition-all"
-                    style="width:{bar(s2Completed, s2Total)}%"
-                  ></div>
-                </div>
-                <span class="text-xs text-neutral-500 w-12 text-right"
-                  >{s2Completed}/{s2Total}</span
-                >
-              </div>
-            {/if}
-            {#if s3Total > 0}
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-neutral-500 w-4">S3</span>
-                <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-                  <div
-                    class="h-full bg-green-500 transition-all"
-                    style="width:{bar(s3Completed, s3Total)}%"
-                  ></div>
-                </div>
-                <span class="text-xs text-neutral-500 w-12 text-right"
-                  >{s3Completed}/{s3Total}</span
-                >
-              </div>
-            {/if}
           </div>
+          {#if s2Total > 0}
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-neutral-500 w-4">S2</span>
+              <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
+                <div
+                  class="h-full bg-blue-400 transition-all"
+                  style="width:{bar(s2Completed, s2Total)}%"
+                ></div>
+              </div>
+              <span class="text-xs text-neutral-500 w-12 text-right"
+                >{s2Completed}/{s2Total}</span
+              >
+            </div>
+          {/if}
+          {#if s3Total > 0}
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-neutral-500 w-4">S3</span>
+              <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
+                <div
+                  class="h-full bg-green-500 transition-all"
+                  style="width:{bar(s3Completed, s3Total)}%"
+                ></div>
+              </div>
+              <span class="text-xs text-neutral-500 w-12 text-right"
+                >{s3Completed}/{s3Total}</span
+              >
+            </div>
+          {/if}
+        </div>
 
-          <!-- Recolor pool -->
-          <div class="flex flex-col gap-1.5">
-            <div
-              class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
-            >
-              Recolor Pool ({recolorPoolDebug.poolSize})
-            </div>
-            <div class="font-mono text-xs text-neutral-300 leading-5">
-              <div class="flex gap-3">
-                <span
-                  >idle <span class="text-white">{recolorPoolDebug.idle}</span
-                  ></span
-                >
-                <span
-                  >active <span class="text-purple-400"
-                    >{recolorPoolDebug.activeS3}</span
-                  ></span
-                >
-                <span
-                  >q <span class="text-white">{recolorPoolDebug.queued}</span
-                  ></span
-                >
-              </div>
-            </div>
-            {#if rcTotal > 0}
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-neutral-500 w-4">RC</span>
-                <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-                  <div
-                    class="h-full bg-purple-400 transition-all"
-                    style="width:{bar(rcCompleted, rcTotal)}%"
-                  ></div>
-                </div>
-                <span class="text-xs text-neutral-500 w-12 text-right"
-                  >{rcCompleted}/{rcTotal}</span
-                >
-              </div>
-            {/if}
+        <!-- Recolor pool -->
+        <div class="flex flex-col gap-1.5">
+          <div
+            class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
+          >
+            Recolor Pool ({recolorPoolDebug.poolSize})
           </div>
+          <div class="font-mono text-xs text-neutral-300 leading-5">
+            <div class="flex gap-3">
+              <span
+                >idle <span class="text-white">{recolorPoolDebug.idle}</span
+                ></span
+              >
+              <span
+                >active <span class="text-purple-400"
+                  >{recolorPoolDebug.activeS3}</span
+                ></span
+              >
+              <span
+                >q <span class="text-white">{recolorPoolDebug.queued}</span
+                ></span
+              >
+            </div>
+          </div>
+          {#if rcTotal > 0}
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-neutral-500 w-4">RC</span>
+              <div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
+                <div
+                  class="h-full bg-purple-400 transition-all"
+                  style="width:{bar(rcCompleted, rcTotal)}%"
+                ></div>
+              </div>
+              <span class="text-xs text-neutral-500 w-12 text-right"
+                >{rcCompleted}/{rcTotal}</span
+              >
+            </div>
+          {/if}
+        </div>
 
-          <!-- System info -->
-          <div class="flex flex-col gap-1.5">
-            <div
-              class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
-            >
-              System
+        <!-- System info -->
+        <div class="flex flex-col gap-1.5">
+          <div
+            class="text-neutral-500 text-xs font-medium uppercase tracking-wider"
+          >
+            System
+          </div>
+          <div
+            class="font-mono text-xs text-neutral-300 leading-5 flex flex-col gap-0.5"
+          >
+            <div>
+              {window.innerWidth}×{window.innerHeight} px @ {window.devicePixelRatio}x
+              DPR
             </div>
-            <div
-              class="font-mono text-xs text-neutral-300 leading-5 flex flex-col gap-0.5"
-            >
-              <div>
-                {window.innerWidth}×{window.innerHeight} px @ {window.devicePixelRatio}x
-                DPR
-              </div>
-              <div>
-                zoom {viewerState.zoom} · {getPrecisionMode(viewerState.zoom)}
-              </div>
-              <div>{navigator.hardwareConcurrency} concurrency</div>
-              {#if memUsed !== null && memTotal !== null}
-                <div>heap {fmtBytes(memUsed)} / {fmtBytes(memTotal)}</div>
-              {:else}
-                <div class="text-neutral-600">heap n/a</div>
-              {/if}
+            <div>
+              zoom {viewerState.zoom} · {getPrecisionMode(viewerState.zoom)}
             </div>
+            <div>{navigator.hardwareConcurrency} concurrency</div>
+            {#if memUsed !== null && memTotal !== null}
+              <div>heap {fmtBytes(memUsed)} / {fmtBytes(memTotal)}</div>
+            {:else}
+              <div class="text-neutral-600">heap n/a</div>
+            {/if}
           </div>
         </div>
-      {/if}
-    </div>
+      </div>
+    </CollapsiblePanel>
   </div>
 </div>
 

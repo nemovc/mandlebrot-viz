@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { viewerState } from '$lib/stores/viewerState.svelte';
+	import CollapsiblePanel from './CollapsiblePanel.svelte';
 
 	let { onNavigate }: { onNavigate: (re: number, im: number, zoom?: number) => void } = $props();
 
@@ -53,70 +54,71 @@
 	}
 </script>
 
-<div class="flex flex-col gap-3 p-3 text-sm bg-neutral-900 rounded-lg border border-neutral-800 min-w-52">
-	<div class="text-neutral-400 text-xs font-medium uppercase tracking-wider">Position</div>
-	<div>
-		<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
-		<input
-			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
-			type="text"
-			value={zoomInput}
-			onfocus={() => (zoomFocused = true)}
-			onblur={() => { zoomFocused = false; commitZoom(); }}
-			oninput={(e) => (zoomInput = (e.target as HTMLInputElement).value)}
-			onkeydown={(e) => onKeydown(e, commitZoom)}
-		/>
-	</div>
-
-	<div>
-		<div class="text-neutral-400 text-xs mb-1">Center (Re)</div>
-		<input
-			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
-			type="text"
-			value={reInput}
-			onfocus={() => (reFocused = true)}
-			onblur={() => { reFocused = false; commitCoords(); }}
-			oninput={(e) => (reInput = (e.target as HTMLInputElement).value)}
-			onkeydown={(e) => onKeydown(e, commitCoords)}
-		/>
-	</div>
-
-	<div>
-		<div class="text-neutral-400 text-xs mb-1">Center (Im)</div>
-		<input
-			class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
-			type="text"
-			value={imInput}
-			onfocus={() => (imFocused = true)}
-			onblur={() => { imFocused = false; commitCoords(); }}
-			oninput={(e) => (imInput = (e.target as HTMLInputElement).value)}
-			onkeydown={(e) => onKeydown(e, commitCoords)}
-		/>
-	</div>
-
-	<div>
-		<div class="text-neutral-400 text-xs mb-1">Max Iterations</div>
-		<div class="flex items-center gap-2">
+<CollapsiblePanel title="Position" position="top-left">
+	<div class="flex flex-col gap-3 p-3 min-w-52">
+		<div>
+			<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
 			<input
-				type="range"
-				min="64"
-				max="4096"
-				step="4"
-				value={viewerState.maxIter}
-				oninput={(e) => {
-					viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
-				}}
-				class="flex-1 accent-blue-500"
-			/>
-			<input
-				class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
 				type="text"
-				value={iterInput}
-				onfocus={() => (iterFocused = true)}
-				onblur={() => { iterFocused = false; commitIter(); }}
-				oninput={(e) => (iterInput = (e.target as HTMLInputElement).value)}
-				onkeydown={(e) => onKeydown(e, commitIter)}
+				value={zoomInput}
+				onfocus={() => (zoomFocused = true)}
+				onblur={() => { zoomFocused = false; commitZoom(); }}
+				oninput={(e) => (zoomInput = (e.target as HTMLInputElement).value)}
+				onkeydown={(e) => onKeydown(e, commitZoom)}
 			/>
 		</div>
+
+		<div>
+			<div class="text-neutral-400 text-xs mb-1">Center (Re)</div>
+			<input
+				class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+				type="text"
+				value={reInput}
+				onfocus={() => (reFocused = true)}
+				onblur={() => { reFocused = false; commitCoords(); }}
+				oninput={(e) => (reInput = (e.target as HTMLInputElement).value)}
+				onkeydown={(e) => onKeydown(e, commitCoords)}
+			/>
+		</div>
+
+		<div>
+			<div class="text-neutral-400 text-xs mb-1">Center (Im)</div>
+			<input
+				class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+				type="text"
+				value={imInput}
+				onfocus={() => (imFocused = true)}
+				onblur={() => { imFocused = false; commitCoords(); }}
+				oninput={(e) => (imInput = (e.target as HTMLInputElement).value)}
+				onkeydown={(e) => onKeydown(e, commitCoords)}
+			/>
+		</div>
+
+		<div>
+			<div class="text-neutral-400 text-xs mb-1">Max Iterations</div>
+			<div class="flex items-center gap-2">
+				<input
+					type="range"
+					min="64"
+					max="4096"
+					step="4"
+					value={viewerState.maxIter}
+					oninput={(e) => {
+						viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
+					}}
+					class="flex-1 accent-blue-500"
+				/>
+				<input
+					class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+					type="text"
+					value={iterInput}
+					onfocus={() => (iterFocused = true)}
+					onblur={() => { iterFocused = false; commitIter(); }}
+					oninput={(e) => (iterInput = (e.target as HTMLInputElement).value)}
+					onkeydown={(e) => onKeydown(e, commitIter)}
+				/>
+			</div>
+		</div>
 	</div>
-</div>
+</CollapsiblePanel>
