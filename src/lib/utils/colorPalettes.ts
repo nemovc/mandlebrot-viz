@@ -96,7 +96,7 @@ export function buildImageData(
 ): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
   const colorCache = new Map<number, [number, number, number]>();
-  const { algorithm, cyclePeriod, offset, palette } = config;
+  const { algorithm, cyclePeriod, offset, palette, reverse } = config;
 
   for (let i = 0; i < iters.length; i++) {
     const val = iters[i];
@@ -119,7 +119,7 @@ export function buildImageData(
         r = g = b = 0;
       } else {
         const t = (((- Math.log2(Math.max(val, 1e-30)) / cyclePeriod + offset) % 1) + 1) % 1;
-        const key = Math.round(t * 4000);
+        const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
         if (!cached) {
           cached = samplePalette(palette, key / 4000);
@@ -133,7 +133,7 @@ export function buildImageData(
       } else {
         const n = algorithm === 'escape_time' ? Math.floor(val) : val;
         const t = (((n / cyclePeriod + offset) % 1) + 1) % 1;
-        const key = Math.round(t * 4000);
+        const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
         if (!cached) {
           cached = samplePalette(palette, key / 4000);

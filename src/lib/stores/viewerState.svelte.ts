@@ -11,6 +11,7 @@ export interface ColorConfig {
 	palette: ColorStop[];
 	cyclePeriod: number;
 	offset: number;
+	reverse?: boolean;
 }
 
 export interface ViewerState {

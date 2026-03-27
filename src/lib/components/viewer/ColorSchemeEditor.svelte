@@ -4,21 +4,23 @@
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 
 	const gradientCss = $derived((() => {
-		const { palette, offset } = viewerState.colors;
+		const { palette, offset, reverse } = viewerState.colors;
 
-		// Shift each stop into display space: palette position `s` appears at display `s - offset`
-		// For ties at the seam (stop=0 and stop=1 both land at 1-offset), sort stop=1 first
-		// so CSS renders palette-end before palette-start (correct wrap direction).
+		// Shift each palette stop into display space.
+		// Normal:  stop `s` appears at display `s - offset` (wrap into [0,1])
+		// Reverse: rendering does `1 - t` *after* offset, so stop `s` appears at display `(1-s) - offset`.
+		//          Seam tie-break is ascending stop (palette[0] before palette[1]) because just before
+		//          the seam t→1 so 1-t→0 (palette start), and just after t→0 so 1-t→1 (palette end).
 		const displayStops = palette
-			.map(({ stop, color }) => ({
-				stop,
-				pos: stop - offset + (stop < offset ? 1 : 0),
-				color
-			}))
-			.sort((a, b) => a.pos - b.pos || b.stop - a.stop);
+			.map(({ stop, color }) => {
+				const d = reverse ? 1 - stop : stop;
+				return { stop, pos: d - offset + (d < offset ? 1 : 0), color };
+			})
+			.sort((a, b) => a.pos - b.pos || (reverse ? a.stop - b.stop : b.stop - a.stop));
 
-		// Display 0% and 100% both equal palette at `offset`
-		const [r, g, b] = samplePalette(palette, offset);
+		// Display 0% and 100% = palette at (offset) normally, palette at (1 - offset) when reversed.
+		const edgeT = reverse ? 1 - offset : offset;
+		const [r, g, b] = samplePalette(palette, edgeT);
 		const edgeColor = `rgb(${r},${g},${b})`;
 
 		const parts = [
@@ -93,7 +95,17 @@
 			</div>
 		</div>
 
-		<div class="h-4 rounded" style="background: {gradientCss}"></div>
+		<div class="flex items-center gap-2">
+			<div class="h-4 rounded flex-1" style="background: {gradientCss}"></div>
+			<button
+				class="text-xs px-2 py-0.5 rounded border transition-colors
+					{viewerState.colors.reverse
+					? 'bg-blue-700 border-blue-600 text-white'
+					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }}
+				title="Reverse palette"
+			>⇄</button>
+		</div>
 
 		<div>
 			<label class="text-neutral-400 text-xs" for="cyclePeriod">Cycle Period</label>
