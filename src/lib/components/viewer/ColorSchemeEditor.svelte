@@ -1,7 +1,33 @@
 <script lang="ts">
 	import { viewerState } from '$lib/stores/viewerState.svelte';
-	import { PRESETS } from '$lib/utils/colorPalettes';
+	import { PRESETS, samplePalette } from '$lib/utils/colorPalettes';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
+
+	const gradientCss = $derived((() => {
+		const { palette, offset } = viewerState.colors;
+
+		// Shift each stop into display space: palette position `s` appears at display `s - offset`
+		// For ties at the seam (stop=0 and stop=1 both land at 1-offset), sort stop=1 first
+		// so CSS renders palette-end before palette-start (correct wrap direction).
+		const displayStops = palette
+			.map(({ stop, color }) => ({
+				stop,
+				pos: stop - offset + (stop < offset ? 1 : 0),
+				color
+			}))
+			.sort((a, b) => a.pos - b.pos || b.stop - a.stop);
+
+		// Display 0% and 100% both equal palette at `offset`
+		const [r, g, b] = samplePalette(palette, offset);
+		const edgeColor = `rgb(${r},${g},${b})`;
+
+		const parts = [
+			`${edgeColor} 0%`,
+			...displayStops.map(({ pos, color }) => `${color} ${(pos * 100).toFixed(2)}%`),
+			`${edgeColor} 100%`
+		];
+		return `linear-gradient(to right, ${parts.join(', ')})`;
+	})());
 
 	const selectedPreset = $derived(
 		Object.entries(PRESETS).find(([, preset]) =>
@@ -66,6 +92,8 @@
 				{/each}
 			</div>
 		</div>
+
+		<div class="h-4 rounded" style="background: {gradientCss}"></div>
 
 		<div>
 			<label class="text-neutral-400 text-xs" for="cyclePeriod">Cycle Period</label>
