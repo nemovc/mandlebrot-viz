@@ -82,7 +82,11 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
-/** Build a flat RGBA Uint8ClampedArray from smooth iteration values */
+/** Build a flat RGBA Uint8ClampedArray from iteration values.
+ *  The meaning of each value in `iters` depends on the algorithm:
+ *  - smooth/escape_time: fractional escape iteration count (>= maxIter = in set)
+ *  - distance_estimation: estimated distance to set boundary (< 0 = in set)
+ */
 export function buildImageData(
   iters: Float32Array,
   width: number,
@@ -91,26 +95,52 @@ export function buildImageData(
   config: ColorConfig,
 ): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
-  // Cache palette lookups — many adjacent pixels share nearly identical smooth values.
-  // Key is the palette t value quantized to 1/4000 resolution.
   const colorCache = new Map<number, [number, number, number]>();
-  const { cyclePeriod, offset, palette } = config;
+  const { algorithm, cyclePeriod, offset, palette } = config;
 
   for (let i = 0; i < iters.length; i++) {
-    const smooth = iters[i];
+    const val = iters[i];
     let r: number, g: number, b: number;
 
-    if (smooth >= maxIter) {
-      r = g = b = 0;
-    } else {
-      const t = (((smooth / cyclePeriod + offset) % 1) + 1) % 1;
-      const key = Math.round(t * 4000);
-      let cached = colorCache.get(key);
-      if (!cached) {
-        cached = samplePalette(palette, key / 4000);
-        colorCache.set(key, cached);
+    if (algorithm === 'distance_estimation') {
+      // val is the estimated distance from this pixel's c-value to the Mandelbrot
+      // set boundary, computed by the WASM DEM functions. val < 0 means the point
+      // is inside the set (colored black). Outside points have val > 0, with
+      // smaller values indicating pixels closer to the boundary.
+      //
+      // To turn the distance into a palette position we take -log₂(dist).
+      // Log-scaling compresses the huge range of distance values (they vary by
+      // many orders of magnitude across a tile) into something palette-sized.
+      // Negating it means smaller distances (near the boundary) map to larger
+      // values, which naturally creates dense banding right at the set edge —
+      // the characteristic "edge-lit" look of DEM coloring.
+      // cyclePeriod controls how many palette cycles fit per decade of distance.
+      if (val < 0) {
+        r = g = b = 0;
+      } else {
+        const t = (((- Math.log2(Math.max(val, 1e-30)) / cyclePeriod + offset) % 1) + 1) % 1;
+        const key = Math.round(t * 4000);
+        let cached = colorCache.get(key);
+        if (!cached) {
+          cached = samplePalette(palette, key / 4000);
+          colorCache.set(key, cached);
+        }
+        [r, g, b] = cached;
       }
-      [r, g, b] = cached;
+    } else {
+      if (val >= maxIter) {
+        r = g = b = 0;
+      } else {
+        const n = algorithm === 'escape_time' ? Math.floor(val) : val;
+        const t = (((n / cyclePeriod + offset) % 1) + 1) % 1;
+        const key = Math.round(t * 4000);
+        let cached = colorCache.get(key);
+        if (!cached) {
+          cached = samplePalette(palette, key / 4000);
+          colorCache.set(key, cached);
+        }
+        [r, g, b] = cached;
+      }
     }
 
     data[i * 4] = r!;

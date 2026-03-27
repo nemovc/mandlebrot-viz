@@ -4,13 +4,12 @@
 
 	const selectedPreset = $derived(
 		Object.entries(PRESETS).find(([, preset]) =>
-			preset.algorithm === viewerState.colors.algorithm &&
 			JSON.stringify(preset.palette) === JSON.stringify(viewerState.colors.palette)
 		)?.[0] ?? null
 	);
 
 	function applyPreset(name: string) {
-		viewerState.colors = { ...PRESETS[name] };
+		viewerState.colors = { ...viewerState.colors, palette: PRESETS[name].palette };
 	}
 
 	function onCyclePeriodChange(e: Event) {
@@ -47,6 +46,7 @@
 		>
 			<option value="smooth">Smooth (normalized)</option>
 			<option value="escape_time">Escape Time (bands)</option>
+			<option value="distance_estimation">Distance Estimation</option>
 		</select>
 	</div>
 

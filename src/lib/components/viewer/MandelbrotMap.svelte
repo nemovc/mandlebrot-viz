@@ -64,12 +64,23 @@
     leafletMap?.remove();
   });
 
-  // Recolor in-place when only the palette changes — no WASM needed
+  // Recolor in-place when palette/algorithm changes.
+  // Switching to/from distance_estimation requires a full recompute since a different
+  // WASM function runs and the cached iters are incompatible.
+  let _lastAlgorithm = '';
   $effect(() => {
     viewerState.colors;
     if (mandelbrotLayer) {
       mandelbrotLayer.colorConfig = viewerState.colors;
-      untrack(() => mandelbrotLayer.recolor());
+      const alg = viewerState.colors.algorithm;
+      const needsRecompute =
+        (alg === 'distance_estimation') !== (_lastAlgorithm === 'distance_estimation');
+      _lastAlgorithm = alg;
+      if (needsRecompute) {
+        untrack(() => mandelbrotLayer.recompute());
+      } else {
+        untrack(() => mandelbrotLayer.recolor());
+      }
     }
   });
 
