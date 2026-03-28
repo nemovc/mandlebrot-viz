@@ -4,7 +4,7 @@
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 
-	const gradientCss = $derived((() => {
+	const paletteDisplay = $derived((() => {
 		const { palette, offset, reverse } = viewerState.colors;
 
 		// Shift each palette stop into display space.
@@ -29,8 +29,10 @@
 			...displayStops.map(({ pos, color }) => `${color} ${(pos * 100).toFixed(2)}%`),
 			`${edgeColor} 100%`
 		];
-		return `linear-gradient(to right, ${parts.join(', ')})`;
+		return { gradient: `linear-gradient(to right, ${parts.join(', ')})`, displayStops };
 	})());
+
+	const gradientCss = $derived(paletteDisplay.gradient);
 
 	const selectedPreset = $derived(
 		Object.entries(PRESETS).find(([, preset]) =>
@@ -97,7 +99,14 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<div class="h-4 rounded flex-1" style="background: {gradientCss}"></div>
+			<div class="relative h-4 rounded flex-1 overflow-visible" style="background: {gradientCss}">
+				{#each paletteDisplay.displayStops as { pos }}
+					<div
+						class="absolute top-[-3px] bottom-[-3px] w-px bg-white/60"
+						style="left: {(pos * 100).toFixed(2)}%"
+					></div>
+				{/each}
+			</div>
 			<ToggleButton
 				active={viewerState.colors.reverse}
 				onclick={() => viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }}
