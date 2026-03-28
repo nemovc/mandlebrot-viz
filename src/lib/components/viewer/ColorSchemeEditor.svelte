@@ -1,38 +1,9 @@
 <script lang="ts">
 	import { viewerState } from '$lib/stores/viewerState.svelte';
-	import { PRESETS, samplePalette } from '$lib/utils/colorPalettes';
+	import { PRESETS } from '$lib/utils/colorPalettes';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
-
-	const paletteDisplay = $derived((() => {
-		const { palette, offset, reverse } = viewerState.colors;
-
-		// Shift each palette stop into display space.
-		// Normal:  stop `s` appears at display `s - offset` (wrap into [0,1])
-		// Reverse: rendering does `1 - t` *after* offset, so stop `s` appears at display `(1-s) - offset`.
-		//          Seam tie-break is ascending stop (palette[0] before palette[1]) because just before
-		//          the seam t→1 so 1-t→0 (palette start), and just after t→0 so 1-t→1 (palette end).
-		const displayStops = palette
-			.map(({ stop, color }) => {
-				const d = reverse ? 1 - stop : stop;
-				return { stop, pos: d - offset + (d < offset ? 1 : 0), color };
-			})
-			.sort((a, b) => a.pos - b.pos || (reverse ? a.stop - b.stop : b.stop - a.stop));
-
-		// Display 0% and 100% = palette at (offset) normally, palette at (1 - offset) when reversed.
-		const edgeT = reverse ? 1 - offset : offset;
-		const [r, g, b] = samplePalette(palette, edgeT);
-		const edgeColor = `rgb(${r},${g},${b})`;
-
-		const parts = [
-			`${edgeColor} 0%`,
-			...displayStops.map(({ pos, color }) => `${color} ${(pos * 100).toFixed(2)}%`),
-			`${edgeColor} 100%`
-		];
-		return { gradient: `linear-gradient(to right, ${parts.join(', ')})`, displayStops };
-	})());
-
-	const gradientCss = $derived(paletteDisplay.gradient);
+	import PalettePreview from './PalettePreview.svelte';
 
 	const selectedPreset = $derived(
 		Object.entries(PRESETS).find(([, preset]) =>
@@ -99,14 +70,7 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<div class="relative h-4 rounded flex-1 overflow-visible" style="background: {gradientCss}">
-				{#each paletteDisplay.displayStops as { pos }}
-					<div
-						class="absolute top-[-3px] bottom-[-3px] w-px bg-white/60"
-						style="left: {(pos * 100).toFixed(2)}%"
-					></div>
-				{/each}
-			</div>
+			<PalettePreview colors={viewerState.colors} />
 			<ToggleButton
 				active={viewerState.colors.reverse}
 				onclick={() => viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }}
