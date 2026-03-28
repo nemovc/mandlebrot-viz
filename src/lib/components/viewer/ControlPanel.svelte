@@ -3,6 +3,7 @@
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 	import LocationsPanel from './LocationsPanel.svelte';
+	import { ChevronRight } from 'lucide-svelte';
 
 	let showLocations = $state(false);
 
@@ -59,10 +60,10 @@
 </script>
 
 <div class="flex flex-row items-start gap-2">
-	<CollapsiblePanel title="Position" position="top-left">
+	<CollapsiblePanel title="Position" position="top-left" oncollapse={() => (showLocations = false)}>
 	<div class="flex flex-col gap-3 p-3">
-		<ToggleButton active={showLocations} onclick={() => (showLocations = !showLocations)} class="w-full text-center">
-			Locations
+		<ToggleButton active={showLocations} onclick={() => (showLocations = !showLocations)} class="w-full justify-between">
+			Locations <ChevronRight size={12} />
 		</ToggleButton>
 		<div>
 			<div class="text-neutral-400 text-xs mb-1">Zoom level</div>

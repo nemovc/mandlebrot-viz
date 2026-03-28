@@ -32,7 +32,7 @@
 </script>
 
 <button
-	class="text-left px-2 py-1 rounded text-xs transition-colors border {active ? activeClass : inactiveClass} {extraClass}"
+	class="flex items-center gap-1 text-left px-2 py-1 rounded text-xs transition-colors border {active ? activeClass : inactiveClass} {extraClass}"
 	{onclick}
 	{title}
 	{disabled}

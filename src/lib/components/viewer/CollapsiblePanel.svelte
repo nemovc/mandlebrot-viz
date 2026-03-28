@@ -5,15 +5,22 @@
 		title,
 		defaultOpen = true,
 		position = 'bottom-left',
+		oncollapse,
 		children
 	}: {
 		title: string;
 		defaultOpen?: boolean;
 		position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+		oncollapse?: () => void;
 		children?: import('svelte').Snippet;
 	} = $props();
 
 	let open = $state(defaultOpen);
+
+	function toggle() {
+		open = !open;
+		if (!open) oncollapse?.();
+	}
 
 	const isTop = $derived(position.startsWith('top'));
 	const chevron = $derived(isTop ? (open ? '▼' : '▲') : (open ? '▲' : '▼'));
@@ -37,7 +44,7 @@
 		class="w-full flex items-center justify-between px-3 py-2 font-medium uppercase tracking-wider transition-all {open
 			? 'text-xs text-neutral-400 hover:text-white'
 			: 'text-[10px] text-neutral-500 hover:text-neutral-300'}"
-		onclick={() => (open = !open)}
+		onclick={toggle}
 	>
 		{title}
 		<span class="ml-3 text-neutral-600">{chevron}</span>
