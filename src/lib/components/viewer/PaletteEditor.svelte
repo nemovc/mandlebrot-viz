@@ -187,6 +187,62 @@
 			{/each}
 		</div>
 
+		<!-- Selected stop controls -->
+		{#if selectedStopIdx !== null && selectedStopIdx < viewerState.colors.palette.length}
+			{@const stop = viewerState.colors.palette[selectedStopIdx]}
+			<div class="flex items-center gap-2 pt-1">
+				<label for="stop-color" class="text-xs text-neutral-400 shrink-0">Color</label>
+				<input
+					id="stop-color"
+					type="color"
+					class="w-8 h-7 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
+					value={stop.color}
+					oninput={(e) => updateStop(selectedStopIdx!, { color: (e.target as HTMLInputElement).value })}
+				/>
+				<label for="stop-position" class="text-xs text-neutral-400 shrink-0">Position</label>
+				<input
+					id="stop-position"
+					type="number"
+					class="w-16 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+					min="0"
+					max="1"
+					step="0.01"
+					value={stop.stop.toFixed(3)}
+					onchange={(e) => {
+						const v = parseFloat((e.target as HTMLInputElement).value);
+						if (!isNaN(v)) updateStop(selectedStopIdx!, { stop: Math.max(0, Math.min(1, v)) });
+					}}
+					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+				/>
+				<label for="stop-hex" class="text-xs text-neutral-400 shrink-0">Hex</label>
+				<input
+					id="stop-hex"
+					type="text"
+					class="w-20 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
+					value={stop.color}
+					onblur={(e) => {
+						const v = (e.target as HTMLInputElement).value.trim();
+						const raw = v.startsWith('#') ? v : '#' + v;
+						let hex = raw;
+						if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+							hex = '#' + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3];
+						}
+						if (/^#[0-9a-fA-F]{6}$/.test(hex)) updateStop(selectedStopIdx!, { color: hex });
+						else (e.target as HTMLInputElement).value = stop.color;
+					}}
+					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+				/>
+				<button
+					class="ml-auto px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-red-400 hover:border-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					onclick={() => deleteStop(selectedStopIdx!)}
+					disabled={viewerState.colors.palette.length <= 2}
+					title="Delete stop (minimum 2 stops)"
+				>Delete</button>
+			</div>
+		{:else}
+			<p class="text-xs text-neutral-600 pt-1">Click a handle to edit. Double-click bar to add. Double-click handle to delete.</p>
+		{/if}
+
 		<!-- Cycle Period -->
 		<div class="flex items-center gap-2 pt-1">
 			<label class="text-neutral-400 text-xs shrink-0 w-20" for="pe-cyclePeriod">Cycle Period</label>
@@ -262,61 +318,6 @@
 			>⇄ Reverse</button>
 		</div>
 
-		<!-- Selected stop controls -->
-		{#if selectedStopIdx !== null && selectedStopIdx < viewerState.colors.palette.length}
-			{@const stop = viewerState.colors.palette[selectedStopIdx]}
-			<div class="flex items-center gap-2 pt-1">
-				<label for="stop-color" class="text-xs text-neutral-400 shrink-0">Color</label>
-				<input
-					id="stop-color"
-					type="color"
-					class="w-8 h-7 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
-					value={stop.color}
-					oninput={(e) => updateStop(selectedStopIdx!, { color: (e.target as HTMLInputElement).value })}
-				/>
-				<label for="stop-position" class="text-xs text-neutral-400 shrink-0">Position</label>
-				<input
-					id="stop-position"
-					type="number"
-					class="w-16 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
-					min="0"
-					max="1"
-					step="0.01"
-					value={stop.stop.toFixed(3)}
-					onchange={(e) => {
-						const v = parseFloat((e.target as HTMLInputElement).value);
-						if (!isNaN(v)) updateStop(selectedStopIdx!, { stop: Math.max(0, Math.min(1, v)) });
-					}}
-					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
-				/>
-				<label for="stop-hex" class="text-xs text-neutral-400 shrink-0">Hex</label>
-				<input
-					id="stop-hex"
-					type="text"
-					class="w-20 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
-					value={stop.color}
-					onblur={(e) => {
-						const v = (e.target as HTMLInputElement).value.trim();
-						const raw = v.startsWith('#') ? v : '#' + v;
-						let hex = raw;
-						if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
-							hex = '#' + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3];
-						}
-						if (/^#[0-9a-fA-F]{6}$/.test(hex)) updateStop(selectedStopIdx!, { color: hex });
-						else (e.target as HTMLInputElement).value = stop.color;
-					}}
-					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
-				/>
-				<button
-					class="ml-auto px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-red-400 hover:border-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-					onclick={() => deleteStop(selectedStopIdx!)}
-					disabled={viewerState.colors.palette.length <= 2}
-					title="Delete stop (minimum 2 stops)"
-				>Delete</button>
-			</div>
-		{:else}
-			<p class="text-xs text-neutral-600 pt-1">Click a handle to edit. Double-click bar to add. Double-click handle to delete.</p>
-		{/if}
 	</div>
 </div>
 
