@@ -19,7 +19,7 @@ pub fn compute_tile_arb(
 
     let w_half = BigFloat::from_f64(w as f64 / 2.0, p);
     let h_half = BigFloat::from_f64(h as f64 / 2.0, p);
-    let four = BigFloat::from_f64(4.0, p);
+    let four = BigFloat::from_f64(65536.0, p);
     let two = BigFloat::from_f64(2.0, p);
 
     // f64 approximations of center/scale for smooth coloring log only
@@ -80,8 +80,8 @@ pub fn compute_tile_arb(
             }
 
             let smooth = if iter < max_iter {
-                let log_zn = ((zr * zr + zi * zi) as f32).ln() / 2.0;
-                iter as f32 + 1.0 - (log_zn / std::f32::consts::LN_2).log2()
+                let log_zn = (zr * zr + zi * zi).ln() / 2.0;
+                (iter as f64 + 1.0 - (log_zn / std::f64::consts::LN_2).log2()) as f32
             } else {
                 max_iter as f32
             };

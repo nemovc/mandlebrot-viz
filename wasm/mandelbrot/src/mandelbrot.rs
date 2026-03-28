@@ -10,7 +10,7 @@ pub fn iterate_f64(c_re: f64, c_im: f64, max_iter: u32) -> f32 {
     while iter < max_iter {
         let re2 = z_re * z_re;
         let im2 = z_im * z_im;
-        if re2 + im2 > 4.0 {
+        if re2 + im2 > 65536.0 {
             break;
         }
         let new_re = re2 - im2 + c_re;
@@ -21,8 +21,8 @@ pub fn iterate_f64(c_re: f64, c_im: f64, max_iter: u32) -> f32 {
     }
 
     if iter < max_iter {
-        let log_zn = ((z_re * z_re + z_im * z_im) as f32).ln() / 2.0;
-        iter as f32 + 1.0 - (log_zn / std::f32::consts::LN_2).log2()
+        let log_zn = (z_re * z_re + z_im * z_im).ln() / 2.0;
+        (iter as f64 + 1.0 - (log_zn / std::f64::consts::LN_2).log2()) as f32
     } else {
         max_iter as f32
     }
@@ -39,7 +39,7 @@ pub fn iterate_dd(c_re: DoubleDouble, c_im: DoubleDouble, max_iter: u32) -> f32 
         let im2 = DoubleDouble::mul(z_im, z_im);
         let norm2 = DoubleDouble::add(re2, im2);
 
-        if norm2.hi > 4.0 {
+        if norm2.hi > 65536.0 {
             break;
         }
 
@@ -55,8 +55,8 @@ pub fn iterate_dd(c_re: DoubleDouble, c_im: DoubleDouble, max_iter: u32) -> f32 
 
     if iter < max_iter {
         let norm_sq = z_re.hi * z_re.hi + z_im.hi * z_im.hi;
-        let log_zn = (norm_sq as f32).ln() / 2.0;
-        iter as f32 + 1.0 - (log_zn / std::f32::consts::LN_2).log2()
+        let log_zn = norm_sq.ln() / 2.0;
+        (iter as f64 + 1.0 - (log_zn / std::f64::consts::LN_2).log2()) as f32
     } else {
         max_iter as f32
     }
