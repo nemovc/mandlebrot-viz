@@ -33,7 +33,7 @@ function createSavedPalettes() {
 		/** Returns error message or null if valid */
 		validateName(name: string): string | null {
 			if (!name.trim()) return 'Name cannot be empty';
-			if (name.trim().length > 48) return 'Name cannot exceed 48 characters';
+			if (name.trim().length > 24) return 'Name cannot exceed 24 characters';
 			if (!/^[a-zA-Z0-9 ]+$/.test(name.trim()))
 				return 'Name can only contain letters, numbers, and spaces';
 			if (name.trim() in PRESETS) return 'Cannot use the name of a built-in palette';

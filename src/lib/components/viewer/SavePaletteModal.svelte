@@ -84,7 +84,7 @@
 					type="text"
 					class="w-full bg-neutral-800 text-white rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
 					placeholder="Palette name"
-					maxlength="48"
+					maxlength="24"
 					value={nameInput}
 					oninput={handleInputChange}
 					onkeydown={handleKeydown}

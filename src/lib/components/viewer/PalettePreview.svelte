@@ -4,7 +4,7 @@
 
 	let { colors, class: extraClass = '' }: { colors: ColorConfig; class?: string } = $props();
 
-	const display = $derived((() => {
+	const gradient = $derived((() => {
 		const { palette, offset, reverse } = colors;
 
 		const displayStops = palette
@@ -24,15 +24,8 @@
 			`${edgeColor} 100%`
 		];
 
-		return { gradient: `linear-gradient(to right, ${parts.join(', ')})`, displayStops };
+		return `linear-gradient(to right, ${parts.join(', ')})`;
 	})());
 </script>
 
-<div class="relative h-4 rounded flex-1 overflow-visible {extraClass}" style="background: {display.gradient}">
-	{#each display.displayStops as { pos }}
-		<div
-			class="absolute top-[-3px] bottom-[-3px] w-px bg-white/60"
-			style="left: {(pos * 100).toFixed(2)}%"
-		></div>
-	{/each}
-</div>
+<div class="h-4 rounded grow {extraClass}" style="background: {gradient}"></div>
