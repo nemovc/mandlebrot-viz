@@ -38,7 +38,7 @@
 </script>
 
 <button
-	class="flex items-center gap-1.5 text-left px-2 py-1 rounded text-xs transition-colors border {active ? activeClass : inactiveClass} {extraClass}"
+	class="flex items-center gap-1.5 text-left px-2 py-1 rounded text-xs transition-colors border {active ? activeClass : inactiveClass} {disabled ? 'opacity-40 cursor-not-allowed' : ''} {extraClass}"
 	{onclick}
 	{title}
 	{disabled}

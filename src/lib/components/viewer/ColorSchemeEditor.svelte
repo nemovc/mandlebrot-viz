@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { PRESETS } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
@@ -75,20 +76,24 @@
 
 <div class="flex flex-row items-start gap-2">
 	{#if showEditor}
-		<PaletteEditor
-			{activePaletteName}
-			{baseline}
-			onClose={() => (showEditor = false)}
-			onSave={onEditorSave}
-		/>
+		<div transition:fly={{ x: 16, duration: 150, opacity: 0 }}>
+			<PaletteEditor
+				{activePaletteName}
+				{baseline}
+				onClose={() => (showEditor = false)}
+				onSave={onEditorSave}
+			/>
+		</div>
 	{/if}
 
 	{#if showPalettePanel}
-		<PalettePanel
-			{activePaletteName}
-			onClose={() => (showPalettePanel = false)}
-			onApply={onPaletteApplied}
-		/>
+		<div transition:fly={{ x: 16, duration: 150, opacity: 0 }}>
+			<PalettePanel
+				{activePaletteName}
+				onClose={() => (showPalettePanel = false)}
+				onApply={onPaletteApplied}
+			/>
+		</div>
 	{/if}
 
 	<CollapsiblePanel title="Color Scheme" position="top-right" oncollapse={() => { showPalettePanel = false; showEditor = false; }}>

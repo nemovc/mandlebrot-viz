@@ -5,6 +5,9 @@
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
   import { PRESETS } from "$lib/utils/colorPalettes";
   import { savedPalettes } from "$lib/stores/savedPalettes.svelte";
+  import { PRESET_LOCATIONS } from "$lib/utils/locations";
+  import type { Location } from "$lib/utils/locations";
+  import { savedLocations } from "$lib/stores/savedLocations.svelte";
   import type { ColorConfig } from "$lib/stores/viewerState.svelte";
   import ToggleButton from "./ToggleButton.svelte";
 
@@ -31,7 +34,7 @@
 
   let selectedRes = $state(0);
   let selectedFormat = $state(0);
-  let showOverlay = $state(false);
+  let showOverlay = $state(true);
 
   type Phase = "idle" | "exporting" | "done";
   let phase = $state<Phase>("idle");
@@ -55,6 +58,21 @@
     URL.revokeObjectURL(resultUrl);
     resultUrl = "";
     phase = "idle";
+  }
+
+  function findLocationName(cx: string, cy: string, zoom: number): string | null {
+    const re = parseFloat(cx);
+    const im = parseFloat(cy);
+    const eps = scaleForZoom(zoom) * 2;
+    const match = (loc: Location) =>
+      loc.zoom === zoom &&
+      Math.abs(re - loc.re) < eps &&
+      Math.abs(im - loc.im) < eps;
+    return (
+      PRESET_LOCATIONS.find(match)?.name ??
+      savedLocations.all.find(match)?.name ??
+      null
+    );
   }
 
   function drawOverlay(
@@ -81,7 +99,9 @@
     )?.name;
     const paletteName = presetName ?? (savedName ? `${savedName}*` : "Custom");
 
+    const locationName = findLocationName(cx, cy, zoom);
     const lines = [
+      ...(locationName ? [locationName] : []),
       `${cx}Re ${cy}Im`,
       `Z${zoom}/I${maxIter}/E${power}`,
       `Palette: ${paletteName}`,

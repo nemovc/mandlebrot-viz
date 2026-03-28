@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 	import LocationsPanel from './LocationsPanel.svelte';
 
 	let showLocations = $state(false);
+
 
 	let { onNavigate }: { onNavigate: (re: number, im: number, zoom?: number) => void } = $props();
 
@@ -160,9 +162,11 @@
 </CollapsiblePanel>
 
 	{#if showLocations}
-		<LocationsPanel
-			{onNavigate}
-			onClose={() => (showLocations = false)}
-		/>
+		<div transition:fly={{ x: -16, duration: 150, opacity: 0 }}>
+			<LocationsPanel
+				{onNavigate}
+				onClose={() => (showLocations = false)}
+			/>
+		</div>
 	{/if}
 </div>
