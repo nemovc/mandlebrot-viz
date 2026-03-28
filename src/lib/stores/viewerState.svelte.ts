@@ -12,6 +12,7 @@ export interface ColorConfig {
 	cyclePeriod: number;
 	offset: number;
 	reverse?: boolean;
+	inSetColor?: string;
 }
 
 export interface ViewerState {

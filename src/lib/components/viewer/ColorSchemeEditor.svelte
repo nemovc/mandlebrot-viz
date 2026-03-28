@@ -187,7 +187,29 @@
 				</div>
 			</div>
 
-			<!-- Row 5: Preview bar + Reverse -->
+			<!-- Row 5: In-set color -->
+			<div class="flex items-center gap-2">
+				<label class="text-neutral-400 text-xs shrink-0" for="inSetColor">In-set color</label>
+				<input
+					id="inSetColor"
+					type="color"
+					class="w-8 h-6 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
+					value={viewerState.colors.inSetColor ?? '#000000'}
+					oninput={(e) => {
+						viewerState.colors = {
+							...viewerState.colors,
+							inSetColor: (e.target as HTMLInputElement).value
+						};
+					}}
+				/>
+				<button
+					class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
+					onclick={() => { viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' }; }}
+					title="Reset to black"
+				>Reset</button>
+			</div>
+
+			<!-- Row 6: Preview bar + Reverse -->
 			<div class="flex items-center gap-2">
 				<PalettePreview colors={viewerState.colors} />
 				<ToggleButton

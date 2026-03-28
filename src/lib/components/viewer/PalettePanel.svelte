@@ -59,8 +59,9 @@
 			active={includeOffsets}
 			onclick={() => (includeOffsets = !includeOffsets)}
 			class="w-full text-center"
+			title="When on, applying a palette also loads its saved algorithm, cycle period, offset, reverse, and in-set colour"
 		>
-			Include cycle/offset
+			{includeOffsets ? 'Applying full settings' : 'Applying colours only'}
 		</ToggleButton>
 	</div>
 

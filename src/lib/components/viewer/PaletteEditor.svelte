@@ -128,7 +128,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between px-3 py-2 border-b border-neutral-800 gap-2">
 		<span class="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate flex-1">
-			{displayName}
+			Editing {displayName} palette
 		</span>
 		<div class="flex items-center gap-1">
 			<button
@@ -185,6 +185,81 @@
 					aria-label="Color stop at {(stop.stop * 100).toFixed(0)}%"
 				></button>
 			{/each}
+		</div>
+
+		<!-- Cycle Period -->
+		<div class="flex items-center gap-2 pt-1">
+			<label class="text-neutral-400 text-xs shrink-0 w-20" for="pe-cyclePeriod">Cycle Period</label>
+			<input
+				id="pe-cyclePeriod"
+				type="range"
+				min="4"
+				max="256"
+				step="1"
+				value={viewerState.colors.cyclePeriod}
+				oninput={(e) => { viewerState.colors = { ...viewerState.colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }; }}
+				class="flex-1 accent-blue-500"
+			/>
+			<input
+				type="text"
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				value={viewerState.colors.cyclePeriod}
+				onblur={(e) => {
+					const v = parseInt((e.target as HTMLInputElement).value);
+					if (!isNaN(v) && v > 0) viewerState.colors = { ...viewerState.colors, cyclePeriod: v };
+				}}
+				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+			/>
+		</div>
+
+		<!-- Offset -->
+		<div class="flex items-center gap-2">
+			<label class="text-neutral-400 text-xs shrink-0 w-20" for="pe-offset">Offset</label>
+			<input
+				id="pe-offset"
+				type="range"
+				min="0"
+				max="1"
+				step="0.01"
+				value={viewerState.colors.offset}
+				oninput={(e) => { viewerState.colors = { ...viewerState.colors, offset: parseFloat((e.target as HTMLInputElement).value) }; }}
+				class="flex-1 accent-blue-500"
+			/>
+			<input
+				type="text"
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				value={viewerState.colors.offset.toFixed(2)}
+				onblur={(e) => {
+					const v = parseFloat((e.target as HTMLInputElement).value);
+					if (!isNaN(v)) viewerState.colors = { ...viewerState.colors, offset: Math.max(0, Math.min(1, v)) };
+				}}
+				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+			/>
+		</div>
+
+		<!-- In-set color + Reverse -->
+		<div class="flex items-center gap-3">
+			<label class="text-neutral-400 text-xs shrink-0" for="pe-inSetColor">In-set color</label>
+			<input
+				id="pe-inSetColor"
+				type="color"
+				class="w-8 h-6 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
+				value={viewerState.colors.inSetColor ?? '#000000'}
+				oninput={(e) => { viewerState.colors = { ...viewerState.colors, inSetColor: (e.target as HTMLInputElement).value }; }}
+			/>
+			<button
+				class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
+				onclick={() => { viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' }; }}
+				title="Reset to black"
+			>Reset</button>
+			<button
+				class="ml-auto px-2 py-1 rounded text-xs border transition-colors
+					{viewerState.colors.reverse
+						? 'border-blue-600 bg-blue-900/40 text-blue-300'
+						: 'border-neutral-700 text-neutral-400 hover:text-white'}"
+				onclick={() => { viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }; }}
+				title="Reverse palette"
+			>⇄ Reverse</button>
 		</div>
 
 		<!-- Selected stop controls -->

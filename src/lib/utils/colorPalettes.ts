@@ -278,7 +278,8 @@ export function buildImageData(
 ): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
   const colorCache = new Map<number, [number, number, number]>();
-  const { algorithm, cyclePeriod, offset, palette, reverse } = config;
+  const { algorithm, cyclePeriod, offset, palette, reverse, inSetColor } = config;
+  const inSetRgb = inSetColor ? hexToRgb(inSetColor) : ([0, 0, 0] as [number, number, number]);
 
   for (let i = 0; i < iters.length; i++) {
     const val = iters[i];
@@ -298,7 +299,7 @@ export function buildImageData(
       // the characteristic "edge-lit" look of DEM coloring.
       // cyclePeriod controls how many palette cycles fit per decade of distance.
       if (val < 0) {
-        r = g = b = 0;
+        [r, g, b] = inSetRgb;
       } else {
         const logDist = -Math.log2(Math.max(val, 1e-30));
         const scaledLog = algorithm === 'distance_estimation_banded' ? Math.floor(logDist) : logDist;
@@ -313,7 +314,7 @@ export function buildImageData(
       }
     } else {
       if (val >= maxIter) {
-        r = g = b = 0;
+        [r, g, b] = inSetRgb;
       } else {
         const n = algorithm === 'escape_time' ? Math.floor(val) : val;
         const t = (((n / cyclePeriod + offset) % 1) + 1) % 1;
