@@ -131,7 +131,7 @@
 		</div>
 
 		<div>
-			<div class="text-neutral-400 text-xs mb-1">Power (z<sup>n</sup> + c)</div>
+			<div class="text-neutral-400 text-xs mb-1">Exponent</div>
 			<div class="flex items-center gap-2">
 				<input
 					type="range"

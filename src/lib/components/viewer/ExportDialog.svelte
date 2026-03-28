@@ -4,6 +4,7 @@
   import { getWorkerPool } from "$lib/rendering/worker/workerPool";
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
   import { PRESETS } from "$lib/utils/colorPalettes";
+  import { savedPalettes } from "$lib/stores/savedPalettes.svelte";
   import type { ColorConfig } from "$lib/stores/viewerState.svelte";
   import ToggleButton from "./ToggleButton.svelte";
 
@@ -23,9 +24,9 @@
   ];
 
   const formats = [
-    { label: 'PNG', mime: 'image/png', ext: 'png' },
-    { label: 'WebP', mime: 'image/webp', ext: 'webp' },
-    { label: 'JPEG', mime: 'image/jpeg', ext: 'jpg' },
+    { label: "PNG", mime: "image/png", ext: "png" },
+    { label: "WebP", mime: "image/webp", ext: "webp" },
+    { label: "JPEG", mime: "image/jpeg", ext: "jpg" },
   ];
 
   let selectedRes = $state(0);
@@ -71,18 +72,20 @@
     const pad = fontSize;
     const lineH = fontSize * 1.6;
 
-    const paletteName =
-      Object.entries(PRESETS).find(
-        ([, p]) => JSON.stringify(p) === JSON.stringify(colorConfig),
-      )?.[0] ?? "Custom";
+    const paletteStr = JSON.stringify(colorConfig.palette);
+    const presetName = Object.entries(PRESETS).find(
+      ([, p]) => JSON.stringify(p.palette) === paletteStr,
+    )?.[0];
+    const savedName = savedPalettes.all.find(
+      (p) => JSON.stringify(p.config.palette) === paletteStr,
+    )?.name;
+    const paletteName = presetName ?? (savedName ? `${savedName}*` : "Custom");
 
     const lines = [
-      `Center: (${cx}, ${cy})`,
-      `Zoom: ${zoom}`,
-      `MaxIter: ${maxIter}`,
-      ...(power !== 2 ? [`Power: ${power}`] : []),
+      `${cx}Re ${cy}Im`,
+      `Z${zoom}/I${maxIter}/E${power}`,
       `Palette: ${paletteName}`,
-      `C/O: ${colorConfig.cyclePeriod}/${colorConfig.offset.toFixed(3)}`,
+      `C_P${colorConfig.cyclePeriod}/O${colorConfig.offset.toFixed(3)}`,
     ];
 
     ctx.font = `${fontSize}px monospace`;
@@ -216,24 +219,28 @@
 
     {#if phase !== "done"}
       <div class="flex flex-col gap-4">
-
         <div class="flex flex-col gap-2">
           <div class="text-neutral-400 text-xs">Resolution</div>
           <div class="grid grid-cols-2 gap-1">
             {#each resolutions as r, i}
               <ToggleButton
                 active={selectedRes === i}
-                onclick={() => selectedRes = i}
+                onclick={() => (selectedRes = i)}
                 disabled={phase === "exporting"}
                 variant="neutral"
-                class={r.wide ? 'col-span-2' : ''}
-              >{r.label}</ToggleButton>
+                class={r.wide ? "col-span-2" : ""}>{r.label}</ToggleButton
+              >
             {/each}
           </div>
           {#if selectedRes === 0}
-            <p class="text-xs text-neutral-400">Pixel-exact match of the current view.</p>
+            <p class="text-xs text-neutral-400">
+              Pixel-exact match of the current view.
+            </p>
           {:else}
-            <p class="text-xs text-neutral-400">Centered on the current view, but the field of view will differ due to the different aspect ratio and resolution.</p>
+            <p class="text-xs text-neutral-400">
+              Centered on the current view, but the field of view will differ
+              due to the different aspect ratio and resolution.
+            </p>
           {/if}
         </div>
 
@@ -243,11 +250,11 @@
             {#each formats as f, i}
               <ToggleButton
                 active={selectedFormat === i}
-                onclick={() => selectedFormat = i}
+                onclick={() => (selectedFormat = i)}
                 disabled={phase === "exporting"}
                 variant="neutral"
-                class="flex-1"
-              >{f.label}</ToggleButton>
+                class="flex-1">{f.label}</ToggleButton
+              >
             {/each}
           </div>
         </div>
@@ -256,28 +263,36 @@
           <div class="text-neutral-400 text-xs">Options</div>
           <ToggleButton
             active={showOverlay}
-            onclick={() => showOverlay = !showOverlay}
+            onclick={() => (showOverlay = !showOverlay)}
             disabled={phase === "exporting"}
-            variant="neutral"
-          >Include info overlay</ToggleButton>
+            variant="neutral">Include info overlay</ToggleButton
+          >
         </div>
 
         {#if phase === "exporting"}
           <div class="flex flex-col gap-2">
             <div class="h-1.5 bg-neutral-700 rounded overflow-hidden">
-              <div class="h-full bg-blue-500 transition-all" style="width:{progress * 100}%"></div>
+              <div
+                class="h-full bg-blue-500 transition-all"
+                style="width:{progress * 100}%"
+              ></div>
             </div>
-            <div class="flex items-center justify-between text-xs text-neutral-400">
+            <div
+              class="flex items-center justify-between text-xs text-neutral-400"
+            >
               <span>Generating… {Math.round(progress * 100)}%</span>
-              <button class="text-red-400 hover:text-red-300" onclick={() => cancelFn?.()}>Cancel</button>
+              <button
+                class="text-red-400 hover:text-red-300"
+                onclick={() => cancelFn?.()}>Cancel</button
+              >
             </div>
           </div>
         {:else}
           <button
             class="w-full bg-blue-700 hover:bg-blue-600 text-white text-sm py-1.5 rounded transition-colors"
-            onclick={exportPng}>Export {formats[selectedFormat].label}</button>
+            onclick={exportPng}>Export {formats[selectedFormat].label}</button
+          >
         {/if}
-
       </div>
     {:else}
       <img
