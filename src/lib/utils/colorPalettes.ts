@@ -8,6 +8,7 @@ export const DEFAULT_PALETTE: ColorConfig = {
     { stop: 0.42, color: "#edffff" },
     { stop: 0.6425, color: "#ffaa00" },
     { stop: 0.8575, color: "#000200" },
+    { stop: 1.0, color: "#000764" },
   ],
   cyclePeriod: 64,
   offset: 0,
@@ -22,7 +23,7 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.25, color: "#7f0000" },
       { stop: 0.5, color: "#ff4000" },
       { stop: 0.75, color: "#ffff00" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 1.0, color: "#000000" },
     ],
     cyclePeriod: 48,
     offset: 0,
@@ -31,9 +32,10 @@ export const PRESETS: Record<string, ColorConfig> = {
     algorithm: "smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.5, color: "#ffffff" },
+      { stop: 1.0, color: "#000000" },
     ],
-    cyclePeriod: 32,
+    cyclePeriod: 64,
     offset: 0,
   },
   "Ultra Fractal": {
@@ -57,7 +59,7 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.45, color: "#0066aa" },
       { stop: 0.65, color: "#00cccc" },
       { stop: 0.85, color: "#80eeff" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 1.0, color: "#000010" },
     ],
     cyclePeriod: 56,
     offset: 0,
@@ -70,7 +72,7 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.4, color: "#cc0044" },
       { stop: 0.6, color: "#ff6600" },
       { stop: 0.8, color: "#ffcc00" },
-      { stop: 1.0, color: "#ffffcc" },
+      { stop: 1.0, color: "#0a0020" },
     ],
     cyclePeriod: 48,
     offset: 0,
@@ -95,7 +97,7 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.25, color: "#1a3300" },
       { stop: 0.5, color: "#2d7a00" },
       { stop: 0.75, color: "#aadd44" },
-      { stop: 1.0, color: "#eeffcc" },
+      { stop: 1.0, color: "#000a00" },
     ],
     cyclePeriod: 48,
     offset: 0,
@@ -119,8 +121,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.3, color: "#003366" },
       { stop: 0.55, color: "#0099cc" },
       { stop: 0.75, color: "#aaddff" },
-      { stop: 0.9, color: "#e8f8ff" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.85, color: "#e8f8ff" },
+      { stop: 0.93, color: "#ffffff" },
+      { stop: 1.0, color: "#000814" },
     ],
     cyclePeriod: 40,
     offset: 0,
@@ -132,8 +135,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.3, color: "#3d0000" },
       { stop: 0.55, color: "#cc1100" },
       { stop: 0.75, color: "#ff8800" },
-      { stop: 0.9, color: "#ffee00" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.85, color: "#ffee00" },
+      { stop: 0.93, color: "#ffffff" },
+      { stop: 1.0, color: "#0a0000" },
     ],
     cyclePeriod: 40,
     offset: 0,
@@ -159,8 +163,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.3, color: "#003300" },
       { stop: 0.55, color: "#00aa00" },
       { stop: 0.75, color: "#aaff00" },
-      { stop: 0.9, color: "#ffff44" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.85, color: "#ffff44" },
+      { stop: 0.93, color: "#ffffff" },
+      { stop: 1.0, color: "#000000" },
     ],
     cyclePeriod: 36,
     offset: 0,
@@ -172,8 +177,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.2, color: "#5c1500" },
       { stop: 0.4, color: "#bb4400" },
       { stop: 0.6, color: "#ee8800" },
-      { stop: 0.8, color: "#ffcc44" },
-      { stop: 1.0, color: "#fff0aa" },
+      { stop: 0.78, color: "#ffcc44" },
+      { stop: 0.9, color: "#fff0aa" },
+      { stop: 1.0, color: "#100500" },
     ],
     cyclePeriod: 48,
     offset: 0,
@@ -186,8 +192,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.35, color: "#1a0050" },
       { stop: 0.55, color: "#4400aa" },
       { stop: 0.7, color: "#0066ff" },
-      { stop: 0.85, color: "#aaccff" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.83, color: "#aaccff" },
+      { stop: 0.93, color: "#ffffff" },
+      { stop: 1.0, color: "#000000" },
     ],
     cyclePeriod: 96,
     offset: 0,
@@ -199,8 +206,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.3, color: "#331100" },
       { stop: 0.55, color: "#884400" },
       { stop: 0.75, color: "#cc7722" },
-      { stop: 0.9, color: "#ddaa66" },
-      { stop: 1.0, color: "#eeddbb" },
+      { stop: 0.85, color: "#ddaa66" },
+      { stop: 0.93, color: "#eeddbb" },
+      { stop: 1.0, color: "#000000" },
     ],
     cyclePeriod: 40,
     offset: 0,
@@ -212,8 +220,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.2, color: "#7b00d4" },
       { stop: 0.4, color: "#dd00aa" },
       { stop: 0.6, color: "#ff4400" },
-      { stop: 0.8, color: "#ffdd00" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.78, color: "#ffdd00" },
+      { stop: 0.9, color: "#ffffff" },
+      { stop: 1.0, color: "#0d0221" },
     ],
     cyclePeriod: 48,
     offset: 0,
@@ -225,8 +234,9 @@ export const PRESETS: Record<string, ColorConfig> = {
       { stop: 0.25, color: "#001133" },
       { stop: 0.5, color: "#0033cc" },
       { stop: 0.7, color: "#0099ff" },
-      { stop: 0.85, color: "#66ddff" },
-      { stop: 1.0, color: "#ffffff" },
+      { stop: 0.82, color: "#66ddff" },
+      { stop: 0.92, color: "#ffffff" },
+      { stop: 1.0, color: "#000000" },
     ],
     cyclePeriod: 44,
     offset: 0,
@@ -278,14 +288,20 @@ export function buildImageData(
 ): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
   const colorCache = new Map<number, [number, number, number]>();
-  const { algorithm, cyclePeriod, offset, palette, reverse, inSetColor } = config;
-  const inSetRgb = inSetColor ? hexToRgb(inSetColor) : ([0, 0, 0] as [number, number, number]);
+  const { algorithm, cyclePeriod, offset, palette, reverse, inSetColor } =
+    config;
+  const inSetRgb = inSetColor
+    ? hexToRgb(inSetColor)
+    : ([0, 0, 0] as [number, number, number]);
 
   for (let i = 0; i < iters.length; i++) {
     const val = iters[i];
     let r: number, g: number, b: number;
 
-    if (algorithm === 'distance_estimation' || algorithm === 'distance_estimation_banded') {
+    if (
+      algorithm === "distance_estimation" ||
+      algorithm === "distance_estimation_banded"
+    ) {
       // val is the estimated distance from this pixel's c-value to the Mandelbrot
       // set boundary, computed by the WASM DEM functions. val < 0 means the point
       // is inside the set (colored black). Outside points have val > 0, with
@@ -302,7 +318,10 @@ export function buildImageData(
         [r, g, b] = inSetRgb;
       } else {
         const logDist = -Math.log2(Math.max(val, 1e-30));
-        const scaledLog = algorithm === 'distance_estimation_banded' ? Math.floor(logDist) : logDist;
+        const scaledLog =
+          algorithm === "distance_estimation_banded"
+            ? Math.floor(logDist)
+            : logDist;
         const t = (((scaledLog / cyclePeriod + offset) % 1) + 1) % 1;
         const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
@@ -316,7 +335,7 @@ export function buildImageData(
       if (val >= maxIter) {
         [r, g, b] = inSetRgb;
       } else {
-        const n = algorithm === 'escape_time' ? Math.floor(val) : val;
+        const n = algorithm === "escape_time" ? Math.floor(val) : val;
         const t = (((n / cyclePeriod + offset) % 1) + 1) % 1;
         const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
