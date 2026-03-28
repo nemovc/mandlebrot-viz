@@ -112,6 +112,14 @@
     });
   }
 
+  export function zoomIn() {
+    leafletMap?.zoomIn();
+  }
+
+  export function zoomOut() {
+    leafletMap?.zoomOut();
+  }
+
   export function resetView() {
     viewerState.cx = "-0.5";
     viewerState.cy = "0.0";
