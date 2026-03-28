@@ -55,7 +55,7 @@
 </script>
 
 <CollapsiblePanel title="Position" position="top-left">
-	<div class="flex flex-col gap-3 p-3 min-w-52">
+	<div class="flex flex-col gap-3 p-3">
 		<div>
 			<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
 			<input

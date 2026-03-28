@@ -29,14 +29,14 @@
 </script>
 
 <div
-	class="rounded-lg border overflow-hidden transition-all duration-200 {open
+	class="{open ? 'w-56' : 'w-fit'} rounded-lg border overflow-hidden transition-all duration-200 {open
 		? 'bg-neutral-900 border-neutral-800'
 		: `bg-neutral-900/40 border-neutral-800/40 backdrop-blur-sm ${collapsedMargin}`}"
 >
 	<button
-		class="w-full flex items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wider transition-colors {open
-			? 'text-neutral-400 hover:text-white'
-			: 'text-neutral-500 hover:text-neutral-300'}"
+		class="w-full flex items-center justify-between px-3 py-2 font-medium uppercase tracking-wider transition-all {open
+			? 'text-xs text-neutral-400 hover:text-white'
+			: 'text-[10px] text-neutral-500 hover:text-neutral-300'}"
 		onclick={() => (open = !open)}
 	>
 		{title}

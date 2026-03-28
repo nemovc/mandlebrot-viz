@@ -65,7 +65,7 @@
 </script>
 
 <CollapsiblePanel title="Color Scheme" position="top-right">
-	<div class="flex flex-col gap-3 p-3 min-w-48">
+	<div class="flex flex-col gap-3 p-3">
 		<div>
 			<div class="text-neutral-400 text-xs mb-1">Algorithm</div>
 			<select
@@ -129,6 +129,9 @@
 					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 				/>
 			</div>
+			{#if viewerState.colors.algorithm === 'distance_estimation' && viewerState.colors.cyclePeriod > 32}
+				<p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">High cycle period loses detail in distance estimation mode.</p>
+			{/if}
 		</div>
 
 		<div>

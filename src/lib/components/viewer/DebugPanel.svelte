@@ -58,7 +58,7 @@
 </script>
 
 <CollapsiblePanel title="Debug" defaultOpen={false} position="bottom-left">
-	<div class="flex flex-col gap-4 px-3 pb-3 min-w-52">
+	<div class="flex flex-col gap-4 px-3 pb-3">
 		<!-- Toggles -->
 		<div class="flex flex-col gap-1.5 pt-3">
 			<ToggleButton active={debugState.debugLogging} onclick={() => debugState.debugLogging = !debugState.debugLogging}>Debug logging</ToggleButton>

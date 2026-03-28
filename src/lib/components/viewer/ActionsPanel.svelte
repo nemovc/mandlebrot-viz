@@ -17,7 +17,7 @@
 </script>
 
 <CollapsiblePanel title="Actions" position="bottom-right">
-	<div class="flex flex-col gap-1.5 p-3 min-w-36">
+	<div class="flex flex-col gap-1.5 p-3">
 		<button
 			class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
 			onclick={onResetView}>Reset View</button
