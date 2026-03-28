@@ -12,8 +12,9 @@ pub fn compute_tile_f64(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
-    mandelbrot::compute_tile_f64(cx, cy, scale, w as usize, h as usize, max_iter)
+    mandelbrot::compute_tile_f64(cx, cy, scale, w as usize, h as usize, max_iter, power)
 }
 
 #[wasm_bindgen]
@@ -24,8 +25,9 @@ pub fn compute_tile_f64_dem(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
-    mandelbrot::compute_tile_f64_dem(cx, cy, scale, w as usize, h as usize, max_iter)
+    mandelbrot::compute_tile_f64_dem(cx, cy, scale, w as usize, h as usize, max_iter, power)
 }
 
 #[wasm_bindgen]
@@ -39,9 +41,10 @@ pub fn compute_tile_dd(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
     mandelbrot::compute_tile_dd(
-        cx_hi, cx_lo, cy_hi, cy_lo, scale_hi, scale_lo, w as usize, h as usize, max_iter,
+        cx_hi, cx_lo, cy_hi, cy_lo, scale_hi, scale_lo, w as usize, h as usize, max_iter, power,
     )
 }
 
@@ -56,9 +59,10 @@ pub fn compute_tile_dd_dem(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
     mandelbrot::compute_tile_dd_dem(
-        cx_hi, cx_lo, cy_hi, cy_lo, scale_hi, scale_lo, w as usize, h as usize, max_iter,
+        cx_hi, cx_lo, cy_hi, cy_lo, scale_hi, scale_lo, w as usize, h as usize, max_iter, power,
     )
 }
 
@@ -71,6 +75,7 @@ pub fn compute_tile_arb_dem(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
     arbitrary::compute_tile_arb_dem(
         cx,
@@ -80,6 +85,7 @@ pub fn compute_tile_arb_dem(
         w as usize,
         h as usize,
         max_iter,
+        power,
     )
 }
 
@@ -92,6 +98,7 @@ pub fn compute_tile_arb(
     w: u32,
     h: u32,
     max_iter: u32,
+    power: u32,
 ) -> Vec<f32> {
     arbitrary::compute_tile_arb(
         cx,
@@ -101,5 +108,6 @@ pub fn compute_tile_arb(
         w as usize,
         h as usize,
         max_iter,
+        power,
     )
 }

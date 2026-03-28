@@ -47,11 +47,11 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
       return;
     }
 
-    const { cx, cy, scale, precisionMode, debug } = e.data;
+    const { cx, cy, scale, precisionMode, power, debug } = e.data;
     const sz = tileSize;
 
     if (debug) console.log(
-      `[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter}`,
+      `[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter} power=${power}`,
     );
     const t0 = performance.now();
 
@@ -60,21 +60,21 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
 
     if (precisionMode === "f64") {
       iters = isDem
-        ? compute_tile_f64_dem(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter)
-        : compute_tile_f64(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter);
+        ? compute_tile_f64_dem(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter, power)
+        : compute_tile_f64(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter, power);
     } else if (precisionMode === "double_double") {
       const [cxHi, cxLo] = split(parseFloat(cx));
       const [cyHi, cyLo] = split(parseFloat(cy));
       const [sHi, sLo] = split(parseFloat(scale));
       iters = isDem
-        ? compute_tile_dd_dem(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter)
-        : compute_tile_dd(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter);
+        ? compute_tile_dd_dem(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter, power)
+        : compute_tile_dd(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter, power);
     } else {
       const bits = getPrecisionBits(Math.round(-Math.log2(parseFloat(scale))));
       console.log(`[worker] arb precision: ${bits} bits`);
       iters = isDem
-        ? compute_tile_arb_dem(cx, cy, scale, bits, sz, sz, maxIter)
-        : compute_tile_arb(cx, cy, scale, bits, sz, sz, maxIter);
+        ? compute_tile_arb_dem(cx, cy, scale, bits, sz, sz, maxIter, power)
+        : compute_tile_arb(cx, cy, scale, bits, sz, sz, maxIter, power);
     }
 
     const elapsed = (performance.now() - t0).toFixed(1);

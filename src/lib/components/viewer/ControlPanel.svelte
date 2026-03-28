@@ -129,6 +129,34 @@
 				/>
 			</div>
 		</div>
+
+		<div>
+			<div class="text-neutral-400 text-xs mb-1">Power (z<sup>n</sup> + c)</div>
+			<div class="flex items-center gap-2">
+				<input
+					type="range"
+					min="2"
+					max="10"
+					step="1"
+					value={viewerState.power}
+					oninput={(e) => {
+						viewerState.power = parseInt((e.target as HTMLInputElement).value);
+					}}
+					class="flex-1 accent-blue-500"
+				/>
+				<input
+					class="w-10 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+					type="number"
+					min="2"
+					max="10"
+					value={viewerState.power}
+					oninput={(e) => {
+						const v = parseInt((e.target as HTMLInputElement).value);
+						if (!isNaN(v) && v >= 2 && v <= 10) viewerState.power = v;
+					}}
+				/>
+			</div>
+		</div>
 	</div>
 </CollapsiblePanel>
 

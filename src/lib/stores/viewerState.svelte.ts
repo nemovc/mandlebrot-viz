@@ -20,6 +20,7 @@ export interface ViewerState {
 	cy: string;
 	zoom: number;
 	maxIter: number;
+	power: number;
 	colors: ColorConfig;
 }
 
@@ -32,6 +33,7 @@ function createViewerState() {
 	let cy = $state(initial.cy ?? '0.0');
 	let zoom = $state(initial.zoom ?? 3);
 	let maxIter = $state(initial.maxIter ?? 256);
+	let power = $state(initial.power ?? 2);
 	let colors = $state<ColorConfig>(initial.colors ?? DEFAULT_PALETTE);
 
 	return {
@@ -43,11 +45,13 @@ function createViewerState() {
 		set zoom(v) { zoom = v; },
 		get maxIter() { return maxIter; },
 		set maxIter(v) { maxIter = v; },
+		get power() { return power; },
+		set power(v) { power = v; },
 		get colors() { return colors; },
 		set colors(v) { colors = v; },
 
 		toJSON(): ViewerState {
-			return { cx, cy, zoom, maxIter, colors };
+			return { cx, cy, zoom, maxIter, power, colors };
 		},
 
 		loadFrom(s: Partial<ViewerState>) {
@@ -55,6 +59,7 @@ function createViewerState() {
 			if (s.cy !== undefined) cy = s.cy;
 			if (s.zoom !== undefined) zoom = s.zoom;
 			if (s.maxIter !== undefined) maxIter = s.maxIter;
+			if (s.power !== undefined) power = s.power;
 			if (s.colors !== undefined) colors = s.colors;
 		}
 	};

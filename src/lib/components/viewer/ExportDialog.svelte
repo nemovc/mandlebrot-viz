@@ -64,6 +64,7 @@
     cy: string,
     zoom: number,
     maxIter: number,
+    power: number,
     colorConfig: ColorConfig,
   ) {
     const fontSize = Math.max(12, Math.round(Math.min(w, h) / 50));
@@ -79,6 +80,7 @@
       `Center: (${cx}, ${cy})`,
       `Zoom: ${zoom}`,
       `MaxIter: ${maxIter}`,
+      ...(power !== 2 ? [`Power: ${power}`] : []),
       `Palette: ${paletteName}`,
       `C/O: ${colorConfig.cyclePeriod}/${colorConfig.offset.toFixed(3)}`,
     ];
@@ -121,6 +123,7 @@
       JSON.stringify(viewerState.colors),
     );
     const maxIter = viewerState.maxIter;
+    const power = viewerState.power;
     const exportId = Date.now();
     const jobIds: string[] = [];
 
@@ -158,6 +161,7 @@
                 scale: scale.toString(),
                 tileSize: TILE,
                 maxIter,
+                power,
                 precisionMode,
                 colorConfig,
                 priority: 0,
@@ -175,7 +179,7 @@
       });
 
       if (showOverlay)
-        drawOverlay(ctx, w, h, cx, cy, zoom, maxIter, colorConfig);
+        drawOverlay(ctx, w, h, cx, cy, zoom, maxIter, power, colorConfig);
 
       const fmt = formats[selectedFormat];
       const blob = await offscreen.convertToBlob({ type: fmt.mime });

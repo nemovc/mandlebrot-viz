@@ -8,6 +8,7 @@ export interface RenderJob {
 	scale: string;
 	tileSize: number;
 	maxIter: number;
+	power: number;
 	precisionMode: PrecisionMode;
 	colorConfig: ColorConfig;
 	priority: number; // lower = higher priority

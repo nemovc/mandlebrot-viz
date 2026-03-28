@@ -48,6 +48,7 @@
     const LayerClass = createMandelbrotLayer(L);
     mandelbrotLayer = new LayerClass();
     mandelbrotLayer.maxIter = viewerState.maxIter;
+    mandelbrotLayer.power = viewerState.power;
     mandelbrotLayer.colorConfig = viewerState.colors;
     mandelbrotLayer.addTo(leafletMap);
 
@@ -93,6 +94,15 @@
     }
   });
 
+  // Recompute via workers when power changes
+  $effect(() => {
+    viewerState.power;
+    if (mandelbrotLayer) {
+      mandelbrotLayer.power = viewerState.power;
+      untrack(() => mandelbrotLayer.recompute());
+    }
+  });
+
   export function panTo(re: number, im: number, zoom?: number) {
     viewerState.cx = re.toString();
     viewerState.cy = im.toString();
@@ -107,6 +117,7 @@
     viewerState.cy = "0.0";
     viewerState.zoom = 3;
     viewerState.maxIter = 256;
+    viewerState.power = 2;
     leafletMap?.setView([imToLat(0.0), reToLng(-0.5)], 3, { animate: true });
   }
 </script>
