@@ -71,6 +71,21 @@
     };
   });
 
+  onMount(() => {
+    function handleHashChange() {
+      const decoded = decodeState(window.location.hash);
+      if (!decoded?.viewer) return;
+      viewerState.loadFrom(decoded.viewer);
+      if (decoded.debug) debugState.loadFrom(decoded.debug);
+      const re = parseFloat(decoded.viewer.cx ?? viewerState.cx);
+      const im = parseFloat(decoded.viewer.cy ?? viewerState.cy);
+      const zoom = decoded.viewer.zoom ?? viewerState.zoom;
+      mapComponent?.panTo(re, im, zoom);
+    }
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  });
+
   // Sync state to URL hash whenever it changes.
   $effect(() => {
     if (!browser) return;
