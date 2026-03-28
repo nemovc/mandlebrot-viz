@@ -256,7 +256,7 @@
 				value={viewerState.colors.cyclePeriod}
 				oninput={(e) => { viewerState.colors = { ...viewerState.colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }; }}
 				use:wheelSlider
-				class="flex-1 accent-blue-500"
+				class="flex-1 min-w-0 accent-blue-500"
 			/>
 			<input
 				type="text"
@@ -282,7 +282,7 @@
 				value={viewerState.colors.offset}
 				oninput={(e) => { viewerState.colors = { ...viewerState.colors, offset: parseFloat((e.target as HTMLInputElement).value) }; }}
 				use:wheelSlider
-				class="flex-1 accent-blue-500"
+				class="flex-1 min-w-0 accent-blue-500"
 			/>
 			<input
 				type="text"

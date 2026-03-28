@@ -144,7 +144,7 @@
 						value={viewerState.colors.cyclePeriod}
 						oninput={onCyclePeriodChange}
 						use:wheelSlider
-						class="flex-1 accent-blue-500"
+						class="flex-1 min-w-0 accent-blue-500"
 					/>
 					<input
 						type="text"
@@ -177,7 +177,7 @@
 						value={viewerState.colors.offset}
 						oninput={onOffsetChange}
 						use:wheelSlider
-						class="flex-1 accent-blue-500"
+						class="flex-1 min-w-0 accent-blue-500"
 					/>
 					<input
 						type="text"

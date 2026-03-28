@@ -16,10 +16,12 @@
 	let imInput = $state(viewerState.cy);
 	let zoomInput = $state(viewerState.zoom.toString());
 	let iterInput = $state(viewerState.maxIter.toString());
+	let powerInput = $state(viewerState.power.toString());
 	let reFocused = false;
 	let imFocused = false;
 	let zoomFocused = false;
 	let iterFocused = false;
+	let powerFocused = false;
 
 	// Always read the store value to maintain reactivity dependency,
 	// then conditionally apply it so we don't clobber an in-progress edit.
@@ -39,6 +41,10 @@
 		const val = viewerState.maxIter.toString();
 		if (!iterFocused) iterInput = val;
 	});
+	$effect(() => {
+		const val = viewerState.power.toString();
+		if (!powerFocused) powerInput = val;
+	});
 
 	function commitCoords() {
 		const re = parseFloat(reInput);
@@ -54,6 +60,11 @@
 	function commitIter() {
 		const v = parseInt(iterInput);
 		if (!isNaN(v) && v > 0) viewerState.maxIter = v;
+	}
+
+	function commitPower() {
+		const v = parseInt(powerInput);
+		if (!isNaN(v) && v >= 2 && v <= 10) viewerState.power = v;
 	}
 
 	function onKeydown(e: KeyboardEvent, commit: () => void) {
@@ -74,7 +85,7 @@
 				type="text"
 				value={zoomInput}
 				onfocus={() => (zoomFocused = true)}
-				onblur={() => { zoomFocused = false; commitZoom(); }}
+				onblur={() => { zoomFocused = false; commitZoom(); zoomInput = viewerState.zoom.toString(); }}
 				oninput={(e) => (zoomInput = (e.target as HTMLInputElement).value)}
 				onkeydown={(e) => onKeydown(e, commitZoom)}
 			/>
@@ -87,7 +98,7 @@
 				type="text"
 				value={reInput}
 				onfocus={() => (reFocused = true)}
-				onblur={() => { reFocused = false; commitCoords(); }}
+				onblur={() => { reFocused = false; commitCoords(); reInput = (+viewerState.cx).toPrecision(8).replace(/\.?0+$/, ''); }}
 				oninput={(e) => (reInput = (e.target as HTMLInputElement).value)}
 				onkeydown={(e) => onKeydown(e, commitCoords)}
 			/>
@@ -100,7 +111,7 @@
 				type="text"
 				value={imInput}
 				onfocus={() => (imFocused = true)}
-				onblur={() => { imFocused = false; commitCoords(); }}
+				onblur={() => { imFocused = false; commitCoords(); imInput = (+viewerState.cy).toPrecision(8).replace(/\.?0+$/, ''); }}
 				oninput={(e) => (imInput = (e.target as HTMLInputElement).value)}
 				onkeydown={(e) => onKeydown(e, commitCoords)}
 			/>
@@ -119,14 +130,14 @@
 						viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
 					}}
 					use:wheelSlider
-					class="flex-1 accent-blue-500"
+					class="flex-1 min-w-0 accent-blue-500"
 				/>
 				<input
 					class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
 					type="text"
 					value={iterInput}
 					onfocus={() => (iterFocused = true)}
-					onblur={() => { iterFocused = false; commitIter(); }}
+					onblur={() => { iterFocused = false; commitIter(); iterInput = viewerState.maxIter.toString(); }}
 					oninput={(e) => (iterInput = (e.target as HTMLInputElement).value)}
 					onkeydown={(e) => onKeydown(e, commitIter)}
 				/>
@@ -146,18 +157,16 @@
 						viewerState.power = parseInt((e.target as HTMLInputElement).value);
 					}}
 					use:wheelSlider
-					class="flex-1 accent-blue-500"
+					class="flex-1 min-w-0 accent-blue-500"
 				/>
 				<input
-					class="w-10 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
-					type="number"
-					min="2"
-					max="10"
-					value={viewerState.power}
-					oninput={(e) => {
-						const v = parseInt((e.target as HTMLInputElement).value);
-						if (!isNaN(v) && v >= 2 && v <= 10) viewerState.power = v;
-					}}
+					class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+					type="text"
+					value={powerInput}
+					onfocus={() => (powerFocused = true)}
+					onblur={() => { powerFocused = false; commitPower(); powerInput = viewerState.power.toString(); }}
+					oninput={(e) => (powerInput = (e.target as HTMLInputElement).value)}
+					onkeydown={(e) => onKeydown(e, commitPower)}
 				/>
 			</div>
 		</div>
