@@ -10,6 +10,7 @@
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
   import { encodeState, decodeState } from "$lib/utils/urlSerializer";
+  import { Code2, CircleUserRound } from "lucide-svelte";
   import {
     getWorkerPool,
     getRecolorPool,
@@ -142,6 +143,31 @@
       {renderPoolDebug}
       {recolorPoolDebug}
     />
+  </div>
+
+  <!-- Info bar -->
+  <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000]">
+    <div class="flex items-center gap-3 text-[11px] text-neutral-400 select-none bg-neutral-900/80 border border-neutral-700 rounded px-2 py-1">
+      <a
+        href="https://github.com/nemovc/mandlebrot-viz"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5"
+      >
+        Mandelbrot Explorer
+        <Code2 size={13} />
+      </a>
+      <span class="text-neutral-700">·</span>
+      <a
+        href="https://github.com/nemovc"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1"
+      >
+        by nemovc
+        <CircleUserRound size={13} />
+      </a>
+    </div>
   </div>
 </div>
 
