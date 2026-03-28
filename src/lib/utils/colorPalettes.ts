@@ -102,7 +102,7 @@ export function buildImageData(
     const val = iters[i];
     let r: number, g: number, b: number;
 
-    if (algorithm === 'distance_estimation') {
+    if (algorithm === 'distance_estimation' || algorithm === 'distance_estimation_banded') {
       // val is the estimated distance from this pixel's c-value to the Mandelbrot
       // set boundary, computed by the WASM DEM functions. val < 0 means the point
       // is inside the set (colored black). Outside points have val > 0, with
@@ -118,7 +118,9 @@ export function buildImageData(
       if (val < 0) {
         r = g = b = 0;
       } else {
-        const t = (((- Math.log2(Math.max(val, 1e-30)) / cyclePeriod + offset) % 1) + 1) % 1;
+        const logDist = -Math.log2(Math.max(val, 1e-30));
+        const scaledLog = algorithm === 'distance_estimation_banded' ? Math.floor(logDist) : logDist;
+        const t = (((scaledLog / cyclePeriod + offset) % 1) + 1) % 1;
         const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
         if (!cached) {

@@ -7,7 +7,7 @@ export interface ColorStop {
 }
 
 export interface ColorConfig {
-	algorithm: 'smooth' | 'escape_time' | 'distance_estimation';
+	algorithm: 'smooth' | 'escape_time' | 'distance_estimation' | 'distance_estimation_banded';
 	palette: ColorStop[];
 	cyclePeriod: number;
 	offset: number;

@@ -73,8 +73,8 @@
     if (mandelbrotLayer) {
       mandelbrotLayer.colorConfig = viewerState.colors;
       const alg = viewerState.colors.algorithm;
-      const needsRecompute =
-        (alg === 'distance_estimation') !== (_lastAlgorithm === 'distance_estimation');
+      const isDem = (a: string) => a === 'distance_estimation' || a === 'distance_estimation_banded';
+      const needsRecompute = isDem(alg) !== isDem(_lastAlgorithm);
       _lastAlgorithm = alg;
       if (needsRecompute) {
         untrack(() => mandelbrotLayer.recompute());

@@ -117,9 +117,10 @@
 					value={viewerState.colors.algorithm}
 					onchange={onAlgorithmChange}
 				>
-					<option value="smooth">Smooth (normalized)</option>
-					<option value="escape_time">Escape Time (bands)</option>
-					<option value="distance_estimation">Distance Estimation</option>
+					<option value="smooth">Escape Time (smooth)</option>
+					<option value="escape_time">Escape Time (banded)</option>
+					<option value="distance_estimation">Distance Estimation (smooth)</option>
+					<option value="distance_estimation_banded">Distance Estimation (banded)</option>
 				</select>
 			</div>
 
@@ -148,7 +149,7 @@
 						onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 					/>
 				</div>
-				{#if viewerState.colors.algorithm === 'distance_estimation' && viewerState.colors.cyclePeriod > 32}
+				{#if (viewerState.colors.algorithm === 'distance_estimation' || viewerState.colors.algorithm === 'distance_estimation_banded') && viewerState.colors.cyclePeriod > 32}
 					<p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">
 						High cycle period loses detail in distance estimation mode.
 					</p>

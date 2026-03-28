@@ -56,7 +56,7 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
     const t0 = performance.now();
 
     let iters: Float32Array;
-    const isDem = colorConfig.algorithm === "distance_estimation";
+    const isDem = colorConfig.algorithm === "distance_estimation" || colorConfig.algorithm === "distance_estimation_banded";
 
     if (precisionMode === "f64") {
       iters = isDem

@@ -136,8 +136,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					const cached = itersCache.get(`${z}/${x}/${y}`);
 					if (!cached) { skippedNoCache++; continue; }
 					if (cached.maxIter !== maxIter) { skippedMaxIterMismatch++; continue; }
-					const isDem = (a: string) => a === 'distance_estimation';
-				if (isDem(cached.algorithm) !== isDem(colorConfig.algorithm)) { skippedNoCache++; continue; }
+					const isDem = (a: string) => a === 'distance_estimation' || a === 'distance_estimation_banded';
+					if (isDem(cached.algorithm) !== isDem(colorConfig.algorithm)) { skippedNoCache++; continue; }
 
 					const { rcId } = tileIds(x, y, z);
 					pool.submit(
