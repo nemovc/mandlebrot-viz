@@ -1,5 +1,7 @@
 import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 import type { PrecisionMode } from '$lib/utils/precision';
+import MandelbrotWorker from './mandelbrot.worker.ts?worker';
+import RecolorWorker from './recolor.worker.ts?worker';
 
 export interface RenderJob {
 	id: string;
@@ -65,10 +67,10 @@ export class WorkerPool {
 
 	constructor(
 		private size: number = navigator.hardwareConcurrency || 4,
-		private workerUrl: URL = new URL('./mandelbrot.worker.ts', import.meta.url)
+		private WorkerConstructor: new () => Worker = MandelbrotWorker
 	) {
 		for (let i = 0; i < size; i++) {
-			const w = new Worker(this.workerUrl, { type: 'module' });
+			const w = new this.WorkerConstructor();
 			w.onmessage = (e) => this.onResult(w, e.data as TileResult);
 			w.onerror = (e) => this.onWorkerError(w, e.message);
 			w.onmessageerror = () => this.onWorkerError(w, 'message deserialization error');
@@ -201,7 +203,7 @@ let recolorPool: WorkerPool | null = null;
 export function getRecolorPool(): WorkerPool {
 	if (!recolorPool) recolorPool = new WorkerPool(
 		Math.max(2, Math.floor((navigator.hardwareConcurrency || 4) / 2)),
-		new URL('./recolor.worker.ts', import.meta.url)
+		RecolorWorker
 	);
 	return recolorPool;
 }
