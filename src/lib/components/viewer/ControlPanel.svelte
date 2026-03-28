@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
+	import ToggleButton from './ToggleButton.svelte';
+	import LocationsPanel from './LocationsPanel.svelte';
+
+	let showLocations = $state(false);
 
 	let { onNavigate }: { onNavigate: (re: number, im: number, zoom?: number) => void } = $props();
 
@@ -54,8 +58,12 @@
 	}
 </script>
 
-<CollapsiblePanel title="Position" position="top-left">
+<div class="flex flex-row items-start gap-2">
+	<CollapsiblePanel title="Position" position="top-left">
 	<div class="flex flex-col gap-3 p-3">
+		<ToggleButton active={showLocations} onclick={() => (showLocations = !showLocations)} class="w-full text-center">
+			Locations
+		</ToggleButton>
 		<div>
 			<div class="text-neutral-400 text-xs mb-1">Zoom level</div>
 			<input
@@ -122,3 +130,11 @@
 		</div>
 	</div>
 </CollapsiblePanel>
+
+	{#if showLocations}
+		<LocationsPanel
+			{onNavigate}
+			onClose={() => (showLocations = false)}
+		/>
+	{/if}
+</div>
