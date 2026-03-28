@@ -1,9 +1,9 @@
 <script lang="ts">
-	import AnimationCreator from '$lib/components/animator/AnimationCreator.svelte';
+	import AnimatorPage from '$lib/components/animator/AnimatorPage.svelte';
 </script>
 
 <svelte:head>
 	<title>Mandelbrot Explorer — Animator</title>
 </svelte:head>
 
-<AnimationCreator />
+<AnimatorPage />
