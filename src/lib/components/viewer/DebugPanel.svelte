@@ -61,10 +61,10 @@
 	<div class="flex flex-col gap-4 px-3 pb-3">
 		<!-- Toggles -->
 		<div class="flex flex-col gap-1.5 pt-3">
-			<ToggleButton active={debugState.debugLogging} onclick={() => debugState.debugLogging = !debugState.debugLogging}>Debug logging</ToggleButton>
-			<ToggleButton active={debugState.showCrosshair} onclick={() => debugState.showCrosshair = !debugState.showCrosshair}>Show crosshair</ToggleButton>
-			<ToggleButton active={debugState.showTileSquare} onclick={() => debugState.showTileSquare = !debugState.showTileSquare}>Show tile square</ToggleButton>
-			<ToggleButton active={debugState.slowMode} onclick={() => debugState.slowMode = !debugState.slowMode}>Slow mode</ToggleButton>
+			<ToggleButton active={debugState.debugLogging} onclick={() => debugState.debugLogging = !debugState.debugLogging} checkbox>Debug logging</ToggleButton>
+			<ToggleButton active={debugState.showCrosshair} onclick={() => debugState.showCrosshair = !debugState.showCrosshair} checkbox>Show crosshair</ToggleButton>
+			<ToggleButton active={debugState.showTileSquare} onclick={() => debugState.showTileSquare = !debugState.showTileSquare} checkbox>Show tile square</ToggleButton>
+			<ToggleButton active={debugState.slowMode} onclick={() => debugState.slowMode = !debugState.slowMode} checkbox>Slow mode</ToggleButton>
 		</div>
 
 		<!-- Render pool -->

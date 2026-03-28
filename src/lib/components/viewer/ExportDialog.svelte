@@ -265,7 +265,8 @@
             active={showOverlay}
             onclick={() => (showOverlay = !showOverlay)}
             disabled={phase === "exporting"}
-            variant="neutral">Include info overlay</ToggleButton
+            variant="neutral"
+            checkbox>Include info overlay</ToggleButton
           >
         </div>
 

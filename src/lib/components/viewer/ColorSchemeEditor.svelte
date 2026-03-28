@@ -4,7 +4,6 @@
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import type { ColorStop } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
-	import { ChevronLeft } from 'lucide-svelte';
 	import ToggleButton from './ToggleButton.svelte';
 	import PalettePreview from './PalettePreview.svelte';
 	import PalettePanel from './PalettePanel.svelte';
@@ -96,15 +95,16 @@
 		<div class="flex flex-col gap-3 p-3">
 			<!-- Row 1: Palettes + Edit buttons -->
 			<div class="grid grid-cols-2 gap-2">
-				<ToggleButton active={showPalettePanel} onclick={() => { showPalettePanel = !showPalettePanel; if (showPalettePanel) showEditor = false; }} class="w-full justify-between">
-					<ChevronLeft size={12} /> Palettes
+				<ToggleButton active={showPalettePanel} onclick={() => { showPalettePanel = !showPalettePanel; if (showPalettePanel) showEditor = false; }} class="w-full" chevron="left">
+					Palettes
 				</ToggleButton>
 				<ToggleButton
 					active={showEditor}
 					onclick={() => { showEditor = !showEditor; if (showEditor) showPalettePanel = false; }}
 					title="Edit palette stops"
-					class="w-full justify-between"
-				><ChevronLeft size={12} /> Edit</ToggleButton>
+					class="w-full"
+					chevron="left"
+				>Edit</ToggleButton>
 			</div>
 
 			<!-- Row 2: Palette name -->
