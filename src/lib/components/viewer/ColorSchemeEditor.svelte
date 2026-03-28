@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
+	import { wheelSlider } from '$lib/actions/wheelSlider';
 	import { PRESETS } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import type { ColorStop } from '$lib/stores/viewerState.svelte';
@@ -142,6 +143,7 @@
 						step="1"
 						value={viewerState.colors.cyclePeriod}
 						oninput={onCyclePeriodChange}
+						use:wheelSlider
 						class="flex-1 accent-blue-500"
 					/>
 					<input
@@ -174,6 +176,7 @@
 						step="0.01"
 						value={viewerState.colors.offset}
 						oninput={onOffsetChange}
+						use:wheelSlider
 						class="flex-1 accent-blue-500"
 					/>
 					<input

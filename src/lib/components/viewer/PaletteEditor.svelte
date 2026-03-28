@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
+	import { wheelSlider } from '$lib/actions/wheelSlider';
 	import { samplePalette } from '$lib/utils/colorPalettes';
 	import type { ColorConfig, ColorStop } from '$lib/stores/viewerState.svelte';
 	import SavePaletteModal from './SavePaletteModal.svelte';
@@ -254,6 +255,7 @@
 				step="1"
 				value={viewerState.colors.cyclePeriod}
 				oninput={(e) => { viewerState.colors = { ...viewerState.colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }; }}
+				use:wheelSlider
 				class="flex-1 accent-blue-500"
 			/>
 			<input
@@ -279,6 +281,7 @@
 				step="0.01"
 				value={viewerState.colors.offset}
 				oninput={(e) => { viewerState.colors = { ...viewerState.colors, offset: parseFloat((e.target as HTMLInputElement).value) }; }}
+				use:wheelSlider
 				class="flex-1 accent-blue-500"
 			/>
 			<input

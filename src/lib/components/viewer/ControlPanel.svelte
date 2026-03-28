@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
+	import { wheelSlider } from '$lib/actions/wheelSlider';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 	import LocationsPanel from './LocationsPanel.svelte';
@@ -117,6 +118,7 @@
 					oninput={(e) => {
 						viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
 					}}
+					use:wheelSlider
 					class="flex-1 accent-blue-500"
 				/>
 				<input
@@ -143,6 +145,7 @@
 					oninput={(e) => {
 						viewerState.power = parseInt((e.target as HTMLInputElement).value);
 					}}
+					use:wheelSlider
 					class="flex-1 accent-blue-500"
 				/>
 				<input
