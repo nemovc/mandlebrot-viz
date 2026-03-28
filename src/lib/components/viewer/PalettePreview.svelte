@@ -2,7 +2,7 @@
 	import { samplePalette } from '$lib/utils/colorPalettes';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 
-	let { colors }: { colors: ColorConfig } = $props();
+	let { colors, class: extraClass = '' }: { colors: ColorConfig; class?: string } = $props();
 
 	const display = $derived((() => {
 		const { palette, offset, reverse } = colors;
@@ -28,7 +28,7 @@
 	})());
 </script>
 
-<div class="relative h-4 rounded flex-1 overflow-visible" style="background: {display.gradient}">
+<div class="relative h-4 rounded flex-1 overflow-visible {extraClass}" style="background: {display.gradient}">
 	{#each display.displayStops as { pos }}
 		<div
 			class="absolute top-[-3px] bottom-[-3px] w-px bg-white/60"
