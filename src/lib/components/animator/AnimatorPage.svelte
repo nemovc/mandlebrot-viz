@@ -2,10 +2,10 @@
 	import { onMount, untrack } from 'svelte';
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
-	import ExpandedTrack from './ExpandedTrack.svelte';
-	import { animationState } from '$lib/stores/animationState.svelte';
+	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
 	import { PRESETS } from '$lib/utils/colorPalettes';
+	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 
 	let selectedTrack = $state<number | null>(null);
 
@@ -154,6 +154,44 @@
 		if (!exportProgress) return 0;
 		return Math.round((exportProgress.frame / exportProgress.totalFrames) * 100);
 	});
+
+	// ---- Keyframe editing ----
+	const kfTrack = $derived(selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null);
+	const kfFrame = $derived(animationState.currentFrame);
+	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame) : 0);
+	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
+	const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
+
+	let kfEditValue = $state('');
+	$effect(() => {
+		kfEditValue = kfAtFrame ? kfAtFrame.value.toString() : kfInterpolated.toFixed(6);
+	});
+
+	function kfAdd() {
+		if (selectedTrack === null) return;
+		animationState.addKeyframe(selectedTrack, kfFrame, kfInterpolated);
+	}
+	function kfDelete() {
+		if (selectedTrack === null) return;
+		animationState.removeKeyframe(selectedTrack, kfFrame);
+	}
+	function kfCommit() {
+		if (selectedTrack === null) return;
+		const v = parseFloat(kfEditValue);
+		if (isNaN(v)) return;
+		if (kfAtFrame) {
+			animationState.updateKeyframeValue(selectedTrack, kfFrame, v);
+		} else {
+			animationState.addKeyframe(selectedTrack, kfFrame, v);
+		}
+	}
+	function kfKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+		if (e.key === 'Escape') {
+			kfEditValue = kfAtFrame?.value.toString() ?? kfInterpolated.toFixed(6);
+			(e.target as HTMLInputElement).blur();
+		}
+	}
 </script>
 
 <svelte:window onkeydown={handleKey} />
@@ -270,31 +308,58 @@
 		<Timeline bind:selectedTrack />
 	</div>
 
-	<!-- Expanded track editor -->
-	{#if selectedTrack !== null}
-		<ExpandedTrack trackIdx={selectedTrack} />
-	{/if}
+	<!-- Keyframe edit + export bar -->
+	<div class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-950 border-t border-neutral-800 text-[11px]">
+		<!-- Keyframe section (left) -->
+		{#if kfTrack}
+			<span class="text-neutral-500 w-20 shrink-0 text-right">{kfLabel}</span>
+			<span class="text-neutral-600">frame {kfFrame}</span>
+			{#if kfAtFrame}
+				<span class="text-blue-400">◆</span>
+				<input
+					type="number"
+					step="any"
+					bind:value={kfEditValue}
+					onblur={kfCommit}
+					onkeydown={kfKeydown}
+					class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
+				/>
+				<button
+					onclick={kfDelete}
+					class="text-neutral-500 hover:text-red-400 transition-colors px-1"
+					title="Delete keyframe"
+				>✕</button>
+			{:else}
+				<span class="text-neutral-500 font-mono">{kfInterpolated.toFixed(6)}</span>
+				<button
+					onclick={kfAdd}
+					class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors"
+				>
+					<span class="text-blue-400">+</span> Add keyframe
+				</button>
+			{/if}
+		{:else}
+			<span class="text-neutral-700">Select a track to edit keyframes</span>
+		{/if}
 
-	<!-- Export bar -->
-	<div class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-900 border-t border-neutral-800 text-[11px]">
+		<div class="flex-1"></div>
+
+		<!-- Export section (right) -->
 		{#if exportPhase === 'idle'}
+			<span class="text-neutral-600">{project.totalFrames} frames · {durationSecs}s</span>
 			<button
 				onclick={startExport}
 				class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors text-[11px]"
 			>
 				Generate WebM — {project.width}×{project.height} @ {project.fps}fps
 			</button>
-			<span class="text-neutral-600">{project.totalFrames} frames · {durationSecs}s</span>
 		{:else if exportPhase === 'exporting'}
-			<div class="flex-1 flex items-center gap-3">
+			<div class="flex items-center gap-3 w-72">
 				<div class="flex-1 h-1.5 bg-neutral-700 rounded overflow-hidden">
-					<div
-						class="h-full bg-blue-500 transition-all"
-						style="width: {exportProgressPct()}%"
-					></div>
+					<div class="h-full bg-blue-500 transition-all" style="width: {exportProgressPct()}%"></div>
 				</div>
 				<span class="text-neutral-400 whitespace-nowrap">
-					{exportProgress?.phase === 'encoding' ? 'Encoding' : 'Rendering'} frame
+					{exportProgress?.phase === 'encoding' ? 'Encoding' : 'Rendering'}
 					{(exportProgress?.frame ?? 0) + 1}/{project.totalFrames}
 					({exportProgressPct()}%)
 				</span>
