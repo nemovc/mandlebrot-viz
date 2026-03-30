@@ -143,8 +143,14 @@
 		{#each project.tracks as track, i}
 			<button
 				class="h-10 flex items-center justify-end pr-2 shrink-0 w-full border-b border-neutral-800/40 transition-colors text-right
-					{selectedTrack === i ? 'text-neutral-200 bg-neutral-800/40' : 'text-neutral-500 hover:text-neutral-300'}"
+					{selectedTrack === i
+						? 'text-neutral-200 bg-neutral-800/40'
+						: hoveredTrackIdx === i
+							? 'text-neutral-300 bg-white/10'
+							: 'text-neutral-500'}"
 				onclick={() => { selectedTrack = selectedTrack === i ? null : i; }}
+				onmouseenter={() => (hoveredTrackIdx = i)}
+				onmouseleave={() => (hoveredTrackIdx = null)}
 			>
 				{TRACK_LABELS[track.parameter]}
 			</button>
@@ -191,13 +197,17 @@
 			{#each project.tracks as track, i}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="relative h-10 border-b border-neutral-800/40 transition-colors
+					class="relative h-10 border-b border-neutral-800/40
 						{selectedTrack === i ? 'bg-neutral-800/25' : 'bg-neutral-900'}"
 					style="background-image: {GRID_BG};"
 					onmousedown={(e) => startScrub(e, i)}
 					onmouseenter={() => (hoveredTrackIdx = i)}
 					ondblclick={(e) => handleDblClick(e, i)}
 				>
+					<!-- Hover row highlight -->
+					{#if hoveredTrackIdx === i}
+						<div class="absolute inset-0 pointer-events-none" style="background: rgba(255,255,255,0.05)"></div>
+					{/if}
 					<!-- Hover column highlight -->
 					{#if hoverX !== null}
 						<div

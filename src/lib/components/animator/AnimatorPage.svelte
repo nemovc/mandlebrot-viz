@@ -254,7 +254,7 @@
 		<span class="text-neutral-700">·</span>
 
 		<label class="flex items-center gap-1 text-neutral-400">
-			power
+			exponent
 			<input
 				type="number"
 				min="2"
