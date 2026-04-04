@@ -7,6 +7,31 @@ import { buildCdf, baseAlgorithm } from '$lib/utils/colorPalettes';
 const TILE_SIZE = 256;
 const STAGE2_SIZE = 64; // low-res quick pass
 
+// Flash colors per render stage
+const FLASH_S2      = 'rgba(40, 120, 255, 0.5)';
+const FLASH_S3      = 'rgba(40, 200,  60, 0.5)';
+const FLASH_RECOLOR = 'rgba(255, 160,   0, 0.5)';
+
+/** Get the render canvas from a tile element (wrapper div or bare canvas). */
+function tileCanvas(el: HTMLElement): HTMLCanvasElement {
+	return (el as any)._canvas ?? (el as unknown as HTMLCanvasElement);
+}
+
+/** Flash a tile's overlay with a color, fading out over 0.2s. */
+function flashTile(el: HTMLElement, color: string) {
+	if (!debugState.showTileFlash) return;
+	const overlay = (el as any)._flashOverlay as HTMLDivElement | undefined;
+	if (!overlay) return;
+	overlay.style.transition = 'none';
+	overlay.style.backgroundColor = color;
+	overlay.style.opacity = '1';
+	// Double RAF ensures the browser commits opacity:1 before starting the transition
+	requestAnimationFrame(() => requestAnimationFrame(() => {
+		overlay.style.transition = 'opacity 0.4s ease-out';
+		overlay.style.opacity = '0';
+	}));
+}
+
 let _tileSeq = 0;
 /** Returns unique job ids for a tile's rendering stages. */
 function tileIds(x: number, y: number, z: number): { s2id: string; s3id: string; rcId: string } {
@@ -41,9 +66,22 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 
 		createTile(coords: { x: number; y: number; z: number }, done: (err: Error | null, tile: HTMLElement) => void) {
 			const { x, y, z } = coords;
+
+			const wrapper = document.createElement('div');
+			wrapper.style.cssText = 'overflow:hidden;';
+
 			const canvas = document.createElement('canvas');
 			canvas.width = TILE_SIZE;
 			canvas.height = TILE_SIZE;
+			canvas.style.cssText = 'display:block;width:100%;height:100%;';
+			wrapper.appendChild(canvas);
+
+			const flashOverlay = document.createElement('div');
+			flashOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;opacity:0;';
+			wrapper.appendChild(flashOverlay);
+			(wrapper as any)._canvas = canvas;
+			(wrapper as any)._flashOverlay = flashOverlay;
+
 			const ctx = canvas.getContext('2d')!;
 
 			const scale = scaleForZoom(z, TILE_SIZE); // complex units/pixel
@@ -89,7 +127,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					ctx.imageSmoothingEnabled = true;
 					ctx.imageSmoothingQuality = 'high';
 					ctx.drawImage(tmpCanvas, 0, 0, TILE_SIZE, TILE_SIZE);
-					done(null, canvas);
+					done(null, wrapper);
+					flashTile(wrapper, FLASH_S2);
 
 					// Stage 3: full-res refinement
 					pool.submit(
@@ -111,6 +150,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter, power, algorithm: colorConfig.algorithm });
 							ctx.putImageData(finalResult.imageData, 0, 0);
+							flashTile(wrapper, FLASH_S3);
 							if ((this as any).colorConfig && baseAlgorithm((this as any).colorConfig.algorithm) === 'histogram') {
 								if (getWorkerPool().s3Pending === 1) (this as any)._rebuildHistogramAndRecolor();
 							}
@@ -119,9 +159,9 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				}
 			);
 
-			// Attach cleanup to canvas for cancellation
-			(canvas as any)._tileIds = [s2id, s3id];
-			return canvas;
+			// Attach cleanup to wrapper for cancellation
+			(wrapper as any)._tileIds = [s2id, s3id];
+			return wrapper;
 		},
 
 		/** Recolor all visible tiles via the dedicated recolor worker pool. */
@@ -143,7 +183,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
 				const maxIter = this.maxIter;
 				const power = this.power;
-				const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+				const tiles = (this as any)._tiles as Record<string, { el: HTMLElement; coords: { x: number; y: number; z: number } }>;
 				const itersCache = (this as any)._itersCache as ItersCache;
 				const tileCount = Object.keys(tiles).length;
 				let submittedCount = 0;
@@ -163,7 +203,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					pool.submit(
 						{ id: rcId, recolorOnly: true, iters: new Float32Array(cached.iters), tileSize: TILE_SIZE, maxIter, power,
 						  colorConfig, cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3, slow: debugState.slowMode },
-						(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
+						(result) => { tileCanvas(canvas).getContext('2d')!.putImageData(result.imageData, 0, 0); flashTile(canvas, FLASH_RECOLOR); }
 					);
 					(canvas as any)._tileIds = [rcId];
 					submittedCount++;
@@ -184,7 +224,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
 			const maxIter = this.maxIter;
 			const power = this.power;
-			const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+			const tiles = (this as any)._tiles as Record<string, { el: HTMLElement; coords: { x: number; y: number; z: number } }>;
 			const itersCache = (this as any)._itersCache as ItersCache;
 			const tileCount = Object.keys(tiles).length;
 
@@ -211,7 +251,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						// Color settings may have changed while this job was in flight — recolor to latest.
 						const liveConfig = JSON.parse(JSON.stringify((this as any).colorConfig!));
 						if (baseAlgorithm(liveConfig.algorithm) === 'histogram') {
-							canvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
+							tileCanvas(canvas).getContext('2d')!.putImageData(result.imageData, 0, 0);
+							flashTile(canvas, FLASH_S3);
 							if (getWorkerPool().s3Pending === 1) (this as any)._rebuildHistogramAndRecolor();
 							return;
 						}
@@ -221,11 +262,12 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 								{ id: rcId, recolorOnly: true, iters: new Float32Array(result.iters),
 								  tileSize: TILE_SIZE, maxIter, power, colorConfig: liveConfig,
 								  cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3, slow: debugState.slowMode },
-								(rc) => { canvas.getContext('2d')!.putImageData(rc.imageData, 0, 0); }
+								(rc) => { tileCanvas(canvas).getContext('2d')!.putImageData(rc.imageData, 0, 0); flashTile(canvas, FLASH_RECOLOR); }
 							);
 							(canvas as any)._tileIds = [rcId];
 						} else {
-							canvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
+							tileCanvas(canvas).getContext('2d')!.putImageData(result.imageData, 0, 0);
+							flashTile(canvas, FLASH_S3);
 						}
 					}
 				);
@@ -238,7 +280,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			const liveConfig: ColorConfig | null = (this as any).colorConfig;
 			if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
 
-			const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+			const tiles = (this as any)._tiles as Record<string, { el: HTMLElement; coords: { x: number; y: number; z: number } }>;
 			const itersCache = (this as any)._itersCache as ItersCache;
 			const maxIter = this.maxIter;
 			const power = this.power;
@@ -275,7 +317,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						cdf: new Float32Array(cdf),
 						slow: debugState.slowMode,
 					},
-					(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
+					(result) => { tileCanvas(canvas).getContext('2d')!.putImageData(result.imageData, 0, 0); flashTile(canvas, FLASH_RECOLOR); }
 				);
 				(canvas as any)._tileIds = [rcId];
 			}

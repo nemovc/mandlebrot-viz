@@ -43,6 +43,7 @@
       scrollWheelZoom: true,
       maxBounds: worldBounds,
       maxBoundsViscosity: 1.0,
+      fadeAnimation: false,
     });
 
     const LayerClass = createMandelbrotLayer(L);

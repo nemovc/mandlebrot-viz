@@ -65,6 +65,7 @@
 			<ToggleButton active={debugState.showCrosshair} onclick={() => debugState.showCrosshair = !debugState.showCrosshair} checkbox>Show crosshair</ToggleButton>
 			<ToggleButton active={debugState.showTileSquare} onclick={() => debugState.showTileSquare = !debugState.showTileSquare} checkbox>Show tile square</ToggleButton>
 			<ToggleButton active={debugState.slowMode} onclick={() => debugState.slowMode = !debugState.slowMode} checkbox>Slow mode</ToggleButton>
+			<ToggleButton active={debugState.showTileFlash} onclick={() => debugState.showTileFlash = !debugState.showTileFlash} checkbox>Tile flash</ToggleButton>
 		</div>
 
 		<!-- Render pool -->

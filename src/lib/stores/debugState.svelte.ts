@@ -3,6 +3,7 @@ export interface DebugStateSnapshot {
 	showCrosshair: boolean;
 	showTileSquare: boolean;
 	slowMode: boolean;
+	showTileFlash: boolean;
 }
 
 function createDebugState() {
@@ -10,6 +11,7 @@ function createDebugState() {
 	let showCrosshair = $state(false);
 	let showTileSquare = $state(false);
 	let slowMode = $state(false);
+	let showTileFlash = $state(false);
 
 	return {
 		get debugLogging() { return debugLogging; },
@@ -20,15 +22,18 @@ function createDebugState() {
 		set showTileSquare(v) { showTileSquare = v; },
 		get slowMode() { return slowMode; },
 		set slowMode(v) { slowMode = v; },
+		get showTileFlash() { return showTileFlash; },
+		set showTileFlash(v) { showTileFlash = v; },
 
 		toJSON(): DebugStateSnapshot {
-			return { debugLogging, showCrosshair, showTileSquare, slowMode };
+			return { debugLogging, showCrosshair, showTileSquare, slowMode, showTileFlash };
 		},
 		loadFrom(s: Partial<DebugStateSnapshot>) {
 			if (s.debugLogging !== undefined) debugLogging = s.debugLogging;
 			if (s.showCrosshair !== undefined) showCrosshair = s.showCrosshair;
 			if (s.showTileSquare !== undefined) showTileSquare = s.showTileSquare;
 			if (s.slowMode !== undefined) slowMode = s.slowMode;
+			if (s.showTileFlash !== undefined) showTileFlash = s.showTileFlash;
 		},
 	};
 }
