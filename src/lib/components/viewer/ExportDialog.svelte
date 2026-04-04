@@ -13,11 +13,15 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
+  const dpr = window.devicePixelRatio || 1;
+  const physW = Math.round(window.innerWidth * dpr);
+  const physH = Math.round(window.innerHeight * dpr);
+
   const resolutions = [
     {
-      label: `Current view (${window.innerWidth}×${window.innerHeight})`,
-      w: window.innerWidth,
-      h: window.innerHeight,
+      label: `Current view (${physW}×${physH})`,
+      w: physW,
+      h: physH,
       wide: true,
     },
     { label: "256×256", w: 256, h: 256 },
