@@ -51,6 +51,9 @@ export class WorkerPool {
 	private jobStages = new Map<string, 2 | 3>(); // id → stage, for lookup in onResult/cancel
 	onProgress?: (stage: 2 | 3, completed: number, total: number) => void;
 
+	/** Number of stage-3 jobs currently submitted but not yet complete (queued + in-flight). */
+	get s3Pending(): number { return this.pending[3]; }
+
 	get debugState() {
 		let activeS2 = 0, activeS3 = 0;
 		for (const [worker, jobId] of this.workerJobs) {

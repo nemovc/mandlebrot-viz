@@ -107,7 +107,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter, power, algorithm: colorConfig.algorithm });
 							if ((this as any).colorConfig && baseAlgorithm((this as any).colorConfig.algorithm) === 'histogram') {
-								(this as any)._rebuildHistogramAndRecolor();
+								(this as any)._rebuildHistogramAndRecolor(true);
 							} else {
 								ctx.putImageData(finalResult.imageData, 0, 0);
 							}
@@ -206,7 +206,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						// Color settings may have changed while this job was in flight — recolor to latest.
 						const liveConfig = JSON.parse(JSON.stringify((this as any).colorConfig!));
 						if (baseAlgorithm(liveConfig.algorithm) === 'histogram') {
-							(this as any)._rebuildHistogramAndRecolor();
+							(this as any)._rebuildHistogramAndRecolor(true);
 							return;
 						}
 						if (result.iters && liveConfig.algorithm === colorConfig.algorithm) {
@@ -228,7 +228,13 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			debugLog(() => `[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
 		},
 
-		_rebuildHistogramAndRecolor() {
+		/** @param calledFromTileCallback - true when called from within a worker result callback,
+		 *  where the pool hasn't decremented pending[3] yet. In that case s3Pending === 1
+		 *  means "this is the last tile". */
+		_rebuildHistogramAndRecolor(calledFromTileCallback = false) {
+			const s3Pending = getWorkerPool().s3Pending;
+			if (s3Pending > (calledFromTileCallback ? 1 : 0)) return;
+
 			const liveConfig: ColorConfig | null = (this as any).colorConfig;
 			if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
 
