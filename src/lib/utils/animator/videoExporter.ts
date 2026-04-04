@@ -1,7 +1,8 @@
 import { Muxer, ArrayBufferTarget } from 'webm-muxer';
-import { getWorkerPool } from '$lib/rendering/worker/workerPool';
+import { getWorkerPool, getRecolorPool } from '$lib/rendering/worker/workerPool';
 import { interpolateAll } from '$lib/utils/animator/interpolation';
 import { getPrecisionMode, scaleForZoom } from '$lib/utils/precision';
+import { buildCdf, baseAlgorithm } from '$lib/utils/colorPalettes';
 import type { AnimationProject } from '$lib/stores/animationState.svelte';
 import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 
@@ -71,10 +72,12 @@ export async function exportWebM(
 		const power = state.power;
 		const batchId = `webm-${frameNum}`;
 		const jobIds: string[] = [];
+		const isHistogram = baseAlgorithm(colorConfig.algorithm) === 'histogram';
+		const tileIters = new Map<string, Float32Array>();
 
 		ctx.clearRect(0, 0, width, height);
 
-		// Render all tiles for this frame, then encode
+		// Pass 1: render all tiles (placeholder coloring for histogram)
 		await new Promise<void>((resolve, reject) => {
 			if (signal.aborted) {
 				reject(new DOMException('Export cancelled', 'AbortError'));
@@ -110,6 +113,7 @@ export async function exportWebM(
 						},
 						(result) => {
 							ctx.putImageData(result.imageData, tx * TILE, ty * TILE);
+							if (isHistogram && result.iters) tileIters.set(`${tx},${ty}`, result.iters);
 							done++;
 							if (done === tileCount) resolve();
 						},
@@ -120,6 +124,44 @@ export async function exportWebM(
 			for (const id of jobIds) pool.cancel(id);
 			throw err;
 		});
+
+		// Pass 2 (histogram only): build global CDF and recolor all tiles
+		if (isHistogram && tileIters.size > 0) {
+			if (signal.aborted) {
+				encoder.close();
+				throw new DOMException('Export cancelled', 'AbortError');
+			}
+			const cdf = buildCdf([...tileIters.values()], maxIter);
+			const rcPool = getRecolorPool();
+			const rcJobIds: string[] = [];
+			await new Promise<void>((resolve, reject) => {
+				let done = 0;
+				const count = tileIters.size;
+				for (let ty = 0; ty < tilesY; ty++) {
+					for (let tx = 0; tx < tilesX; tx++) {
+						const iters = tileIters.get(`${tx},${ty}`);
+						if (!iters) continue;
+						const rcId = `${batchId}-rc-${tx}-${ty}`;
+						rcJobIds.push(rcId);
+						rcPool.submit(
+							{
+								id: rcId, recolorOnly: true, iters: new Float32Array(iters),
+								tileSize: TILE, maxIter, power, colorConfig, cdf,
+								cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3,
+							},
+							(result) => {
+								ctx.putImageData(result.imageData, tx * TILE, ty * TILE);
+								done++;
+								if (done === count) resolve();
+							},
+						);
+					}
+				}
+			}).catch((err) => {
+				for (const id of rcJobIds) rcPool.cancel(id);
+				throw err;
+			});
+		}
 
 		if (signal.aborted) {
 			encoder.close();

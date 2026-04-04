@@ -197,7 +197,10 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					const cached = itersCache.get(`${z}/${x}/${y}`);
 					if (!cached) { skippedNoCache++; continue; }
 					if (cached.maxIter !== maxIter || cached.power !== power) { skippedMismatch++; continue; }
-					if (baseAlgorithm(cached.algorithm) !== baseAlgorithm(colorConfig.algorithm)) { skippedNoCache++; continue; }
+					// DEM stores different iteration data — incompatible with escape_time/histogram cache.
+					// escape_time and histogram use the same WASM function so their caches are interchangeable.
+					const isDem = (a: string) => baseAlgorithm(a as ColorConfig['algorithm']) === 'distance_estimation';
+					if (isDem(cached.algorithm) !== isDem(colorConfig.algorithm)) { skippedNoCache++; continue; }
 
 					const { rcId } = tileIds(x, y, z);
 					pool.submit(

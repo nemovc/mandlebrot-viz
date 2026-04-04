@@ -3,8 +3,9 @@
 	import { animationState } from '$lib/stores/animationState.svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { interpolateAll } from '$lib/utils/animator/interpolation';
-	import { getWorkerPool } from '$lib/rendering/worker/workerPool';
+	import { getWorkerPool, getRecolorPool } from '$lib/rendering/worker/workerPool';
 	import { getPrecisionMode, scaleForZoom } from '$lib/utils/precision';
+	import { buildCdf, baseAlgorithm } from '$lib/utils/colorPalettes';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 
 	const TILE = 256;
@@ -57,6 +58,9 @@
 
 		const pool = getWorkerPool();
 		const batchId = `preview-${Date.now()}`;
+		const isHistogram = baseAlgorithm(colorConfig.algorithm) === 'histogram';
+		const tileIters = new Map<string, Float32Array>();
+		let passOneDone = 0;
 
 		for (let ty = 0; ty < tilesY; ty++) {
 			for (let tx = 0; tx < tilesX; tx++) {
@@ -82,6 +86,32 @@
 					(result) => {
 						if (seq !== renderSeq) return;
 						ctx.putImageData(result.imageData, tx * TILE, ty * TILE);
+						if (isHistogram && result.iters) tileIters.set(`${tx},${ty}`, result.iters);
+						passOneDone++;
+						if (isHistogram && passOneDone === total) {
+							// Pass 2: build CDF from all tiles and recolor
+							const cdf = buildCdf([...tileIters.values()], maxIter);
+							const rcPool = getRecolorPool();
+							for (let ry = 0; ry < tilesY; ry++) {
+								for (let rx = 0; rx < tilesX; rx++) {
+									const iters = tileIters.get(`${rx},${ry}`);
+									if (!iters) continue;
+									const rcId = `${batchId}-rc-${rx}-${ry}`;
+									activeJobIds.push(rcId);
+									rcPool.submit(
+										{
+											id: rcId, recolorOnly: true, iters: new Float32Array(iters),
+											tileSize: TILE, maxIter, power, colorConfig, cdf,
+											cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 1, stage: 3,
+										},
+										(rcResult) => {
+											if (seq !== renderSeq) return;
+											ctx.putImageData(rcResult.imageData, rx * TILE, ry * TILE);
+										},
+									);
+								}
+							}
+						}
 					},
 				);
 			}
