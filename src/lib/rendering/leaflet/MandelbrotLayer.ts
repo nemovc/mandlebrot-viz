@@ -110,10 +110,9 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						},
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter, power, algorithm: colorConfig.algorithm });
+							ctx.putImageData(finalResult.imageData, 0, 0);
 							if ((this as any).colorConfig && baseAlgorithm((this as any).colorConfig.algorithm) === 'histogram') {
-								(this as any)._rebuildHistogramAndRecolor();
-							} else {
-								ctx.putImageData(finalResult.imageData, 0, 0);
+								if (getWorkerPool().s3Pending === 1) (this as any)._rebuildHistogramAndRecolor();
 							}
 						}
 					);
@@ -212,7 +211,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						// Color settings may have changed while this job was in flight — recolor to latest.
 						const liveConfig = JSON.parse(JSON.stringify((this as any).colorConfig!));
 						if (baseAlgorithm(liveConfig.algorithm) === 'histogram') {
-							(this as any)._rebuildHistogramAndRecolor();
+							canvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
+							if (getWorkerPool().s3Pending === 1) (this as any)._rebuildHistogramAndRecolor();
 							return;
 						}
 						if (result.iters && liveConfig.algorithm === colorConfig.algorithm) {
@@ -273,6 +273,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						tileSize: TILE_SIZE, maxIter, power, colorConfig,
 						cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3,
 						cdf: new Float32Array(cdf),
+						slow: debugState.slowMode,
 					},
 					(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
 				);
