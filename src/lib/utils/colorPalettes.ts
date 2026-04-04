@@ -1,10 +1,20 @@
 import type { ColorConfig } from "$lib/stores/viewerState.svelte";
 
+export type BaseAlgorithm = 'escape_time' | 'distance_estimation' | 'histogram';
+
+export function baseAlgorithm(a: ColorConfig['algorithm']): BaseAlgorithm {
+  if (a === 'distance_estimation' || a === 'distance_estimation_banded') return 'distance_estimation';
+  if (a === 'histogram_equalized_smooth' || a === 'histogram_equalized_banded') return 'histogram';
+  return 'escape_time';
+}
+
 export const ALGORITHMS: { value: ColorConfig['algorithm']; label: string }[] = [
   { value: 'escape_time_smooth',          label: 'Escape Time (smooth)' },
   { value: 'escape_time_banded',          label: 'Escape Time (banded)' },
   { value: 'distance_estimation',         label: 'Distance Estimation (smooth)' },
   { value: 'distance_estimation_banded',  label: 'Distance Estimation (banded)' },
+  { value: 'histogram_equalized_smooth',  label: 'Histogram Equalized (smooth)' },
+  { value: 'histogram_equalized_banded',  label: 'Histogram Equalized (banded)' },
 ];
 
 export const DEFAULT_PALETTE: ColorConfig = {
@@ -250,6 +260,32 @@ export const PRESETS: Record<string, ColorConfig> = {
   },
 };
 
+/** Build a cumulative distribution function from escaped-pixel iteration values across tiles.
+ *  Returns a Float32Array of length maxIter+1 where cdf[i] = fraction of escaped pixels with iter ≤ i.
+ *  In-set pixels (val >= maxIter) are excluded from the distribution.
+ */
+export function buildCdf(tileIters: Float32Array[], maxIter: number): Float32Array {
+  const bins = new Uint32Array(maxIter + 1);
+  let total = 0;
+  for (const iters of tileIters) {
+    for (let i = 0; i < iters.length; i++) {
+      const v = iters[i];
+      if (v < maxIter) {
+        bins[Math.min(Math.floor(v), maxIter - 1)]++;
+        total++;
+      }
+    }
+  }
+  const cdf = new Float32Array(maxIter + 1);
+  if (total === 0) return cdf;
+  let cumulative = 0;
+  for (let i = 0; i <= maxIter; i++) {
+    cumulative += bins[i];
+    cdf[i] = cumulative / total;
+  }
+  return cdf;
+}
+
 /** Sample a gradient palette at position t ∈ [0,1] */
 export function samplePalette(
   palette: ColorConfig["palette"],
@@ -292,6 +328,7 @@ export function buildImageData(
   height: number,
   maxIter: number,
   config: ColorConfig,
+  cdf?: Float32Array,
 ): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
   const colorCache = new Map<number, [number, number, number]>();
@@ -330,6 +367,32 @@ export function buildImageData(
             ? Math.floor(logDist)
             : logDist;
         const t = (((scaledLog / cyclePeriod + offset) % 1) + 1) % 1;
+        const key = Math.round((reverse ? 1 - t : t) * 4000);
+        let cached = colorCache.get(key);
+        if (!cached) {
+          cached = samplePalette(palette, key / 4000);
+          colorCache.set(key, cached);
+        }
+        [r, g, b] = cached;
+      }
+    } else if (algorithm === 'histogram_equalized_smooth' || algorithm === 'histogram_equalized_banded') {
+      if (val >= maxIter) {
+        [r, g, b] = inSetRgb;
+      } else {
+        const lo = Math.min(Math.floor(val), maxIter - 1);
+        let rawT: number;
+        if (cdf) {
+          if (algorithm === 'histogram_equalized_banded') {
+            rawT = cdf[lo];
+          } else {
+            const hi = Math.min(lo + 1, maxIter - 1);
+            rawT = cdf[lo] + (cdf[hi] - cdf[lo]) * (val - lo);
+          }
+        } else {
+          // No CDF yet — placeholder using smooth escape time
+          rawT = (val / cyclePeriod) % 1;
+        }
+        const t = (((rawT + offset) % 1) + 1) % 1;
         const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);
         if (!cached) {

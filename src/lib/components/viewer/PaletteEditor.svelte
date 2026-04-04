@@ -2,7 +2,7 @@
 	import { untrack } from 'svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { samplePalette } from '$lib/utils/colorPalettes';
+	import { samplePalette, baseAlgorithm } from '$lib/utils/colorPalettes';
 	import type { ColorConfig, ColorStop } from '$lib/stores/viewerState.svelte';
 	import SavePaletteModal from './SavePaletteModal.svelte';
 
@@ -246,7 +246,7 @@
 
 		<!-- Cycle Period -->
 		<div class="flex items-center gap-2 pt-1">
-			<label class="text-neutral-400 text-xs shrink-0 w-20" for="pe-cyclePeriod">Cycle Period</label>
+			<label class="text-neutral-400 text-xs shrink-0 w-20 {baseAlgorithm(viewerState.colors.algorithm) === 'histogram' ? 'opacity-30' : ''}" for="pe-cyclePeriod">Cycle Period</label>
 			<input
 				id="pe-cyclePeriod"
 				type="range"
@@ -256,11 +256,13 @@
 				value={viewerState.colors.cyclePeriod}
 				oninput={(e) => { viewerState.colors = { ...viewerState.colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }; }}
 				use:wheelSlider
-				class="flex-1 min-w-0 accent-blue-500"
+				disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+				class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
 			/>
 			<input
 				type="text"
-				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+				disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
 				value={viewerState.colors.cyclePeriod}
 				onblur={(e) => {
 					const v = parseInt((e.target as HTMLInputElement).value);

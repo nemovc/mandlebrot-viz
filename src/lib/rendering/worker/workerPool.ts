@@ -18,6 +18,7 @@ export interface RenderJob {
 	// For color-only redraws: skip WASM and recolorize from provided iters
 	recolorOnly?: true;
 	iters?: Float32Array;
+	cdf?: Float32Array;
 	debug?: boolean;
 	slow?: boolean;
 }

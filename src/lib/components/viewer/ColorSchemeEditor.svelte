@@ -2,7 +2,7 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { PRESETS, ALGORITHMS } from '$lib/utils/colorPalettes';
+	import { PRESETS, ALGORITHMS, baseAlgorithm } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import type { ColorStop } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
@@ -132,7 +132,7 @@
 
 			<!-- Row 3: Cycle Period -->
 			<div>
-				<label class="text-neutral-400 text-xs" for="cyclePeriod">Cycle Period</label>
+				<label class="text-neutral-400 text-xs {baseAlgorithm(viewerState.colors.algorithm) === 'histogram' ? 'opacity-30' : ''}" for="cyclePeriod">Cycle Period</label>
 				<div class="flex items-center gap-2 mt-1">
 					<input
 						id="cyclePeriod"
@@ -143,11 +143,13 @@
 						value={viewerState.colors.cyclePeriod}
 						oninput={onCyclePeriodChange}
 						use:wheelSlider
-						class="flex-1 min-w-0 accent-blue-500"
+						disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+						class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
 					/>
 					<input
 						type="text"
-						class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+						disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+						class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
 						value={viewerState.colors.cyclePeriod}
 						onblur={(e) => {
 							const v = parseInt((e.target as HTMLInputElement).value);
@@ -156,9 +158,14 @@
 						onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 					/>
 				</div>
-				{#if (viewerState.colors.algorithm === 'distance_estimation' || viewerState.colors.algorithm === 'distance_estimation_banded') && viewerState.colors.cyclePeriod > 32}
+				{#if baseAlgorithm(viewerState.colors.algorithm) === 'distance_estimation' && viewerState.colors.cyclePeriod > 32}
 					<p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">
 						High cycle period loses detail in distance estimation mode.
+					</p>
+				{/if}
+				{#if baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+					<p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">
+						Cycle period is unused in histogram equalized mode.
 					</p>
 				{/if}
 			</div>

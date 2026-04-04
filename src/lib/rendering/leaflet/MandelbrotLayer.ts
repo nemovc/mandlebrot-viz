@@ -2,6 +2,7 @@ import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 import { getWorkerPool, getRecolorPool } from '$lib/rendering/worker/workerPool';
 import { debugLog, debugState } from '$lib/stores/debugState.svelte';
 import { getPrecisionMode, scaleForZoom } from '$lib/utils/precision';
+import { buildCdf, baseAlgorithm } from '$lib/utils/colorPalettes';
 
 const TILE_SIZE = 256;
 const STAGE2_SIZE = 64; // low-res quick pass
@@ -105,7 +106,11 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						},
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter, power, algorithm: colorConfig.algorithm });
-							ctx.putImageData(finalResult.imageData, 0, 0);
+							if ((this as any).colorConfig && baseAlgorithm((this as any).colorConfig.algorithm) === 'histogram') {
+								(this as any)._rebuildHistogramAndRecolor();
+							} else {
+								ctx.putImageData(finalResult.imageData, 0, 0);
+							}
 						}
 					);
 				}
@@ -123,6 +128,12 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 
 			(this as any)._recolorTimer = setTimeout(() => {
 				(this as any)._recolorTimer = null;
+
+				if (this.colorConfig && baseAlgorithm(this.colorConfig.algorithm) === 'histogram') {
+					(this as any)._rebuildHistogramAndRecolor();
+					return;
+				}
+
 				// Clear any queued recolor jobs — pool is exclusively for recolor so this is safe
 				pool.cancelAll();
 
@@ -143,8 +154,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					const cached = itersCache.get(`${z}/${x}/${y}`);
 					if (!cached) { skippedNoCache++; continue; }
 					if (cached.maxIter !== maxIter || cached.power !== power) { skippedMismatch++; continue; }
-					const isDem = (a: string) => a === 'distance_estimation' || a === 'distance_estimation_banded';
-					if (isDem(cached.algorithm) !== isDem(colorConfig.algorithm)) { skippedNoCache++; continue; }
+					if (baseAlgorithm(cached.algorithm) !== baseAlgorithm(colorConfig.algorithm)) { skippedNoCache++; continue; }
 
 					const { rcId } = tileIds(x, y, z);
 					pool.submit(
@@ -195,6 +205,10 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						if (result.iters) itersCache.set(key, { iters: result.iters, maxIter, power, algorithm: colorConfig.algorithm });
 						// Color settings may have changed while this job was in flight — recolor to latest.
 						const liveConfig = JSON.parse(JSON.stringify((this as any).colorConfig!));
+						if (baseAlgorithm(liveConfig.algorithm) === 'histogram') {
+							(this as any)._rebuildHistogramAndRecolor();
+							return;
+						}
 						if (result.iters && liveConfig.algorithm === colorConfig.algorithm) {
 							const { rcId } = tileIds(x, y, z);
 							getRecolorPool().submit(
@@ -212,6 +226,56 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 				(canvas as any)._tileIds = [s3id];
 			}
 			debugLog(() => `[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
+		},
+
+		_rebuildHistogramAndRecolor() {
+			if ((this as any)._histogramTimer) clearTimeout((this as any)._histogramTimer);
+			(this as any)._histogramTimer = setTimeout(() => {
+				(this as any)._histogramTimer = null;
+
+				const liveConfig: ColorConfig | null = (this as any).colorConfig;
+				if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
+
+				const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+				const itersCache = (this as any)._itersCache as ItersCache;
+				const maxIter = this.maxIter;
+				const power = this.power;
+
+				const arrays: Float32Array[] = [];
+				for (const tile of Object.values(tiles)) {
+					const { x, y, z } = tile.coords;
+					const cached = itersCache.get(`${z}/${x}/${y}`);
+					if (cached && cached.maxIter === maxIter && cached.power === power) {
+						arrays.push(cached.iters);
+					}
+				}
+				if (arrays.length === 0) return;
+
+				const cdf = buildCdf(arrays, maxIter);
+				const colorConfig = JSON.parse(JSON.stringify(liveConfig));
+				const pool = getRecolorPool();
+				pool.cancelAll();
+
+				for (const tile of Object.values(tiles)) {
+					const { x, y, z } = tile.coords;
+					const canvas = tile.el;
+					const cached = itersCache.get(`${z}/${x}/${y}`);
+					if (!cached || cached.maxIter !== maxIter || cached.power !== power) continue;
+
+					const { rcId } = tileIds(x, y, z);
+					pool.submit(
+						{
+							id: rcId, recolorOnly: true,
+							iters: new Float32Array(cached.iters),
+							tileSize: TILE_SIZE, maxIter, power, colorConfig,
+							cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3,
+							cdf: new Float32Array(cdf),
+						},
+						(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
+					);
+					(canvas as any)._tileIds = [rcId];
+				}
+			}, 50);
 		},
 
 		_removeTile(key: string) {

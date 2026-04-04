@@ -1,5 +1,5 @@
 import type { RenderJob, TileResult } from "./workerPool";
-import { buildImageData } from "$lib/utils/colorPalettes";
+import { buildImageData, baseAlgorithm } from "$lib/utils/colorPalettes";
 import { getPrecisionBits } from "$lib/utils/precision";
 import init, {
   compute_tile_f64,
@@ -39,6 +39,7 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
         tileSize,
         maxIter,
         colorConfig,
+        e.data.cdf,
       );
       (self as unknown as Worker).postMessage(
         { id, imageData } satisfies TileResult,
@@ -56,7 +57,7 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
     const t0 = performance.now();
 
     let iters: Float32Array;
-    const isDem = colorConfig.algorithm === "distance_estimation" || colorConfig.algorithm === "distance_estimation_banded";
+    const isDem = baseAlgorithm(colorConfig.algorithm) === 'distance_estimation';
 
     if (precisionMode === "f64") {
       iters = isDem
