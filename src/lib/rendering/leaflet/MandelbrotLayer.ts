@@ -229,53 +229,48 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 		},
 
 		_rebuildHistogramAndRecolor() {
-			if ((this as any)._histogramTimer) clearTimeout((this as any)._histogramTimer);
-			(this as any)._histogramTimer = setTimeout(() => {
-				(this as any)._histogramTimer = null;
+			const liveConfig: ColorConfig | null = (this as any).colorConfig;
+			if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
 
-				const liveConfig: ColorConfig | null = (this as any).colorConfig;
-				if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
+			const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
+			const itersCache = (this as any)._itersCache as ItersCache;
+			const maxIter = this.maxIter;
+			const power = this.power;
 
-				const tiles = (this as any)._tiles as Record<string, { el: HTMLCanvasElement; coords: { x: number; y: number; z: number } }>;
-				const itersCache = (this as any)._itersCache as ItersCache;
-				const maxIter = this.maxIter;
-				const power = this.power;
-
-				const arrays: Float32Array[] = [];
-				for (const tile of Object.values(tiles)) {
-					const { x, y, z } = tile.coords;
-					const cached = itersCache.get(`${z}/${x}/${y}`);
-					if (cached && cached.maxIter === maxIter && cached.power === power) {
-						arrays.push(cached.iters);
-					}
+			const arrays: Float32Array[] = [];
+			for (const tile of Object.values(tiles)) {
+				const { x, y, z } = tile.coords;
+				const cached = itersCache.get(`${z}/${x}/${y}`);
+				if (cached && cached.maxIter === maxIter && cached.power === power) {
+					arrays.push(cached.iters);
 				}
-				if (arrays.length === 0) return;
+			}
+			if (arrays.length === 0) return;
 
-				const cdf = buildCdf(arrays, maxIter);
-				const colorConfig = JSON.parse(JSON.stringify(liveConfig));
-				const pool = getRecolorPool();
-				pool.cancelAll();
+			const cdf = buildCdf(arrays, maxIter);
+			const colorConfig = JSON.parse(JSON.stringify(liveConfig));
+			const pool = getRecolorPool();
+			pool.cancelAll();
 
-				for (const tile of Object.values(tiles)) {
-					const { x, y, z } = tile.coords;
-					const canvas = tile.el;
-					const cached = itersCache.get(`${z}/${x}/${y}`);
-					if (!cached || cached.maxIter !== maxIter || cached.power !== power) continue;
+			for (const tile of Object.values(tiles)) {
+				const { x, y, z } = tile.coords;
+				const canvas = tile.el;
+				const cached = itersCache.get(`${z}/${x}/${y}`);
+				if (!cached || cached.maxIter !== maxIter || cached.power !== power) continue;
 
-					const { rcId } = tileIds(x, y, z);
-					pool.submit(
-						{
-							id: rcId, recolorOnly: true,
-							iters: new Float32Array(cached.iters),
-							tileSize: TILE_SIZE, maxIter, power, colorConfig,
-							cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3,
-							cdf: new Float32Array(cdf),
-						},
-						(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
-					);
-					(canvas as any)._tileIds = [rcId];
-				}
-			}, 50);
+				const { rcId } = tileIds(x, y, z);
+				pool.submit(
+					{
+						id: rcId, recolorOnly: true,
+						iters: new Float32Array(cached.iters),
+						tileSize: TILE_SIZE, maxIter, power, colorConfig,
+						cx: '', cy: '', scale: '', precisionMode: 'f64', priority: 0, stage: 3,
+						cdf: new Float32Array(cdf),
+					},
+					(result) => { canvas.getContext('2d')!.putImageData(result.imageData, 0, 0); }
+				);
+				(canvas as any)._tileIds = [rcId];
+			}
 		},
 
 		_removeTile(key: string) {
