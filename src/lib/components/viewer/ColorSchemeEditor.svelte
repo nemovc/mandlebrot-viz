@@ -2,7 +2,7 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { PRESETS } from '$lib/utils/colorPalettes';
+	import { PRESETS, ALGORITHMS } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import type { ColorStop } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
@@ -124,10 +124,9 @@
 					value={viewerState.colors.algorithm}
 					onchange={onAlgorithmChange}
 				>
-					<option value="smooth">Escape Time (smooth)</option>
-					<option value="escape_time">Escape Time (banded)</option>
-					<option value="distance_estimation">Distance Estimation (smooth)</option>
-					<option value="distance_estimation_banded">Distance Estimation (banded)</option>
+					{#each ALGORITHMS as a}
+						<option value={a.value}>{a.label}</option>
+					{/each}
 				</select>
 			</div>
 

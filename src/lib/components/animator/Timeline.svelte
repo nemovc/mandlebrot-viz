@@ -220,16 +220,18 @@
 					{#each track.keyframes as kf}
 						{@const isDragging = dragInfo?.trackIdx === i && dragInfo.fromFrame === kf.frame}
 						{@const displayFrame = isDragging ? dragInfo!.toFrame : kf.frame}
+						{@const easingColor = ({ linear: 'bg-blue-500 hover:bg-blue-400', 'ease-in': 'bg-purple-500 hover:bg-purple-400', 'ease-out': 'bg-green-500 hover:bg-green-400', 'ease-in-out': 'bg-amber-500 hover:bg-amber-400' } as Record<string, string>)[kf.easing] ?? 'bg-blue-500 hover:bg-blue-400'}
+						{@const selectedColor = ({ linear: 'bg-blue-300 ring-blue-200/50', 'ease-in': 'bg-purple-300 ring-purple-200/50', 'ease-out': 'bg-green-300 ring-green-200/50', 'ease-in-out': 'bg-amber-300 ring-amber-200/50' } as Record<string, string>)[kf.easing] ?? 'bg-blue-300 ring-blue-200/50'}
 						<button
 							class="absolute top-1/2 -translate-y-1/2 w-[10px] h-[10px] rotate-45 transition-colors
 								{kf.frame === 0 ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}
 								{selectedTrack === i && currentFrame === kf.frame
-								? 'bg-blue-300 ring-1 ring-blue-200/50'
-								: 'bg-blue-500 hover:bg-blue-400'}
+								? `${selectedColor} ring-1`
+								: easingColor}
 								{isDragging ? 'opacity-50' : ''}"
 							style="left: {displayFrame * CELL_W + CELL_W / 2 - 5}px"
 							onmousedown={(e) => startKeyframeDrag(e, i, kf.frame)}
-							title="Frame {kf.frame}: {kf.value}"
+							title="Frame {kf.frame}: {kf.value} ({kf.easing})"
 						></button>
 					{/each}
 

@@ -1,7 +1,14 @@
 import type { ColorConfig } from "$lib/stores/viewerState.svelte";
 
+export const ALGORITHMS: { value: ColorConfig['algorithm']; label: string }[] = [
+  { value: 'escape_time_smooth',          label: 'Escape Time (smooth)' },
+  { value: 'escape_time_banded',          label: 'Escape Time (banded)' },
+  { value: 'distance_estimation',         label: 'Distance Estimation (smooth)' },
+  { value: 'distance_estimation_banded',  label: 'Distance Estimation (banded)' },
+];
+
 export const DEFAULT_PALETTE: ColorConfig = {
-  algorithm: "smooth",
+  algorithm: "escape_time_smooth",
   palette: [
     { stop: 0.0, color: "#000764" },
     { stop: 0.16, color: "#206bcb" },
@@ -17,7 +24,7 @@ export const DEFAULT_PALETTE: ColorConfig = {
 export const PRESETS: Record<string, ColorConfig> = {
   "Classic Blue-Gold": DEFAULT_PALETTE,
   Fire: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.25, color: "#7f0000" },
@@ -29,7 +36,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Grayscale: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.5, color: "#ffffff" },
@@ -39,7 +46,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   "Ultra Fractal": {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.2, color: "#3d006e" },
@@ -52,7 +59,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Ocean: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000010" },
       { stop: 0.2, color: "#001a4d" },
@@ -65,7 +72,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Sunset: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#0a0020" },
       { stop: 0.2, color: "#4b0082" },
@@ -78,7 +85,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Neon: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#0d0d0d" },
       { stop: 0.2, color: "#0f00ff" },
@@ -91,7 +98,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Forest: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000a00" },
       { stop: 0.25, color: "#1a3300" },
@@ -103,7 +110,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Candy: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#ff6688" },
       { stop: 0.25, color: "#ffcc44" },
@@ -115,7 +122,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Ice: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000814" },
       { stop: 0.3, color: "#003366" },
@@ -129,7 +136,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Lava: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#0a0000" },
       { stop: 0.3, color: "#3d0000" },
@@ -143,7 +150,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Galaxy: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000008" },
       { stop: 0.2, color: "#110033" },
@@ -157,7 +164,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Toxic: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.3, color: "#003300" },
@@ -171,7 +178,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Autumn: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#100500" },
       { stop: 0.2, color: "#5c1500" },
@@ -185,7 +192,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   "Deep Space": {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.15, color: "#0a0020" },
@@ -200,7 +207,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Copper: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.3, color: "#331100" },
@@ -214,7 +221,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   Plasma: {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#0d0221" },
       { stop: 0.2, color: "#7b00d4" },
@@ -228,7 +235,7 @@ export const PRESETS: Record<string, ColorConfig> = {
     offset: 0,
   },
   "Electric Blue": {
-    algorithm: "smooth",
+    algorithm: "escape_time_smooth",
     palette: [
       { stop: 0.0, color: "#000000" },
       { stop: 0.25, color: "#001133" },
@@ -276,7 +283,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 /** Build a flat RGBA Uint8ClampedArray from iteration values.
  *  The meaning of each value in `iters` depends on the algorithm:
- *  - smooth/escape_time: fractional escape iteration count (>= maxIter = in set)
+ *  - escape_time_smooth/escape_time_banded: fractional escape iteration count (>= maxIter = in set)
  *  - distance_estimation: estimated distance to set boundary (< 0 = in set)
  */
 export function buildImageData(
@@ -335,7 +342,7 @@ export function buildImageData(
       if (val >= maxIter) {
         [r, g, b] = inSetRgb;
       } else {
-        const n = algorithm === "escape_time" ? Math.floor(val) : val;
+        const n = algorithm === "escape_time_banded" ? Math.floor(val) : val;
         const t = (((n / cyclePeriod + offset) % 1) + 1) % 1;
         const key = Math.round((reverse ? 1 - t : t) * 4000);
         let cached = colorCache.get(key);

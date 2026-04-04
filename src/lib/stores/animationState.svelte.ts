@@ -2,6 +2,7 @@ import type { ColorConfig, ViewerState } from '$lib/stores/viewerState.svelte';
 import { viewerState } from '$lib/stores/viewerState.svelte';
 
 export type TrackParameter = 'zoom' | 'cx' | 'cy' | 'maxIter' | 'cyclePeriod' | 'offset';
+export type EasingType = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 export const TRACK_PARAMS: TrackParameter[] = ['zoom', 'cx', 'cy', 'maxIter', 'cyclePeriod', 'offset'];
 
@@ -17,7 +18,7 @@ export const TRACK_LABELS: Record<TrackParameter, string> = {
 export interface Keyframe {
 	frame: number; // integer
 	value: number;
-	easing: 'linear';
+	easing: EasingType;
 }
 
 export interface ParameterTrack {
@@ -45,7 +46,7 @@ function defaultProject(): AnimationProject {
 		width: 1920,
 		height: 1080,
 		power: 2,
-		algorithm: 'smooth',
+		algorithm: 'escape_time_smooth',
 		palette: [],
 		inSetColor: '#000000',
 		reverse: false,
@@ -168,6 +169,12 @@ function createAnimationState() {
 				...track.keyframes.filter((k) => k.frame !== fromFrame && k.frame !== toFrame),
 				{ ...kf, frame: toFrame },
 			].sort((a, b) => a.frame - b.frame);
+		},
+
+		setKeyframeEasing(trackIdx: number, frame: number, easing: EasingType) {
+			commit();
+			const kf = project.tracks[trackIdx].keyframes.find((k) => k.frame === frame);
+			if (kf) kf.easing = easing;
 		},
 
 		updateProject(patch: Partial<Omit<AnimationProject, 'tracks'>>) {

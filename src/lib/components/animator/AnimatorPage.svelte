@@ -2,9 +2,10 @@
 	import { onMount, untrack } from 'svelte';
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
-	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
+	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
+	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
-	import { PRESETS } from '$lib/utils/colorPalettes';
+	import { PRESETS, ALGORITHMS } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 
 	let selectedTrack = $state<number | null>(null);
@@ -66,6 +67,11 @@
 	function setPower(v: string) {
 		const n = parseInt(v);
 		if (n >= 2 && n <= 10) animationState.updateProject({ power: n });
+	}
+
+	// Algorithm selector
+	function setAlgorithm(v: string) {
+		animationState.updateProject({ algorithm: v as ColorConfig['algorithm'] });
 	}
 
 	// Palette selector — show preset names
@@ -283,6 +289,19 @@
 			</select>
 		</label>
 
+		<label class="flex items-center gap-1 text-neutral-400">
+			algorithm
+			<select
+				value={project.algorithm}
+				onchange={(e) => setAlgorithm((e.target as HTMLSelectElement).value)}
+				class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+			>
+				{#each ALGORITHMS as a}
+					<option value={a.value}>{a.label}</option>
+				{/each}
+			</select>
+		</label>
+
 		<span class="text-neutral-700">·</span>
 
 		<!-- Undo / Redo -->
@@ -324,6 +343,19 @@
 					onkeydown={kfKeydown}
 					class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
 				/>
+				<select
+					value={kfAtFrame.easing}
+					onchange={(e) => {
+						if (selectedTrack !== null)
+							animationState.setKeyframeEasing(selectedTrack, kfFrame, (e.target as HTMLSelectElement).value as EasingType);
+					}}
+					class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+				>
+					<option value="linear">Linear</option>
+					<option value="ease-in">Ease In</option>
+					<option value="ease-out">Ease Out</option>
+					<option value="ease-in-out">Ease In-Out</option>
+				</select>
 				<button
 					onclick={kfDelete}
 					class="text-neutral-500 hover:text-red-400 transition-colors px-1"

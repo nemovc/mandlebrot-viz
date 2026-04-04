@@ -1,5 +1,14 @@
-import type { AnimationProject, ParameterTrack, TrackParameter } from '$lib/stores/animationState.svelte';
+import type { AnimationProject, EasingType, ParameterTrack, TrackParameter } from '$lib/stores/animationState.svelte';
 import type { ViewerState } from '$lib/stores/viewerState.svelte';
+
+function applyEasing(t: number, easing: EasingType): number {
+	switch (easing) {
+		case 'ease-in':     return t * t * t;
+		case 'ease-out':    return 1 - Math.pow(1 - t, 3);
+		case 'ease-in-out': return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+		default:            return t;
+	}
+}
 
 export function interpolateTrack(track: ParameterTrack, frame: number): number {
 	const kfs = track.keyframes;
@@ -12,7 +21,8 @@ export function interpolateTrack(track: ParameterTrack, frame: number): number {
 		const a = kfs[i],
 			b = kfs[i + 1];
 		if (frame >= a.frame && frame <= b.frame) {
-			const t = (frame - a.frame) / (b.frame - a.frame);
+			const rawT = (frame - a.frame) / (b.frame - a.frame);
+			const t = applyEasing(rawT, a.easing);
 			return a.value + (b.value - a.value) * t;
 		}
 	}
