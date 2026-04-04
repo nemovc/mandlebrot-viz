@@ -36,6 +36,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 		initialize(options: unknown) {
 			(L.GridLayer.prototype as any).initialize?.call(this, options);
 			(this as any)._itersCache = new Map() as ItersCache;
+			(this as any)._lastCdf = null as Float32Array | null;
 		},
 
 		createTile(coords: { x: number; y: number; z: number }, done: (err: Error | null, tile: HTMLElement) => void) {
@@ -60,6 +61,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			const power = this.power;
 
 			const { s2id, s3id } = tileIds(x, y, z);
+			const lastCdf = (this as any)._lastCdf as Float32Array | null;
 
 			// Stage 2: low-res quick tile
 			pool.submit(
@@ -72,6 +74,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 					power,
 					precisionMode,
 					colorConfig,
+					cdf: lastCdf ? new Float32Array(lastCdf) : undefined,
 					priority: 0,
 					stage: 2,
 					debug: debugState.debugLogging,
@@ -99,6 +102,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 							power,
 							precisionMode,
 							colorConfig,
+							cdf: lastCdf ? new Float32Array(lastCdf) : undefined,
 							priority: 1,
 							stage: 3,
 							debug: debugState.debugLogging,
@@ -107,7 +111,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						(finalResult) => {
 							if (finalResult.iters) (this as any)._itersCache.set(`${z}/${x}/${y}`, { iters: finalResult.iters, maxIter, power, algorithm: colorConfig.algorithm });
 							if ((this as any).colorConfig && baseAlgorithm((this as any).colorConfig.algorithm) === 'histogram') {
-								(this as any)._rebuildHistogramAndRecolor(true);
+								(this as any)._rebuildHistogramAndRecolor();
 							} else {
 								ctx.putImageData(finalResult.imageData, 0, 0);
 							}
@@ -175,6 +179,8 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 
 		/** Recompute all visible tiles via workers (used when maxIter or power changes). */
 		recompute() {
+			// Old CDF is invalid when maxIter/power changes — clear it so tiles don't use stale data
+			(this as any)._lastCdf = null;
 			const pool = getWorkerPool();
 			const colorConfig = JSON.parse(JSON.stringify(this.colorConfig!));
 			const maxIter = this.maxIter;
@@ -206,7 +212,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 						// Color settings may have changed while this job was in flight — recolor to latest.
 						const liveConfig = JSON.parse(JSON.stringify((this as any).colorConfig!));
 						if (baseAlgorithm(liveConfig.algorithm) === 'histogram') {
-							(this as any)._rebuildHistogramAndRecolor(true);
+							(this as any)._rebuildHistogramAndRecolor();
 							return;
 						}
 						if (result.iters && liveConfig.algorithm === colorConfig.algorithm) {
@@ -228,13 +234,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			debugLog(() => `[recompute] ${tileCount} tiles submitted (${(performance.now() - t0).toFixed(1)}ms)`);
 		},
 
-		/** @param calledFromTileCallback - true when called from within a worker result callback,
-		 *  where the pool hasn't decremented pending[3] yet. In that case s3Pending === 1
-		 *  means "this is the last tile". */
-		_rebuildHistogramAndRecolor(calledFromTileCallback = false) {
-			const s3Pending = getWorkerPool().s3Pending;
-			if (s3Pending > (calledFromTileCallback ? 1 : 0)) return;
-
+		_rebuildHistogramAndRecolor() {
 			const liveConfig: ColorConfig | null = (this as any).colorConfig;
 			if (!liveConfig || baseAlgorithm(liveConfig.algorithm) !== 'histogram') return;
 
@@ -254,6 +254,7 @@ export function createMandelbrotLayer(L: typeof import('leaflet')) {
 			if (arrays.length === 0) return;
 
 			const cdf = buildCdf(arrays, maxIter);
+			(this as any)._lastCdf = cdf;
 			const colorConfig = JSON.parse(JSON.stringify(liveConfig));
 			const pool = getRecolorPool();
 			pool.cancelAll();

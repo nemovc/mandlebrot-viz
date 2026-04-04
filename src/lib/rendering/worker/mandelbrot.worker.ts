@@ -81,7 +81,7 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
     const elapsed = (performance.now() - t0).toFixed(1);
     if (debug) console.log(`[worker] job ${id} done in ${elapsed}ms`);
 
-    const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig);
+    const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig, e.data.cdf);
     const result: TileResult = { id, imageData, iters };
     (self as unknown as Worker).postMessage(result, {
       transfer: [imageData.data.buffer, iters.buffer],
