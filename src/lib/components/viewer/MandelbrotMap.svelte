@@ -3,10 +3,11 @@
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
   import { getWorkerPool } from "$lib/rendering/worker/workerPool";
+  import type { MandelbrotLayerInstance } from "$lib/rendering/leaflet/MandelbrotLayer";
 
   let mapContainer: HTMLDivElement;
   let leafletMap: import("leaflet").Map | null = null;
-  let mandelbrotLayer: any = null;
+  let mandelbrotLayer: MandelbrotLayerInstance | null = null;
 
   // CRS.Simple uses pixel units. Our world [-4,4] maps to [0,256] at zoom 0.
   // Scale = 256/8 = 32 pixels per complex unit.
