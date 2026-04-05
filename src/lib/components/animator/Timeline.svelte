@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
+	import { baseAlgorithm } from '$lib/utils/colorPalettes';
 
 	const CELL_W = 10; // px per frame
 	const GRID_BG = `repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent ${CELL_W * 10}px)`;
@@ -13,6 +14,17 @@
 	const project = $derived(animationState.project);
 	const totalFrames = $derived(project.totalFrames);
 	const currentFrame = $derived(animationState.currentFrame);
+	const isHistogram = $derived(baseAlgorithm(project.algorithm) === 'histogram');
+	const disabledTracks = $derived(new Set(
+		isHistogram ? project.tracks.map((t, i) => t.parameter === 'cyclePeriod' ? i : -1).filter(i => i >= 0) : []
+	));
+
+	// Deselect track if it becomes disabled (e.g. switching to histogram while cyclePeriod selected)
+	$effect(() => {
+		if (selectedTrack !== null && disabledTracks.has(selectedTrack)) {
+			selectedTrack = null;
+		}
+	});
 
 	// Auto-scroll playhead into view
 	$effect(() => {
@@ -141,16 +153,20 @@
 	<div class="w-20 shrink-0 flex flex-col border-r border-neutral-800 bg-neutral-900">
 		<div class="h-6 border-b border-neutral-800 shrink-0"></div>
 		{#each project.tracks as track, i}
+			{@const disabled = disabledTracks.has(i)}
 			<button
 				class="h-10 flex items-center justify-end pr-2 shrink-0 w-full border-b border-neutral-800/40 transition-colors text-right
-					{selectedTrack === i
-						? 'text-neutral-200 bg-neutral-800/40'
-						: hoveredTrackIdx === i
-							? 'text-neutral-300 bg-white/10'
-							: 'text-neutral-500'}"
-				onclick={() => { selectedTrack = selectedTrack === i ? null : i; }}
+					{disabled
+						? 'text-neutral-600 cursor-not-allowed bg-neutral-700 opacity-60'
+						: selectedTrack === i
+							? 'text-neutral-200 bg-neutral-800/40'
+							: hoveredTrackIdx === i
+								? 'text-neutral-300 bg-white/10'
+								: 'text-neutral-500'}"
+				onclick={() => { if (!disabled) selectedTrack = selectedTrack === i ? null : i; }}
 				onmouseenter={() => (hoveredTrackIdx = i)}
 				onmouseleave={() => (hoveredTrackIdx = null)}
+				title={disabled ? 'Not available for histogram coloring' : undefined}
 			>
 				{TRACK_LABELS[track.parameter]}
 			</button>
@@ -195,14 +211,15 @@
 
 			<!-- Track rows -->
 			{#each project.tracks as track, i}
+				{@const disabled = disabledTracks.has(i)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="relative h-10 border-b border-neutral-800/40
-						{selectedTrack === i ? 'bg-neutral-800/25' : 'bg-neutral-900'}"
+						{disabled ? 'bg-neutral-700 opacity-60' : selectedTrack === i ? 'bg-neutral-800/25' : 'bg-neutral-900'}"
 					style="background-image: {GRID_BG};"
-					onmousedown={(e) => startScrub(e, i)}
+					onmousedown={(e) => { if (!disabled) startScrub(e, i); }}
 					onmouseenter={() => (hoveredTrackIdx = i)}
-					ondblclick={(e) => handleDblClick(e, i)}
+					ondblclick={(e) => { if (!disabled) handleDblClick(e, i); }}
 				>
 					<!-- Hover row highlight -->
 					{#if hoveredTrackIdx === i}
@@ -237,7 +254,7 @@
 								: easingColor}
 								{isDragging ? 'opacity-50' : ''}"
 							style="left: {displayFrame * CELL_W + CELL_W / 2 - 5}px"
-							onmousedown={(e) => startKeyframeDrag(e, i, kf.frame)}
+							onmousedown={(e) => { if (!disabled) startKeyframeDrag(e, i, kf.frame); }}
 							title="Frame {kf.frame}: {kf.value} ({kf.easing})"
 						></button>
 					{/each}
