@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PRESETS } from '$lib/utils/colorPalettes';
+	import { presetsFor } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import PalettePreview from './PalettePreview.svelte';
@@ -18,8 +18,10 @@
 	let includeOffsets = $state(false);
 	let pendingDelete = $state<string | null>(null);
 
+	const presets = $derived(presetsFor(viewerState.colors.algorithm));
+
 	function applyPalette(name: string) {
-		const config = PRESETS[name] ?? savedPalettes.all.find((p) => p.name === name)?.config;
+		const config = presets[name] ?? savedPalettes.all.find((p) => p.name === name)?.config;
 		if (!config) return;
 		if (includeOffsets) {
 			viewerState.colors = JSON.parse(JSON.stringify(config));
@@ -70,7 +72,7 @@
 	<div class="overflow-y-auto max-h-[50vh] p-2 flex flex-col gap-0">
 		<!-- Built-in presets -->
 		<div class="grid grid-cols-2 gap-1">
-			{#each Object.entries(PRESETS) as [name, config]}
+			{#each Object.entries(presets) as [name, config]}
 				<button
 					class="flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName === name
 						? 'border-blue-500'

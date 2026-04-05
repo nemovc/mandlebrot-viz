@@ -3,7 +3,7 @@
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { getWorkerPool } from "$lib/rendering/worker/workerPool";
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
-  import { PRESETS } from "$lib/utils/colorPalettes";
+  import { presetsFor } from "$lib/utils/colorPalettes";
   import { savedPalettes } from "$lib/stores/savedPalettes.svelte";
   import { PRESET_LOCATIONS } from "$lib/utils/locations";
   import type { Location } from "$lib/utils/locations";
@@ -95,7 +95,7 @@
     const lineH = fontSize * 1.6;
 
     const paletteStr = JSON.stringify(colorConfig.palette);
-    const presetName = Object.entries(PRESETS).find(
+    const presetName = Object.entries(presetsFor(colorConfig.algorithm)).find(
       ([, p]) => JSON.stringify(p.palette) === paletteStr,
     )?.[0];
     const savedName = savedPalettes.all.find(

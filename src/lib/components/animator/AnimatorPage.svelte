@@ -5,7 +5,7 @@
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
-	import { PRESETS, ALGORITHMS } from '$lib/utils/colorPalettes';
+	import { presetsFor, ALGORITHMS } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 
 	let selectedTrack = $state<number | null>(null);
@@ -74,15 +74,16 @@
 		animationState.updateProject({ algorithm: v as ColorConfig['algorithm'] });
 	}
 
-	// Palette selector — show preset names
-	const presetNames = Object.keys(PRESETS);
+	// Palette selector — show preset names appropriate for the current algorithm
+	const presets = $derived(presetsFor(project.algorithm));
+	const presetNames = $derived(Object.keys(presets));
 	const currentPresetName = $derived(
 		presetNames.find(
-			(name) => JSON.stringify(PRESETS[name].palette) === JSON.stringify(project.palette),
+			(name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette),
 		) ?? 'Custom',
 	);
 	function applyPreset(name: string) {
-		const p = PRESETS[name];
+		const p = presets[name];
 		if (!p) return;
 		animationState.updateProject({
 			algorithm: p.algorithm,

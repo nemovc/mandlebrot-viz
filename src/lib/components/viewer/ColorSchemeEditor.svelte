@@ -2,7 +2,7 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { PRESETS, ALGORITHMS, baseAlgorithm } from '$lib/utils/colorPalettes';
+	import { presetsFor, ALGORITHMS, baseAlgorithm } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import type { ColorStop } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
@@ -16,7 +16,7 @@
 
 	// Initialize active name by matching current palette against known palettes
 	const initialPaletteJson = JSON.stringify(viewerState.colors.palette);
-	const initialPreset = Object.entries(PRESETS).find(
+	const initialPreset = Object.entries(presetsFor(viewerState.colors.algorithm)).find(
 		([, p]) => JSON.stringify(p.palette) === initialPaletteJson
 	);
 	const initialSaved = savedPalettes.all.find(
