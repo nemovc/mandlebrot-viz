@@ -208,6 +208,13 @@
 					{#if hoveredTrackIdx === i}
 						<div class="absolute inset-0 pointer-events-none" style="background: rgba(255,255,255,0.05)"></div>
 					{/if}
+					<!-- Selected cell highlight (selectedTrack × currentFrame) -->
+					{#if selectedTrack === i}
+						<div
+							class="absolute top-0 bottom-0 pointer-events-none ring-1 ring-inset ring-blue-400/60"
+							style="left: {currentFrame * CELL_W}px; width: {CELL_W}px; background: rgba(96,165,250,0.15)"
+						></div>
+					{/if}
 					<!-- Hover column highlight -->
 					{#if hoverX !== null}
 						<div
