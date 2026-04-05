@@ -178,6 +178,7 @@
 	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame) : 0);
 	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
 	const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
+	const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);
 	const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
 
 	let kfEditValue = $state('');
@@ -408,7 +409,17 @@
 					>✕</button>
 				{/if}
 			{:else}
-				<span class="text-neutral-500 font-mono">{kfInterpolated.toFixed(6)}</span>
+				{#if kfPrev}
+					<span class="text-neutral-700 font-mono">{kfPrev.value.toFixed(4)}</span>
+					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
+					<span class="text-neutral-600">{kfPrev.easing}</span>
+					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
+				{/if}
+				<span class="text-neutral-400 font-mono">{kfInterpolated.toFixed(6)}</span>
+				{#if kfNext}
+					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
+					<span class="text-neutral-700 font-mono">{kfNext.value.toFixed(4)}</span>
+				{/if}
 				<button
 					onclick={kfAdd}
 					class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors"
