@@ -3,6 +3,7 @@
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
+	import { ChevronRight } from 'lucide-svelte';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
 	import { presetsFor, ALGORITHMS } from '$lib/utils/colorPalettes';
@@ -167,9 +168,11 @@
 	const kfFrame = $derived(animationState.currentFrame);
 	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame) : 0);
 	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
+	const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
 	const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
 
 	let kfEditValue = $state('');
+	let kfValueInput = $state<HTMLInputElement | null>(null);
 	$effect(() => {
 		kfEditValue = kfAtFrame ? kfAtFrame.value.toString() : kfInterpolated.toFixed(6);
 	});
@@ -177,6 +180,8 @@
 	function kfAdd() {
 		if (selectedTrack === null) return;
 		animationState.addKeyframe(selectedTrack, kfFrame, kfInterpolated);
+		// Focus the value input after adding so the user can immediately type a value
+		setTimeout(() => kfValueInput?.focus(), 0);
 	}
 	function kfDelete() {
 		if (selectedTrack === null) return;
@@ -336,14 +341,33 @@
 			<span class="text-neutral-600">frame {kfFrame}</span>
 			{#if kfAtFrame}
 				<span class="text-blue-400">◆</span>
+				{#if kfPrev}
+					<select
+						value={kfPrev.easing}
+						onchange={(e) => {
+							if (selectedTrack !== null)
+								animationState.setKeyframeEasing(selectedTrack, kfPrev.frame, (e.target as HTMLSelectElement).value as EasingType);
+						}}
+						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+						title="Easing into this keyframe"
+					>
+						<option value="linear">Linear</option>
+						<option value="ease-in">Ease In</option>
+						<option value="ease-out">Ease Out</option>
+						<option value="ease-in-out">Ease In-Out</option>
+					</select>
+					<ChevronRight size={14} class="text-neutral-500 shrink-0" />
+				{/if}
 				<input
 					type="number"
 					step="any"
 					bind:value={kfEditValue}
+					bind:this={kfValueInput}
 					onblur={kfCommit}
 					onkeydown={kfKeydown}
 					class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
 				/>
+				<ChevronRight size={14} class="text-neutral-500 shrink-0" />
 				<select
 					value={kfAtFrame.easing}
 					onchange={(e) => {
