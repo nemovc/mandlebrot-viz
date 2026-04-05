@@ -2,6 +2,7 @@
 	import { onMount, untrack } from 'svelte';
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
+	import ShortcutsModal from './ShortcutsModal.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
 	import { ChevronRight } from 'lucide-svelte';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
@@ -10,6 +11,7 @@
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 
 	let selectedTrack = $state<number | null>(null);
+	let showShortcuts = $state(false);
 
 	// Seed from explorer on first load if project is empty
 	onMount(() => {
@@ -19,8 +21,16 @@
 
 	// ---- Keyboard shortcuts ----
 	function handleKey(e: KeyboardEvent) {
-		// Don't fire when typing in an input
-		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+		const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
+
+		// Escape always blurs a focused input
+		if (e.key === 'Escape' && inInput) {
+			(e.target as HTMLElement).blur();
+			return;
+		}
+
+		// All other shortcuts are suppressed while typing
+		if (inInput) return;
 
 		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
 			e.preventDefault();
@@ -31,18 +41,70 @@
 		) {
 			e.preventDefault();
 			animationState.redo();
+		} else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			if (kfTrack) {
+				const prev = [...kfTrack.keyframes].reverse().find((k) => k.frame < animationState.currentFrame);
+				if (prev) animationState.currentFrame = prev.frame;
+			}
+		} else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			if (kfTrack) {
+				const next = kfTrack.keyframes.find((k) => k.frame > animationState.currentFrame);
+				if (next) animationState.currentFrame = next.frame;
+			}
 		} else if (e.key === 'ArrowLeft' && e.shiftKey) {
 			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame - 10;
+			animationState.currentFrame = animationState.currentFrame - project.fps;
 		} else if (e.key === 'ArrowRight' && e.shiftKey) {
 			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame + 10;
+			animationState.currentFrame = animationState.currentFrame + project.fps;
 		} else if (e.key === 'ArrowLeft') {
 			e.preventDefault();
 			animationState.currentFrame = animationState.currentFrame - 1;
 		} else if (e.key === 'ArrowRight') {
 			e.preventDefault();
 			animationState.currentFrame = animationState.currentFrame + 1;
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			const count = project.tracks.length;
+			if (count === 0) return;
+			selectedTrack = selectedTrack === null ? count - 1 : Math.max(0, selectedTrack - 1);
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			const count = project.tracks.length;
+			if (count === 0) return;
+			selectedTrack = selectedTrack === null ? 0 : Math.min(count - 1, selectedTrack + 1);
+		} else if (e.key === 'Home') {
+			e.preventDefault();
+			animationState.currentFrame = 0;
+		} else if (e.key === 'End') {
+			e.preventDefault();
+			animationState.currentFrame = project.totalFrames;
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			if (!kfTrack) return;
+			if (kfAtFrame) {
+				kfValueInput?.focus();
+			} else {
+				animationState.addKeyframe(selectedTrack!, kfFrame, kfInterpolated);
+			}
+		} else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			startExport();
+		} else if (e.key === ' ') {
+			e.preventDefault();
+			// TODO: preview playback (not yet implemented)
+		} else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			// TODO: save project (not yet implemented)
+		} else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			// TODO: new project (not yet implemented)
+		} else if (e.key === 'Delete') {
+			if (kfAtFrame && !kfIsAnchor) kfDelete();
+		} else if (e.key === '?') {
+			showShortcuts = !showShortcuts;
 		}
 	}
 
@@ -336,6 +398,11 @@
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 				title="Redo (Ctrl+Y)"
 			>↪</button>
+			<button
+				onclick={() => (showShortcuts = true)}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
+				title="Keyboard shortcuts (?)"
+			>?</button>
 		</div>
 
 	</div>
@@ -496,3 +563,5 @@
 		</div>
 	</div>
 {/if}
+
+<ShortcutsModal bind:open={showShortcuts} />
