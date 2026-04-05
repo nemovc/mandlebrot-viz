@@ -73,7 +73,7 @@ function createAnimationState() {
 	}
 
 	function clampFrame(f: number) {
-		return Math.max(0, Math.min(Math.round(f), project.totalFrames - 1));
+		return Math.max(0, Math.min(Math.round(f), project.totalFrames));
 	}
 
 	return {
@@ -134,7 +134,11 @@ function createAnimationState() {
 				offset: s.colors.offset,
 			};
 			for (const track of project.tracks) {
-				track.keyframes = [{ frame: 0, value: values[track.parameter], easing: 'linear' as const }];
+				const value = values[track.parameter];
+				track.keyframes = [
+					{ frame: 0, value, easing: 'linear' as const },
+					{ frame: project.totalFrames, value, easing: 'linear' as const },
+				];
 			}
 		},
 
@@ -179,6 +183,20 @@ function createAnimationState() {
 
 		updateProject(patch: Partial<Omit<AnimationProject, 'tracks'>>) {
 			commit();
+			if (patch.totalFrames !== undefined && patch.totalFrames !== project.totalFrames) {
+				const oldEnd = project.totalFrames;
+				const newEnd = patch.totalFrames;
+				for (const track of project.tracks) {
+					const endKf = track.keyframes.find((k) => k.frame === oldEnd);
+					// Remove the old end anchor and any now-out-of-bounds keyframes
+					track.keyframes = track.keyframes.filter((k) => k.frame !== oldEnd && k.frame < newEnd);
+					// Re-place the end anchor at the new end (unless something already sits there)
+					if (endKf && !track.keyframes.find((k) => k.frame === newEnd)) {
+						track.keyframes.push({ ...endKf, frame: newEnd });
+						track.keyframes.sort((a, b) => a.frame - b.frame);
+					}
+				}
+			}
 			Object.assign(project, patch);
 			if (patch.totalFrames !== undefined) {
 				currentFrame = clampFrame(currentFrame);

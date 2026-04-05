@@ -55,7 +55,16 @@
 	}
 	function setTotalFrames(v: string) {
 		const n = parseInt(v);
-		if (n > 0 && n <= 100_000) animationState.updateProject({ totalFrames: n });
+		if (n <= 0 || n > 100_000) return;
+		if (n < project.totalFrames) {
+			// Count intermediate keyframes that will be dropped (excluding the end anchor which moves)
+			const dropping = project.tracks.reduce(
+				(sum, t) => sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
+				0,
+			);
+			if (dropping > 0 && !confirm(`Shortening will delete ${dropping} keyframe${dropping === 1 ? '' : 's'} outside the new length. Continue?`)) return;
+		}
+		animationState.updateProject({ totalFrames: n });
 	}
 	function setWidth(v: string) {
 		const n = parseInt(v);
@@ -183,8 +192,10 @@
 		// Focus the value input after adding so the user can immediately type a value
 		setTimeout(() => kfValueInput?.focus(), 0);
 	}
+	const kfIsAnchor = $derived(kfFrame === 0 || kfFrame === project.totalFrames);
+
 	function kfDelete() {
-		if (selectedTrack === null) return;
+		if (selectedTrack === null || kfIsAnchor) return;
 		animationState.removeKeyframe(selectedTrack, kfFrame);
 	}
 	function kfCommit() {
@@ -357,6 +368,9 @@
 						<option value="ease-in-out">Ease In-Out</option>
 					</select>
 					<ChevronRight size={14} class="text-neutral-500 shrink-0" />
+				{:else}
+					<span class="text-neutral-700 font-mono">start</span>
+					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
 				{/if}
 				<input
 					type="number"
@@ -367,25 +381,32 @@
 					onkeydown={kfKeydown}
 					class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
 				/>
-				<ChevronRight size={14} class="text-neutral-500 shrink-0" />
-				<select
-					value={kfAtFrame.easing}
-					onchange={(e) => {
-						if (selectedTrack !== null)
-							animationState.setKeyframeEasing(selectedTrack, kfFrame, (e.target as HTMLSelectElement).value as EasingType);
-					}}
-					class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-				>
-					<option value="linear">Linear</option>
-					<option value="ease-in">Ease In</option>
-					<option value="ease-out">Ease Out</option>
-					<option value="ease-in-out">Ease In-Out</option>
-				</select>
-				<button
-					onclick={kfDelete}
-					class="text-neutral-500 hover:text-red-400 transition-colors px-1"
-					title="Delete keyframe"
-				>✕</button>
+				{#if kfFrame !== project.totalFrames}
+					<ChevronRight size={14} class="text-neutral-500 shrink-0" />
+					<select
+						value={kfAtFrame.easing}
+						onchange={(e) => {
+							if (selectedTrack !== null)
+								animationState.setKeyframeEasing(selectedTrack, kfFrame, (e.target as HTMLSelectElement).value as EasingType);
+						}}
+						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+					>
+						<option value="linear">Linear</option>
+						<option value="ease-in">Ease In</option>
+						<option value="ease-out">Ease Out</option>
+						<option value="ease-in-out">Ease In-Out</option>
+					</select>
+				{:else}
+					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
+					<span class="text-neutral-700 font-mono">end</span>
+				{/if}
+				{#if !kfIsAnchor}
+					<button
+						onclick={kfDelete}
+						class="text-neutral-500 hover:text-red-400 transition-colors px-1"
+						title="Delete keyframe"
+					>✕</button>
+				{/if}
 			{:else}
 				<span class="text-neutral-500 font-mono">{kfInterpolated.toFixed(6)}</span>
 				<button

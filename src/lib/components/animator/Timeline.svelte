@@ -56,7 +56,7 @@
 	function frameFromClientX(clientX: number): number {
 		const rect = contentEl.getBoundingClientRect();
 		const x = clientX - rect.left;
-		return Math.max(0, Math.min(Math.floor(x / CELL_W), totalFrames - 1));
+		return Math.max(0, Math.min(Math.floor(x / CELL_W), totalFrames));
 	}
 
 	// ---- Hover highlight ----
@@ -92,7 +92,7 @@
 		animationState.currentFrame = frame;
 		const existing = track.keyframes.find((k) => k.frame === frame);
 		if (existing) {
-			if (frame !== 0) animationState.removeKeyframe(trackIdx, frame);
+			if (frame !== 0 && frame !== totalFrames) animationState.removeKeyframe(trackIdx, frame);
 		} else {
 			animationState.addKeyframe(trackIdx, frame, interpolateTrack(track, frame));
 		}
@@ -112,7 +112,7 @@
 		e.preventDefault();
 		animationState.currentFrame = frame;
 		selectedTrack = trackIdx;
-		if (frame === 0) return; // frame-0 keyframe is anchored
+		if (frame === 0 || frame === totalFrames) return; // anchor keyframes are immovable
 		dragInfo = { trackIdx, fromFrame: frame, toFrame: frame, startX: e.clientX };
 	}
 
@@ -139,7 +139,7 @@
 		scrubbing = false;
 	}
 
-	const contentWidth = $derived(totalFrames * CELL_W);
+	const contentWidth = $derived((totalFrames + 1) * CELL_W);
 	const playheadX = $derived(currentFrame * CELL_W + CELL_W / 2);
 	const hoverX = $derived(hoveredFrame !== null ? hoveredFrame * CELL_W : null);
 	const ghostX = $derived(dragInfo ? dragInfo.toFrame * CELL_W + CELL_W / 2 : null);
@@ -248,7 +248,7 @@
 						{@const selectedColor = ({ linear: 'bg-blue-300 ring-blue-200/50', 'ease-in': 'bg-purple-300 ring-purple-200/50', 'ease-out': 'bg-green-300 ring-green-200/50', 'ease-in-out': 'bg-amber-300 ring-amber-200/50' } as Record<string, string>)[kf.easing] ?? 'bg-blue-300 ring-blue-200/50'}
 						<button
 							class="absolute top-1/2 -translate-y-1/2 w-[10px] h-[10px] rotate-45 transition-colors
-								{kf.frame === 0 ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}
+								{kf.frame === 0 || kf.frame === totalFrames ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-grab'}
 								{selectedTrack === i && currentFrame === kf.frame
 								? `${selectedColor} ring-1`
 								: easingColor}
