@@ -5,7 +5,7 @@ import {
 import { interpolateAll } from "$lib/utils/animator/interpolation";
 import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
 import { buildCdf, baseAlgorithm } from "$lib/utils/colorPalettes";
-import type { ColorConfig } from "$lib/stores/viewerState.svelte";
+import type { ColorConfig } from "$lib/utils/colorPalettes";
 import type { AnimationProject } from "$lib/stores/animationState.svelte";
 import { animationState } from "$lib/stores/animationState.svelte";
 

@@ -1,5 +1,5 @@
-import type { ColorConfig, ViewerState } from "$lib/stores/viewerState.svelte";
 import { viewerState } from "$lib/stores/viewerState.svelte";
+import type { ColorConfig } from "$lib/utils/colorPalettes";
 
 export type TrackParameter =
   | "zoom"

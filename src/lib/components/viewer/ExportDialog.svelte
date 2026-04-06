@@ -8,8 +8,9 @@
   import { PRESET_LOCATIONS } from "$lib/utils/locations";
   import type { Location } from "$lib/utils/locations";
   import { savedLocations } from "$lib/stores/savedLocations.svelte";
-  import type { ColorConfig } from "$lib/stores/viewerState.svelte";
+  import type { ColorConfig } from "$lib/utils/colorPalettes";
   import ToggleButton from "./ToggleButton.svelte";
+  import { ALGORITHMS } from "$lib/utils/colorPalettes";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -64,7 +65,11 @@
     phase = "idle";
   }
 
-  function findLocationName(cx: string, cy: string, zoom: number): string | null {
+  function findLocationName(
+    cx: string,
+    cy: string,
+    zoom: number,
+  ): string | null {
     const re = parseFloat(cx);
     const im = parseFloat(cy);
     const eps = scaleForZoom(zoom) * 2;
@@ -102,10 +107,14 @@
       (p) => JSON.stringify(p.config.palette) === paletteStr,
     )?.name;
     const paletteName = presetName ?? (savedName ? `${savedName}*` : "Custom");
+    const algorithm =
+      ALGORITHMS.find((a) => (a.value = colorConfig.algorithm))?.label ??
+      "Custom";
 
     const locationName = findLocationName(cx, cy, zoom);
     const lines = [
       ...(locationName ? [locationName] : []),
+      algorithm,
       `${cx}Re ${cy}Im`,
       `Z${zoom}/I${maxIter}/E${power}`,
       `Palette: ${paletteName}`,

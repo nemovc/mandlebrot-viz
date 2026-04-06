@@ -6,7 +6,7 @@
 	import PlaybackModal from './PlaybackModal.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
 	import { Play, ChevronRight, Repeat } from 'lucide-svelte';
-	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
+  import type { ColorConfig } from '$lib/utils/colorPalettes';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
 	import { presetsFor, ALGORITHMS } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';

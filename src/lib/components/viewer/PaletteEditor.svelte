@@ -3,7 +3,7 @@
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
 	import { samplePalette, baseAlgorithm } from '$lib/utils/colorPalettes';
-	import type { ColorConfig, ColorStop } from '$lib/stores/viewerState.svelte';
+  import type { ColorConfig, ColorStop } from "$lib/utils/colorPalettes";
 	import SavePaletteModal from './SavePaletteModal.svelte';
 
 	let {

@@ -1,22 +1,51 @@
-import type { ColorConfig } from "$lib/stores/viewerState.svelte";
+export type Algorithm =
+  | "escape_time_smooth"
+  | "escape_time_banded"
+  | "distance_estimation"
+  | "distance_estimation_banded"
+  | "histogram_equalized_smooth"
+  | "histogram_equalized_banded";
 
-export type BaseAlgorithm = 'escape_time' | 'distance_estimation' | 'histogram';
+export type BaseAlgorithm = "escape_time" | "distance_estimation" | "histogram";
 
-export function baseAlgorithm(a: ColorConfig['algorithm']): BaseAlgorithm {
-  if (a === 'distance_estimation' || a === 'distance_estimation_banded') return 'distance_estimation';
-  if (a === 'histogram_equalized_smooth' || a === 'histogram_equalized_banded') return 'histogram';
-  return 'escape_time';
+export function baseAlgorithm(a: Algorithm): BaseAlgorithm {
+  if (a === "distance_estimation" || a === "distance_estimation_banded")
+    return "distance_estimation";
+  if (a === "histogram_equalized_smooth" || a === "histogram_equalized_banded")
+    return "histogram";
+  return "escape_time";
 }
-
-export const ALGORITHMS: { value: ColorConfig['algorithm']; label: string }[] = [
-  { value: 'escape_time_smooth',          label: 'Escape Time (smooth)' },
-  { value: 'escape_time_banded',          label: 'Escape Time (banded)' },
-  { value: 'distance_estimation',         label: 'Distance Estimation (smooth)' },
-  { value: 'distance_estimation_banded',  label: 'Distance Estimation (banded)' },
-  { value: 'histogram_equalized_smooth',  label: 'Histogram Equalized (smooth)' },
-  { value: 'histogram_equalized_banded',  label: 'Histogram Equalized (banded)' },
+export const ALGORITHMS: { value: Algorithm; label: string }[] = [
+  { value: "escape_time_smooth", label: "Escape Time (smooth)" },
+  { value: "escape_time_banded", label: "Escape Time (banded)" },
+  { value: "distance_estimation", label: "Distance Estimation (smooth)" },
+  {
+    value: "distance_estimation_banded",
+    label: "Distance Estimation (banded)",
+  },
+  {
+    value: "histogram_equalized_smooth",
+    label: "Histogram Equalized (smooth)",
+  },
+  {
+    value: "histogram_equalized_banded",
+    label: "Histogram Equalized (banded)",
+  },
 ];
 
+export interface ColorStop {
+  stop: number;
+  color: string;
+}
+
+export interface ColorConfig {
+  algorithm: Algorithm;
+  palette: ColorStop[];
+  cyclePeriod: number;
+  offset: number;
+  reverse?: boolean;
+  inSetColor?: string;
+}
 export interface PresetEntry {
   /** For escape-time and distance-estimation: the palette loops, start === end color. */
   cyclic: ColorConfig;
@@ -25,10 +54,15 @@ export interface PresetEntry {
 }
 
 /** Returns the algorithm-appropriate ColorConfig for each preset. */
-export function presetsFor(algorithm: ColorConfig['algorithm']): Record<string, ColorConfig> {
-  const isHistogram = baseAlgorithm(algorithm) === 'histogram';
+export function presetsFor(
+  algorithm: ColorConfig["algorithm"],
+): Record<string, ColorConfig> {
+  const isHistogram = baseAlgorithm(algorithm) === "histogram";
   return Object.fromEntries(
-    Object.entries(PRESETS).map(([name, entry]) => [name, isHistogram ? entry.histogram : entry.cyclic])
+    Object.entries(PRESETS).map(([name, entry]) => [
+      name,
+      isHistogram ? entry.histogram : entry.cyclic,
+    ]),
   );
 }
 
@@ -40,49 +74,53 @@ export const PRESETS: Record<string, PresetEntry> = {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,    color: "#001780" },
-        { stop: 0.16,   color: "#206bcb" },
-        { stop: 0.42,   color: "#edffff" },
+        { stop: 0.0, color: "#001780" },
+        { stop: 0.16, color: "#206bcb" },
+        { stop: 0.42, color: "#edffff" },
         { stop: 0.6425, color: "#ffaa00" },
         { stop: 0.8575, color: "#001a00" },
-        { stop: 1.0,    color: "#001780" },
+        { stop: 1.0, color: "#001780" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#001780" },
-        { stop: 0.2,  color: "#206bcb" },
-        { stop: 0.5,  color: "#edffff" },
+        { stop: 0.0, color: "#001780" },
+        { stop: 0.2, color: "#206bcb" },
+        { stop: 0.5, color: "#edffff" },
         { stop: 0.75, color: "#ffaa00" },
-        { stop: 1.0,  color: "#ff7700" },
+        { stop: 1.0, color: "#ff7700" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
   },
   Fire: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#1a0000" },
+        { stop: 0.0, color: "#1a0000" },
         { stop: 0.25, color: "#7f0000" },
-        { stop: 0.5,  color: "#ff4000" },
+        { stop: 0.5, color: "#ff4000" },
         { stop: 0.75, color: "#ffff00" },
-        { stop: 1.0,  color: "#1a0000" },
+        { stop: 1.0, color: "#1a0000" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#1a0000" },
-        { stop: 0.3,  color: "#7f0000" },
+        { stop: 0.0, color: "#1a0000" },
+        { stop: 0.3, color: "#7f0000" },
         { stop: 0.55, color: "#ff4000" },
-        { stop: 0.8,  color: "#ffff00" },
-        { stop: 1.0,  color: "#ffffc0" },
+        { stop: 0.8, color: "#ffff00" },
+        { stop: 1.0, color: "#ffffc0" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
   },
   Grayscale: {
@@ -93,7 +131,8 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.5, color: "#ffffff" },
         { stop: 1.0, color: "#181818" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
@@ -101,7 +140,8 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.0, color: "#181818" },
         { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
   },
   "Ultra Fractal": {
@@ -115,43 +155,47 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.8, color: "#ffdd00" },
         { stop: 1.0, color: "#0c001a" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#0c001a" },
+        { stop: 0.0, color: "#0c001a" },
         { stop: 0.25, color: "#3d006e" },
-        { stop: 0.5,  color: "#00a0ff" },
+        { stop: 0.5, color: "#00a0ff" },
         { stop: 0.72, color: "#ffffff" },
-        { stop: 1.0,  color: "#ffdd00" },
+        { stop: 1.0, color: "#ffdd00" },
       ],
-      cyclePeriod: 64, offset: 0,
+      cyclePeriod: 64,
+      offset: 0,
     },
   },
   Ocean: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#000e2e" },
-        { stop: 0.2,  color: "#001a4d" },
+        { stop: 0.0, color: "#000e2e" },
+        { stop: 0.2, color: "#001a4d" },
         { stop: 0.45, color: "#0066aa" },
         { stop: 0.65, color: "#00cccc" },
         { stop: 0.85, color: "#80eeff" },
-        { stop: 1.0,  color: "#000e2e" },
+        { stop: 1.0, color: "#000e2e" },
       ],
-      cyclePeriod: 56, offset: 0,
+      cyclePeriod: 56,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#000e2e" },
+        { stop: 0.0, color: "#000e2e" },
         { stop: 0.25, color: "#001a4d" },
-        { stop: 0.5,  color: "#0066aa" },
+        { stop: 0.5, color: "#0066aa" },
         { stop: 0.75, color: "#00cccc" },
-        { stop: 1.0,  color: "#80eeff" },
+        { stop: 1.0, color: "#80eeff" },
       ],
-      cyclePeriod: 56, offset: 0,
+      cyclePeriod: 56,
+      offset: 0,
     },
   },
   Sunset: {
@@ -165,19 +209,21 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.8, color: "#ffcc00" },
         { stop: 1.0, color: "#0e002a" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#0e002a" },
-        { stop: 0.2,  color: "#4b0082" },
-        { stop: 0.4,  color: "#cc0044" },
+        { stop: 0.0, color: "#0e002a" },
+        { stop: 0.2, color: "#4b0082" },
+        { stop: 0.4, color: "#cc0044" },
         { stop: 0.65, color: "#ff6600" },
         { stop: 0.85, color: "#ffcc00" },
-        { stop: 1.0,  color: "#fff0a0" },
+        { stop: 1.0, color: "#fff0a0" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
   },
   Neon: {
@@ -191,119 +237,129 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.8, color: "#ff00aa" },
         { stop: 1.0, color: "#0f0030" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#0f0030" },
+        { stop: 0.0, color: "#0f0030" },
         { stop: 0.25, color: "#0f00ff" },
-        { stop: 0.5,  color: "#ff00ff" },
+        { stop: 0.5, color: "#ff00ff" },
         { stop: 0.75, color: "#00ffff" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
   },
   Forest: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#001200" },
+        { stop: 0.0, color: "#001200" },
         { stop: 0.25, color: "#1a3300" },
-        { stop: 0.5,  color: "#2d7a00" },
+        { stop: 0.5, color: "#2d7a00" },
         { stop: 0.75, color: "#aadd44" },
-        { stop: 1.0,  color: "#001200" },
+        { stop: 1.0, color: "#001200" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#001200" },
-        { stop: 0.3,  color: "#1a3300" },
+        { stop: 0.0, color: "#001200" },
+        { stop: 0.3, color: "#1a3300" },
         { stop: 0.55, color: "#2d7a00" },
-        { stop: 0.8,  color: "#aadd44" },
-        { stop: 1.0,  color: "#ddff88" },
+        { stop: 0.8, color: "#aadd44" },
+        { stop: 1.0, color: "#ddff88" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
   },
   Candy: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#ff6688" },
+        { stop: 0.0, color: "#ff6688" },
         { stop: 0.25, color: "#ffcc44" },
-        { stop: 0.5,  color: "#44eebb" },
+        { stop: 0.5, color: "#44eebb" },
         { stop: 0.75, color: "#aa66ff" },
-        { stop: 1.0,  color: "#ff6688" },
+        { stop: 1.0, color: "#ff6688" },
       ],
-      cyclePeriod: 32, offset: 0,
+      cyclePeriod: 32,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,   color: "#ff6688" },
+        { stop: 0.0, color: "#ff6688" },
         { stop: 0.333, color: "#ffcc44" },
         { stop: 0.667, color: "#44eebb" },
-        { stop: 1.0,   color: "#cc99ff" },
+        { stop: 1.0, color: "#cc99ff" },
       ],
-      cyclePeriod: 32, offset: 0,
+      cyclePeriod: 32,
+      offset: 0,
     },
   },
   Ice: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#001030" },
-        { stop: 0.3,  color: "#003366" },
+        { stop: 0.0, color: "#001030" },
+        { stop: 0.3, color: "#003366" },
         { stop: 0.55, color: "#0099cc" },
         { stop: 0.75, color: "#aaddff" },
         { stop: 0.85, color: "#e8f8ff" },
         { stop: 0.93, color: "#ffffff" },
-        { stop: 1.0,  color: "#001030" },
+        { stop: 1.0, color: "#001030" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#001030" },
+        { stop: 0.0, color: "#001030" },
         { stop: 0.25, color: "#003366" },
-        { stop: 0.5,  color: "#0099cc" },
+        { stop: 0.5, color: "#0099cc" },
         { stop: 0.75, color: "#aaddff" },
-        { stop: 0.9,  color: "#e8f8ff" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 0.9, color: "#e8f8ff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
   },
   Lava: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#1a0000" },
-        { stop: 0.3,  color: "#3d0000" },
+        { stop: 0.0, color: "#1a0000" },
+        { stop: 0.3, color: "#3d0000" },
         { stop: 0.55, color: "#cc1100" },
         { stop: 0.75, color: "#ff8800" },
         { stop: 0.85, color: "#ffee00" },
         { stop: 0.93, color: "#ffffff" },
-        { stop: 1.0,  color: "#1a0000" },
+        { stop: 1.0, color: "#1a0000" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#1a0000" },
-        { stop: 0.2,  color: "#3d0000" },
+        { stop: 0.0, color: "#1a0000" },
+        { stop: 0.2, color: "#3d0000" },
         { stop: 0.45, color: "#cc1100" },
         { stop: 0.65, color: "#ff8800" },
         { stop: 0.82, color: "#ffee00" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
   },
   Galaxy: {
@@ -318,181 +374,195 @@ export const PRESETS: Record<string, PresetEntry> = {
         { stop: 0.9, color: "#ffffff" },
         { stop: 1.0, color: "#0b001e" },
       ],
-      cyclePeriod: 72, offset: 0,
+      cyclePeriod: 72,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#0b001e" },
+        { stop: 0.0, color: "#0b001e" },
         { stop: 0.25, color: "#440077" },
-        { stop: 0.5,  color: "#cc44bb" },
+        { stop: 0.5, color: "#cc44bb" },
         { stop: 0.75, color: "#ffaaee" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 72, offset: 0,
+      cyclePeriod: 72,
+      offset: 0,
     },
   },
   Toxic: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#001400" },
-        { stop: 0.3,  color: "#003300" },
+        { stop: 0.0, color: "#001400" },
+        { stop: 0.3, color: "#003300" },
         { stop: 0.55, color: "#00aa00" },
         { stop: 0.75, color: "#aaff00" },
         { stop: 0.85, color: "#ffff44" },
         { stop: 0.93, color: "#ffffff" },
-        { stop: 1.0,  color: "#001400" },
+        { stop: 1.0, color: "#001400" },
       ],
-      cyclePeriod: 36, offset: 0,
+      cyclePeriod: 36,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#001400" },
-        { stop: 0.2,  color: "#003300" },
+        { stop: 0.0, color: "#001400" },
+        { stop: 0.2, color: "#003300" },
         { stop: 0.45, color: "#00aa00" },
-        { stop: 0.7,  color: "#aaff00" },
+        { stop: 0.7, color: "#aaff00" },
         { stop: 0.85, color: "#ffff44" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 36, offset: 0,
+      cyclePeriod: 36,
+      offset: 0,
     },
   },
   Autumn: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#1e0800" },
-        { stop: 0.2,  color: "#5c1500" },
-        { stop: 0.4,  color: "#bb4400" },
-        { stop: 0.6,  color: "#ee8800" },
+        { stop: 0.0, color: "#1e0800" },
+        { stop: 0.2, color: "#5c1500" },
+        { stop: 0.4, color: "#bb4400" },
+        { stop: 0.6, color: "#ee8800" },
         { stop: 0.78, color: "#ffcc44" },
-        { stop: 0.9,  color: "#fff0aa" },
-        { stop: 1.0,  color: "#1e0800" },
+        { stop: 0.9, color: "#fff0aa" },
+        { stop: 1.0, color: "#1e0800" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#1e0800" },
-        { stop: 0.2,  color: "#5c1500" },
-        { stop: 0.4,  color: "#bb4400" },
-        { stop: 0.6,  color: "#ee8800" },
-        { stop: 0.8,  color: "#ffcc44" },
-        { stop: 1.0,  color: "#fff0aa" },
+        { stop: 0.0, color: "#1e0800" },
+        { stop: 0.2, color: "#5c1500" },
+        { stop: 0.4, color: "#bb4400" },
+        { stop: 0.6, color: "#ee8800" },
+        { stop: 0.8, color: "#ffcc44" },
+        { stop: 1.0, color: "#fff0aa" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
   },
   "Deep Space": {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#000820" },
+        { stop: 0.0, color: "#000820" },
         { stop: 0.15, color: "#0a0020" },
         { stop: 0.35, color: "#1a0050" },
         { stop: 0.55, color: "#4400aa" },
-        { stop: 0.7,  color: "#0066ff" },
+        { stop: 0.7, color: "#0066ff" },
         { stop: 0.83, color: "#aaccff" },
         { stop: 0.93, color: "#ffffff" },
-        { stop: 1.0,  color: "#000820" },
+        { stop: 1.0, color: "#000820" },
       ],
-      cyclePeriod: 96, offset: 0,
+      cyclePeriod: 96,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#000820" },
-        { stop: 0.2,  color: "#1a0050" },
-        { stop: 0.4,  color: "#4400aa" },
-        { stop: 0.6,  color: "#0066ff" },
-        { stop: 0.8,  color: "#aaccff" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 0.0, color: "#000820" },
+        { stop: 0.2, color: "#1a0050" },
+        { stop: 0.4, color: "#4400aa" },
+        { stop: 0.6, color: "#0066ff" },
+        { stop: 0.8, color: "#aaccff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 96, offset: 0,
+      cyclePeriod: 96,
+      offset: 0,
     },
   },
   Copper: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#0d0500" },
-        { stop: 0.3,  color: "#331100" },
+        { stop: 0.0, color: "#0d0500" },
+        { stop: 0.3, color: "#331100" },
         { stop: 0.55, color: "#884400" },
         { stop: 0.75, color: "#cc7722" },
         { stop: 0.85, color: "#ddaa66" },
         { stop: 0.93, color: "#eeddbb" },
-        { stop: 1.0,  color: "#0d0500" },
+        { stop: 1.0, color: "#0d0500" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#0d0500" },
+        { stop: 0.0, color: "#0d0500" },
         { stop: 0.25, color: "#331100" },
-        { stop: 0.5,  color: "#884400" },
-        { stop: 0.7,  color: "#cc7722" },
+        { stop: 0.5, color: "#884400" },
+        { stop: 0.7, color: "#cc7722" },
         { stop: 0.85, color: "#ddaa66" },
-        { stop: 1.0,  color: "#eeddbb" },
+        { stop: 1.0, color: "#eeddbb" },
       ],
-      cyclePeriod: 40, offset: 0,
+      cyclePeriod: 40,
+      offset: 0,
     },
   },
   Plasma: {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#150228" },
-        { stop: 0.2,  color: "#7b00d4" },
-        { stop: 0.4,  color: "#dd00aa" },
-        { stop: 0.6,  color: "#ff4400" },
+        { stop: 0.0, color: "#150228" },
+        { stop: 0.2, color: "#7b00d4" },
+        { stop: 0.4, color: "#dd00aa" },
+        { stop: 0.6, color: "#ff4400" },
         { stop: 0.78, color: "#ffdd00" },
-        { stop: 0.9,  color: "#ffffff" },
-        { stop: 1.0,  color: "#150228" },
+        { stop: 0.9, color: "#ffffff" },
+        { stop: 1.0, color: "#150228" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#150228" },
-        { stop: 0.2,  color: "#7b00d4" },
-        { stop: 0.4,  color: "#dd00aa" },
-        { stop: 0.6,  color: "#ff4400" },
-        { stop: 0.8,  color: "#ffdd00" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 0.0, color: "#150228" },
+        { stop: 0.2, color: "#7b00d4" },
+        { stop: 0.4, color: "#dd00aa" },
+        { stop: 0.6, color: "#ff4400" },
+        { stop: 0.8, color: "#ffdd00" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 48, offset: 0,
+      cyclePeriod: 48,
+      offset: 0,
     },
   },
   "Electric Blue": {
     cyclic: {
       algorithm: "escape_time_smooth",
       palette: [
-        { stop: 0.0,  color: "#000f28" },
+        { stop: 0.0, color: "#000f28" },
         { stop: 0.25, color: "#001133" },
-        { stop: 0.5,  color: "#0033cc" },
-        { stop: 0.7,  color: "#0099ff" },
+        { stop: 0.5, color: "#0033cc" },
+        { stop: 0.7, color: "#0099ff" },
         { stop: 0.82, color: "#66ddff" },
         { stop: 0.92, color: "#ffffff" },
-        { stop: 1.0,  color: "#000f28" },
+        { stop: 1.0, color: "#000f28" },
       ],
-      cyclePeriod: 44, offset: 0,
+      cyclePeriod: 44,
+      offset: 0,
     },
     histogram: {
       algorithm: "histogram_equalized_smooth",
       palette: [
-        { stop: 0.0,  color: "#000f28" },
-        { stop: 0.2,  color: "#001133" },
+        { stop: 0.0, color: "#000f28" },
+        { stop: 0.2, color: "#001133" },
         { stop: 0.45, color: "#0033cc" },
         { stop: 0.65, color: "#0099ff" },
         { stop: 0.82, color: "#66ddff" },
-        { stop: 1.0,  color: "#ffffff" },
+        { stop: 1.0, color: "#ffffff" },
       ],
-      cyclePeriod: 44, offset: 0,
+      cyclePeriod: 44,
+      offset: 0,
     },
   },
 };
@@ -503,7 +573,10 @@ export const DEFAULT_PALETTE: ColorConfig = PRESETS["Classic Blue-Gold"].cyclic;
  *  Returns a Float32Array of length maxIter+1 where cdf[i] = fraction of escaped pixels with iter ≤ i.
  *  In-set pixels (val >= maxIter) are excluded from the distribution.
  */
-export function buildCdf(tileIters: Float32Array[], maxIter: number): Float32Array {
+export function buildCdf(
+  tileIters: Float32Array[],
+  maxIter: number,
+): Float32Array {
   const bins = new Uint32Array(maxIter + 1);
   let total = 0;
   for (const iters of tileIters) {
@@ -614,14 +687,17 @@ export function buildImageData(
         }
         [r, g, b] = cached;
       }
-    } else if (algorithm === 'histogram_equalized_smooth' || algorithm === 'histogram_equalized_banded') {
+    } else if (
+      algorithm === "histogram_equalized_smooth" ||
+      algorithm === "histogram_equalized_banded"
+    ) {
       if (val >= maxIter) {
         [r, g, b] = inSetRgb;
       } else {
         const lo = Math.min(Math.floor(val), maxIter - 1);
         let rawT: number;
         if (cdf) {
-          if (algorithm === 'histogram_equalized_banded') {
+          if (algorithm === "histogram_equalized_banded") {
             rawT = cdf[lo];
           } else {
             const hi = Math.min(lo + 1, maxIter - 1);
