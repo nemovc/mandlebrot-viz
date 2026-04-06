@@ -16,21 +16,7 @@
   const totalFrames = $derived(project.totalFrames);
 
   // Cached ranges for scrub bar
-  const cachedRanges = $derived.by(() => {
-    frameCache.cachedCount;
-    const ranges: { start: number; end: number }[] = [];
-    let rangeStart = -1;
-    for (let f = 0; f < totalFrames; f++) {
-      if (frameCache.has(f)) {
-        if (rangeStart === -1) rangeStart = f;
-      } else if (rangeStart !== -1) {
-        ranges.push({ start: rangeStart, end: f - 1 });
-        rangeStart = -1;
-      }
-    }
-    if (rangeStart !== -1) ranges.push({ start: rangeStart, end: totalFrames });
-    return ranges;
-  });
+  const cachedRanges = $derived(frameCache.ranges);
 
   // Draw cached frame to canvas whenever currentFrame changes
   $effect(() => {

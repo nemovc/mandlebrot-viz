@@ -49,9 +49,7 @@
     scheduleCache(false, 100); 
 	});
 
-	const cacheReady = $derived(
-		frameCache.cachedCount >= Math.ceil(animationState.project.fps * 1.5)
-	);
+	const cacheReady = $derived(frameCache.isReady);
 
 	// ---- Keyboard shortcuts ----
 	function handleKey(e: KeyboardEvent) {

@@ -7,6 +7,7 @@ import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
 import { buildCdf, baseAlgorithm } from "$lib/utils/colorPalettes";
 import type { ColorConfig } from "$lib/stores/viewerState.svelte";
 import type { AnimationProject } from "$lib/stores/animationState.svelte";
+import { animationState } from "$lib/stores/animationState.svelte";
 
 const MAX_LOW_RES = 512;
 let _seq = 0;
@@ -23,6 +24,31 @@ function createFrameCache() {
   let buildTotal = $state(0);
   let isBuilding = $state(false);
   let abortCtrl: AbortController | null = null;
+
+  let ranges = $derived.by(() => {
+    cachedCount;
+    const arr: { start: number; end: number }[] = [];
+    let rangeStart = -1;
+    for (let f = 0; f < buildTotal; f++) {
+      if (frameCache.has(f)) {
+        if (rangeStart === -1) rangeStart = f;
+      } else if (rangeStart !== -1) {
+        arr.push({ start: rangeStart, end: f - 1 });
+        rangeStart = -1;
+      }
+    }
+    if (rangeStart !== -1) arr.push({ start: rangeStart, end: buildTotal });
+    return arr;
+  });
+
+  let isReady = $derived.by(() => {
+    cachedCount;
+    return Array.from(
+      { length: animationState.project.fps },
+      (_, k) =>
+        (animationState.currentFrame + k) % animationState.project.totalFrames,
+    ).every((f) => frameCache.has(f));
+  });
 
   function cancelBuild() {
     if (abortCtrl) {
@@ -105,6 +131,12 @@ function createFrameCache() {
     },
     get isBuilding() {
       return isBuilding;
+    },
+    get ranges() {
+      return ranges;
+    },
+    get isReady() {
+      return isReady;
     },
     has: (f: number) => frames.has(f),
     get: (f: number) => frames.get(f),

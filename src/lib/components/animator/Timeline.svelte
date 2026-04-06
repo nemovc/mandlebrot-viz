@@ -18,21 +18,8 @@
 	const isHistogram = $derived(baseAlgorithm(project.algorithm) === 'histogram');
 
 	// Cached frame ranges for the ruler strip
-	const cachedRanges = $derived.by(() => {
-		frameCache.cachedCount; // reactive dep — re-runs when a new frame is cached
-		const ranges: { start: number; end: number }[] = [];
-		let rangeStart = -1;
-		for (let f = 0; f < totalFrames; f++) {
-			if (frameCache.has(f)) {
-				if (rangeStart === -1) rangeStart = f;
-			} else if (rangeStart !== -1) {
-				ranges.push({ start: rangeStart, end: f - 1 });
-				rangeStart = -1;
-			}
-		}
-		if (rangeStart !== -1) ranges.push({ start: rangeStart, end: totalFrames });
-		return ranges;
-	});
+	const cachedRanges = $derived(frameCache.ranges);
+
 	const disabledTracks = $derived(new Set(
 		isHistogram ? project.tracks.map((t, i) => t.parameter === 'cyclePeriod' ? i : -1).filter(i => i >= 0) : []
 	));
