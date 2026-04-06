@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
+	import { animationState, TRACK_LABELS, type ParameterTrack } from '$lib/stores/animationState.svelte';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 	import { baseAlgorithm } from '$lib/utils/colorPalettes';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
@@ -58,10 +58,12 @@
 	});
 
 	// ---- Frame calculation from a clientX ----
-	function frameFromClientX(clientX: number): number {
+	function frameFromClientX(clientX: number): number | null {
 		const rect = contentEl.getBoundingClientRect();
 		const x = clientX - rect.left;
-		return Math.max(0, Math.min(Math.floor(x / CELL_W), totalFrames));
+		const frame =  Math.max(0, Math.min(Math.floor(x / CELL_W), totalFrames));
+    return frame > totalFrames - 1 ? null : frame;
+
 	}
 
 	// ---- Hover highlight ----
@@ -144,7 +146,8 @@
 		scrubbing = false;
 	}
 
-	const contentWidth = $derived((totalFrames + 1) * CELL_W);
+
+	const contentWidth = $derived((totalFrames) * CELL_W);
 	const playheadX = $derived(currentFrame * CELL_W + CELL_W / 2);
 	const hoverX = $derived(hoveredFrame !== null ? hoveredFrame * CELL_W : null);
 	const ghostX = $derived(dragInfo ? dragInfo.toFrame * CELL_W + CELL_W / 2 : null);
@@ -186,6 +189,7 @@
 			style="width: {contentWidth}px"
 			onmousemove={onContentMouseMove}
 			onmouseleave={onContentMouseLeave}
+      role="none"
 		>
 			<!-- Ruler — draggable to scrub -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -275,6 +279,43 @@
 						class="absolute top-0 bottom-0 w-px bg-blue-400/50 pointer-events-none"
 						style="left: {playheadX}px"
 					></div>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="absolute top-1/2 -translate-y-1/2" style="left: calc({contentWidth}px + 0.5rem)" onmousedown={(e) => e.stopPropagation()}>
+            {#if track.endFrame === null}
+              <button
+                onclick={() => animationState.addEndKeyframe(i)}
+                class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors whitespace-nowrap"
+              >
+                <span class="text-blue-400">+</span> Add end keyframe
+              </button>
+            {:else}
+              <div class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300">
+                <span class="text-blue-400">◆</span>
+                <input
+                  type="number"
+                  step="any"
+                  value={track.endFrame}
+                  onblur={(e) => {
+                    const v = parseFloat((e.target as HTMLInputElement).value);
+                    if (!isNaN(v)) animationState.updateEndKeyframe(i, v);
+                  }}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') {
+                      (e.target as HTMLInputElement).value = String(track.endFrame);
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  class="w-28 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  onclick={() => animationState.removeEndKeyframe(i)}
+                  class="flex items-center justify-center w-4 h-4 text-[13px] leading-none text-neutral-500 hover:text-red-400 transition-colors"
+                  title="Remove end keyframe"
+                >✕</button>
+              </div>
+            {/if}
+          </div>
 				</div>
 			{/each}
 

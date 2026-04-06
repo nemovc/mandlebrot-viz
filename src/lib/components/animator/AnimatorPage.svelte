@@ -274,7 +274,7 @@
 	// ---- Keyframe editing ----
 	const kfTrack = $derived(selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null);
 	const kfFrame = $derived(animationState.currentFrame);
-	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame) : 0);
+	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame, animationState.project.totalFrames) : 0);
 	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
 	const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
 	const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);

@@ -37,6 +37,7 @@ export interface Keyframe {
 export interface ParameterTrack {
   parameter: TrackParameter;
   keyframes: Keyframe[]; // always sorted by frame ascending
+  endFrame: number | null;
 }
 
 export interface AnimationProject {
@@ -54,7 +55,7 @@ export interface AnimationProject {
 
 function defaultProject(): AnimationProject {
   return {
-    totalFrames: 300,
+    totalFrames: 30,
     fps: 30,
     width: 1920,
     height: 1080,
@@ -63,7 +64,11 @@ function defaultProject(): AnimationProject {
     palette: [],
     inSetColor: "#000000",
     reverse: false,
-    tracks: TRACK_PARAMS.map((p) => ({ parameter: p, keyframes: [] })),
+    tracks: TRACK_PARAMS.map((p) => ({
+      parameter: p,
+      keyframes: [],
+      endFrame: null,
+    })),
   };
 }
 
@@ -148,10 +153,7 @@ function createAnimationState() {
       };
       for (const track of project.tracks) {
         const value = values[track.parameter];
-        track.keyframes = [
-          { frame: 0, value, easing: "linear" as const },
-          { frame: project.totalFrames, value, easing: "linear" as const },
-        ];
+        track.keyframes = [{ frame: 0, value, easing: "linear" as const }];
       }
     },
 
@@ -177,6 +179,25 @@ function createAnimationState() {
         (k) => k.frame === frame,
       );
       if (kf) kf.value = value;
+    },
+
+    addEndKeyframe(trackIdx: number) {
+      commit();
+      const track = project.tracks[trackIdx];
+      track.endFrame = track.keyframes.at(-1)!.value;
+      console.log(track.endFrame);
+    },
+
+    updateEndKeyframe(trackIdx: number, value: number) {
+      commit();
+      const track = project.tracks[trackIdx];
+      track.endFrame = value;
+    },
+
+    removeEndKeyframe(trackIdx: number) {
+      commit();
+      const track = project.tracks[trackIdx];
+      track.endFrame = null;
     },
 
     moveKeyframe(trackIdx: number, fromFrame: number, toFrame: number) {
