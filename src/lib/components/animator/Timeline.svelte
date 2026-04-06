@@ -182,7 +182,7 @@
 	</div>
 
 	<!-- Scrollable content -->
-	<div bind:this={scrollEl} class="flex-1 overflow-x-auto overflow-y-hidden">
+	<div bind:this={scrollEl} class="flex-1 overflow-x-auto overflow-y-hidden pr-44">
 		<div
 			bind:this={contentEl}
 			class="relative"
