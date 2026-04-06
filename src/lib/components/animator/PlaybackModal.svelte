@@ -178,6 +178,7 @@
     onclick={close}
     role="dialog"
     aria-modal="true"
+    tabindex="0"
   >
     <!-- Card — stop propagation so clicking inside doesn't close -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -222,7 +223,7 @@
         {/each}
         <div
           class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full pointer-events-none shadow"
-          style="left: calc({(animationState.currentFrame / totalFrames) *
+          style="left: calc({(animationState.currentFrame / (totalFrames - 1)) *
             100}% - 6px)"
         ></div>
       </div>

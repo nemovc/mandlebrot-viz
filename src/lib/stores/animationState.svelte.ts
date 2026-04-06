@@ -86,7 +86,7 @@ function createAnimationState() {
   }
 
   function clampFrame(f: number) {
-    return Math.max(0, Math.min(Math.round(f), project.totalFrames));
+    return Math.max(0, Math.min(Math.round(f), project.totalFrames - 1));
   }
 
   return {

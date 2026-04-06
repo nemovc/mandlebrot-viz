@@ -454,7 +454,7 @@
 		<!-- Keyframe section (left) -->
 		{#if kfTrack}
 			<span class="text-neutral-500 w-20 shrink-0 text-right">{kfLabel}</span>
-			<span class="text-neutral-600">frame {kfFrame}</span>
+			<span class="text-neutral-600">frame {kfFrame + 1}</span>
 			{#if kfAtFrame}
 				<span class="text-blue-400">◆</span>
 				{#if kfPrev}

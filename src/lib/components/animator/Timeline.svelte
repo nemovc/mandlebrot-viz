@@ -52,7 +52,7 @@
 	const rulerMarkers = $derived(() => {
 		const out: { x: number; label: string }[] = [];
 		for (let f = 0; f <= totalFrames; f += rulerInterval) {
-			out.push({ x: f * CELL_W, label: f.toString() });
+			out.push({ x: f * CELL_W, label: (f + 1).toString() });
 		}
 		return out;
 	});

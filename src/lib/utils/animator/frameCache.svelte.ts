@@ -37,7 +37,7 @@ function createFrameCache() {
         rangeStart = -1;
       }
     }
-    if (rangeStart !== -1) arr.push({ start: rangeStart, end: buildTotal });
+    if (rangeStart !== -1) arr.push({ start: rangeStart, end: buildTotal - 1 });
     return arr;
   });
 
