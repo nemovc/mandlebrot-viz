@@ -2,7 +2,8 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange, baseAlgorithm, type ColorStop } from '$lib/utils/colorPalettes';
+	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange, baseAlgorithm } from '$lib/utils/colorPalettes';
+	import type { ColorStop } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
@@ -84,6 +85,8 @@
 			<PaletteEditor
 				{activePaletteName}
 				{baseline}
+				colors={viewerState.colors}
+				setColors={(c) => (viewerState.colors = c)}
 				onClose={() => (showEditor = false)}
 				onSave={onEditorSave}
 			/>
@@ -94,6 +97,9 @@
 		<div transition:fly={{ x: 16, duration: 150, opacity: 0 }}>
 			<PalettePanel
 				{activePaletteName}
+				algorithm={viewerState.colors.algorithm}
+				colors={viewerState.colors}
+				setColors={(c) => (viewerState.colors = c)}
 				onClose={() => (showPalettePanel = false)}
 				onApply={onPaletteApplied}
 			/>

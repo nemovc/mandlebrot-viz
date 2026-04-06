@@ -4,9 +4,13 @@
 	import Timeline from './Timeline.svelte';
 	import ShortcutsModal from './ShortcutsModal.svelte';
 	import PlaybackModal from './PlaybackModal.svelte';
+	import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
+	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
+	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
-	import { Play, ChevronRight, Repeat } from 'lucide-svelte';
-  import type { ColorConfig } from '$lib/utils/colorPalettes';
+	import { Play, ChevronRight, Repeat, Undo2, Redo2, CircleHelp } from 'lucide-svelte';
+	import type { ColorConfig } from '$lib/utils/colorPalettes';
+	import type { ColorStop } from '$lib/utils/colorPalettes';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
 	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
@@ -16,6 +20,8 @@
 	let showShortcuts = $state(false);
 	let showPlayback = $state(false);
 	let loopPlayback = $state(true);
+	let showPalettePanel = $state(false);
+	let showEditor = $state(false);
 
 	// ---- Frame cache ----
 	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
@@ -46,7 +52,7 @@
 	// Restart cache from new position on seek (debounced)
 	$effect(() => {
 		animationState.currentFrame;
-    scheduleCache(false, 100); 
+		scheduleCache(false, 100);
 	});
 
 	const cacheReady = $derived(frameCache.isReady);
@@ -55,13 +61,11 @@
 	function handleKey(e: KeyboardEvent) {
 		const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
 
-		// Escape always blurs a focused input
 		if (e.key === 'Escape' && inInput) {
 			(e.target as HTMLElement).blur();
 			return;
 		}
 
-		// All other shortcuts are suppressed while typing or when the playback modal is open
 		if (inInput || showPlayback) return;
 
 		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -123,19 +127,17 @@
 			}
 		} else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
-      if(exportPhase === 'exporting'){
-        cancelExport();
-      }
-      startExport();
+			if (exportPhase === 'exporting') {
+				cancelExport();
+			}
+			startExport();
 		} else if (e.key === ' ') {
 			e.preventDefault();
 			if (cacheReady) showPlayback = true;
 		} else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
-			// TODO: save project (not yet implemented)
 		} else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
-			// TODO: new project (not yet implemented)
 		} else if (e.key === 'r' || e.key === 'R') {
 			loopPlayback = !loopPlayback;
 		} else if (e.key === 'Delete') {
@@ -156,7 +158,6 @@
 		const n = parseInt(v);
 		if (n <= 0 || n > 100_000) return;
 		if (n < project.totalFrames) {
-			// Count intermediate keyframes that will be dropped (excluding the end anchor which moves)
 			const dropping = project.tracks.reduce(
 				(sum, t) => sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
 				0,
@@ -178,14 +179,39 @@
 		if (n >= 2 && n <= 10) animationState.updateProject({ power: n });
 	}
 
-	// Algorithm selector
-	function setAlgorithm(v: string) {
-		const newAlgorithm = v as ColorConfig['algorithm'];
-		const swappedPalette = paletteForAlgorithmChange(project.algorithm, newAlgorithm, currentPresetName === 'Custom' ? null : currentPresetName);
-		animationState.updateProject({ algorithm: newAlgorithm, ...(swappedPalette && { palette: swappedPalette }) });
+	// ---- Palette / color helpers ----
+
+	// Synthesize a ColorConfig from the project + current frame's interpolated track values.
+	// cyclePeriod and offset come from tracks (they're animated); everything else is a static project field.
+	const editorColors = $derived<ColorConfig>({
+		algorithm: project.algorithm,
+		palette: project.palette,
+		cyclePeriod: interpolateTrack(
+			project.tracks.find((t) => t.parameter === 'cyclePeriod')!,
+			animationState.currentFrame,
+			project.totalFrames,
+		),
+		offset: interpolateTrack(
+			project.tracks.find((t) => t.parameter === 'offset')!,
+			animationState.currentFrame,
+			project.totalFrames,
+		),
+		reverse: project.reverse,
+		inSetColor: project.inSetColor,
+	});
+
+	// Only the non-animated fields are settable via the palette UI.
+	// cyclePeriod and offset are managed via keyframe tracks.
+	function setProjectColors(c: ColorConfig) {
+		animationState.updateProject({
+			algorithm: c.algorithm,
+			palette: c.palette,
+			inSetColor: c.inSetColor ?? '#000000',
+			reverse: c.reverse ?? false,
+		});
 	}
 
-	// Palette selector — show preset names appropriate for the current algorithm
+	// Algorithm selector — also swaps preset palette variant when crossing histogram boundary
 	const presets = $derived(presetsFor(project.algorithm));
 	const presetNames = $derived(Object.keys(presets));
 	const currentPresetName = $derived(
@@ -193,15 +219,30 @@
 			(name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette),
 		) ?? 'Custom',
 	);
-	function applyPreset(name: string) {
-		const p = presets[name];
-		if (!p) return;
-		animationState.updateProject({
-			algorithm: p.algorithm,
-			palette: JSON.parse(JSON.stringify(p.palette)),
-			inSetColor: p.inSetColor ?? '#000000',
-			reverse: p.reverse ?? false,
-		});
+
+	function setAlgorithm(v: string) {
+		const newAlgorithm = v as ColorConfig['algorithm'];
+		const swappedPalette = paletteForAlgorithmChange(project.algorithm, newAlgorithm, currentPresetName === 'Custom' ? null : currentPresetName);
+		animationState.updateProject({ algorithm: newAlgorithm, ...(swappedPalette && { palette: swappedPalette }) });
+	}
+
+	// Palette name + baseline for dirty tracking in the editor
+	const initialPaletteJson = JSON.stringify(animationState.project.palette);
+	const initialPreset = Object.entries(presetsFor(animationState.project.algorithm)).find(
+		([, p]) => JSON.stringify(p.palette) === initialPaletteJson,
+	);
+	let activePaletteName = $state<string | null>(initialPreset?.[0] ?? null);
+	let baseline = $state<ColorStop[]>(
+		JSON.parse(JSON.stringify(initialPreset?.[1].palette ?? animationState.project.palette)),
+	);
+
+	function onPaletteApplied(name: string) {
+		activePaletteName = name;
+		baseline = JSON.parse(JSON.stringify(project.palette));
+	}
+	function onEditorSave(name: string) {
+		activePaletteName = name;
+		baseline = JSON.parse(JSON.stringify(project.palette));
 	}
 
 	// Duration display helper
@@ -210,9 +251,8 @@
 	// Cancel/clear export whenever the project is mutated
 	let exportWatchInitialized = false;
 	$effect(() => {
-		animationState.revision; // only dep we want
+		animationState.revision;
 		if (!exportWatchInitialized) { exportWatchInitialized = true; return; }
-		// untrack so reading exportPhase/exportUrl doesn't add them as dependencies
 		untrack(() => {
 			cancelExport();
 			if (exportPhase !== 'idle') resetExport();
@@ -236,7 +276,7 @@
 		exportAbort = new AbortController();
 		try {
 			const blob = await exportWebM(
-				JSON.parse(JSON.stringify(project)), // plain clone — no Svelte proxies
+				JSON.parse(JSON.stringify(project)),
 				(p) => (exportProgress = p),
 				exportAbort.signal,
 			);
@@ -291,7 +331,6 @@
 	function kfAdd() {
 		if (selectedTrack === null) return;
 		animationState.addKeyframe(selectedTrack, kfFrame, kfInterpolated);
-		// Focus the value input after adding so the user can immediately type a value
 		setTimeout(() => kfValueInput?.focus(), 0);
 	}
 	const kfIsAnchor = $derived(kfFrame === 0 || kfFrame === project.totalFrames);
@@ -321,9 +360,9 @@
 
 <svelte:window onkeydown={handleKey} />
 
-<div class="flex flex-col h-full bg-neutral-950 text-white overflow-hidden">
+<div class="flex flex-col h-full bg-neutral-950 text-white relative">
 	<!-- Preview (takes remaining vertical space) -->
-	<div class="flex-1 min-h-0">
+	<div class="flex-1 min-h-0 overflow-hidden">
 		<AnimatorPreview active={!showPlayback} />
 	</div>
 
@@ -392,21 +431,78 @@
 
 		<span class="text-neutral-700">·</span>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			palette
-			<select
-				value={currentPresetName}
-				onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
-				class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			>
-				{#each presetNames as name}
-					<option value={name}>{name}</option>
-				{/each}
-				{#if currentPresetName === 'Custom'}
-					<option value="Custom" disabled>Custom</option>
-				{/if}
-			</select>
-		</label>
+		<!-- Palette controls: preview + reverse + in-set + Palettes/Edit buttons -->
+		<div class="relative flex items-center gap-1.5">
+			<!-- Floating panels (open upward over the preview) -->
+			{#if showPalettePanel}
+				<div class="absolute bottom-full left-0 z-50 mb-6">
+					<PalettePanel
+						{activePaletteName}
+						algorithm={project.algorithm}
+						colors={editorColors}
+						setColors={setProjectColors}
+						layout="horizontal"
+						onClose={() => (showPalettePanel = false)}
+						onApply={onPaletteApplied}
+					/>
+				</div>
+			{/if}
+			{#if showEditor}
+				<div class="absolute bottom-full left-0 z-50 mb-6">
+					<PaletteEditor
+						{activePaletteName}
+						{baseline}
+						colors={editorColors}
+						setColors={setProjectColors}
+						disableAnimatedTracks
+						onClose={() => (showEditor = false)}
+						onSave={onEditorSave}
+					/>
+				</div>
+			{/if}
+
+			<!-- Palette preview + reverse -->
+			<div class="flex items-center gap-1 w-28">
+				<PalettePreview colors={editorColors} />
+				<button
+					class="px-1.5 py-0.5 rounded border text-[11px] transition-colors shrink-0
+						{project.reverse
+							? 'border-blue-600 bg-blue-900/40 text-blue-300'
+							: 'border-neutral-700 text-neutral-400 hover:text-white'}"
+					onclick={() => animationState.updateProject({ reverse: !project.reverse })}
+					title="Reverse palette"
+				>⇄</button>
+			</div>
+
+			<!-- In-set color picker -->
+			<label class="flex items-center gap-1 text-neutral-400 shrink-0">
+				<span>in-set</span>
+				<input
+					type="color"
+					class="w-6 h-5 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
+					value={project.inSetColor}
+					oninput={(e) => animationState.updateProject({ inSetColor: (e.target as HTMLInputElement).value })}
+				/>
+			</label>
+
+			<!-- Palettes / Edit toggle buttons -->
+			<button
+				class="px-2 py-0.5 rounded border text-[11px] transition-colors
+					{showPalettePanel
+						? 'bg-blue-700 border-blue-600 text-white'
+						: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => { showPalettePanel = !showPalettePanel; if (showPalettePanel) showEditor = false; }}
+			>Palettes</button>
+			<button
+				class="px-2 py-0.5 rounded border text-[11px] transition-colors
+					{showEditor
+						? 'bg-blue-700 border-blue-600 text-white'
+						: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => { showEditor = !showEditor; if (showEditor) showPalettePanel = false; }}
+			>Edit</button>
+		</div>
+
+		<span class="text-neutral-700">·</span>
 
 		<label class="flex items-center gap-1 text-neutral-400">
 			algorithm
@@ -420,30 +516,6 @@
 				{/each}
 			</select>
 		</label>
-
-		<span class="text-neutral-700">·</span>
-
-		<!-- Undo / Redo -->
-		<div class="flex gap-1">
-			<button
-				onclick={() => animationState.undo()}
-				disabled={!animationState.canUndo}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Undo (Ctrl+Z)"
-			>↩</button>
-			<button
-				onclick={() => animationState.redo()}
-				disabled={!animationState.canRedo}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Redo (Ctrl+Y)"
-			>↪</button>
-			<button
-				onclick={() => (showShortcuts = true)}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
-				title="Keyboard shortcuts (?)"
-			>?</button>
-		</div>
-
 	</div>
 
 	<!-- Timeline -->
@@ -539,13 +611,8 @@
 
 		<div class="flex-1"></div>
 
-		<!-- Playback controls (centre) -->
+		<!-- Playback + utility controls (centre) -->
 		<div class="flex items-center gap-1.5">
-			{#if frameCache.buildTotal > 0}
-				<div class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden" title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached">
-					<div class="h-full bg-blue-400/60 transition-all" style="width: {Math.round(frameCache.cachedCount / frameCache.buildTotal * 100)}%"></div>
-				</div>
-			{/if}
 			<button
 				onclick={() => { if (cacheReady) showPlayback = true; }}
 				disabled={!cacheReady}
@@ -557,6 +624,28 @@
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback ? 'text-blue-400 border-blue-700' : 'text-neutral-500 hover:text-white'}"
 				title="Loop playback (R)"
 			><Repeat size={12} /></button>
+			{#if frameCache.buildTotal > 0}
+				<div class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden" title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached">
+					<div class="h-full bg-blue-400/60 transition-all" style="width: {Math.round(frameCache.cachedCount / frameCache.buildTotal * 100)}%"></div>
+				</div>
+			{/if}
+			<button
+				onclick={() => animationState.undo()}
+				disabled={!animationState.canUndo}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+				title="Undo (Ctrl+Z)"
+			><Undo2 size={12} /></button>
+			<button
+				onclick={() => animationState.redo()}
+				disabled={!animationState.canRedo}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+				title="Redo (Ctrl+Y)"
+			><Redo2 size={12} /></button>
+			<button
+				onclick={() => (showShortcuts = true)}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
+				title="Keyboard shortcuts (?)"
+			><CircleHelp size={12} /></button>
 		</div>
 
 		<div class="flex-1"></div>

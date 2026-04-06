@@ -1,16 +1,24 @@
 <script lang="ts">
 	import { presetsFor } from '$lib/utils/colorPalettes';
+	import type { Algorithm, ColorConfig } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
-	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import PalettePreview from './PalettePreview.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 
 	let {
 		activePaletteName,
+		algorithm,
+		colors,
+		setColors,
+		layout = 'vertical',
 		onClose,
 		onApply
 	}: {
 		activePaletteName: string | null;
+		algorithm: Algorithm;
+		colors: ColorConfig;
+		setColors: (c: ColorConfig) => void;
+		layout?: 'vertical' | 'horizontal';
 		onClose: () => void;
 		onApply: (name: string) => void;
 	} = $props();
@@ -18,18 +26,15 @@
 	let includeOffsets = $state(false);
 	let pendingDelete = $state<string | null>(null);
 
-	const presets = $derived(presetsFor(viewerState.colors.algorithm));
+	const presets = $derived(presetsFor(algorithm));
 
 	function applyPalette(name: string) {
 		const config = presets[name] ?? savedPalettes.all.find((p) => p.name === name)?.config;
 		if (!config) return;
 		if (includeOffsets) {
-			viewerState.colors = JSON.parse(JSON.stringify(config));
+			setColors(JSON.parse(JSON.stringify(config)));
 		} else {
-			viewerState.colors = {
-				...viewerState.colors,
-				palette: JSON.parse(JSON.stringify(config.palette))
-			};
+			setColors({ ...colors, palette: JSON.parse(JSON.stringify(config.palette)) });
 		}
 		onApply(name);
 	}
@@ -42,9 +47,11 @@
 		savedPalettes.remove(name);
 		pendingDelete = null;
 	}
+
+	const isHorizontal = $derived(layout === 'horizontal');
 </script>
 
-<div class="w-64 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col overflow-hidden">
+<div class="rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col overflow-hidden {isHorizontal ? 'w-[520px]' : 'w-64'}">
 	<!-- Header -->
 	<div class="flex items-center justify-between px-3 py-2 border-b border-neutral-800">
 		<span class="text-xs font-medium uppercase tracking-wider text-neutral-400">Palettes</span>
@@ -69,9 +76,9 @@
 	</div>
 
 	<!-- Scrollable palette list -->
-	<div class="overflow-y-auto max-h-[50vh] p-2 flex flex-col gap-0">
+	<div class="overflow-y-auto {isHorizontal ? 'max-h-56' : 'max-h-[50vh]'} p-2 flex flex-col gap-0">
 		<!-- Built-in presets -->
-		<div class="grid grid-cols-2 gap-1">
+		<div class="{isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}">
 			{#each Object.entries(presets) as [name, config]}
 				<button
 					class="flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName === name
@@ -92,10 +99,9 @@
 				<span class="text-[10px] text-neutral-600 uppercase tracking-wider">Saved</span>
 				<div class="flex-1 border-t border-neutral-700"></div>
 			</div>
-			<div class="grid grid-cols-2 gap-1">
+			<div class="{isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}">
 				{#each savedPalettes.all as saved}
 					{#if pendingDelete === saved.name}
-						<!-- Inline delete confirmation spans 2 columns -->
 						<div class="col-span-2 flex items-center gap-2 px-2 py-1 rounded bg-neutral-800 border border-neutral-700">
 							<span class="text-xs text-neutral-300 flex-1 truncate">Delete "{saved.name}"?</span>
 							<button
@@ -118,7 +124,6 @@
 								<span class="px-2 py-1 text-xs text-neutral-300 truncate">{saved.name}</span>
 								<PalettePreview colors={saved.config} class="h-6 rounded-none" />
 							</button>
-							<!-- Delete button -->
 							<button
 								class="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-all opacity-0 group-hover:opacity-100 text-[10px] leading-none"
 								onclick={(e) => { e.stopPropagation(); confirmDelete(saved.name); }}

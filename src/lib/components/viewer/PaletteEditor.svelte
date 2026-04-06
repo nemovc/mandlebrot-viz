@@ -1,24 +1,29 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
 	import { samplePalette, baseAlgorithm } from '$lib/utils/colorPalettes';
-  import type { ColorConfig, ColorStop } from "$lib/utils/colorPalettes";
+	import type { ColorConfig, ColorStop } from '$lib/utils/colorPalettes';
 	import SavePaletteModal from './SavePaletteModal.svelte';
 
 	let {
 		activePaletteName,
 		baseline,
+		colors,
+		setColors,
+		disableAnimatedTracks = false,
 		onClose,
 		onSave
 	}: {
 		activePaletteName: string | null;
 		baseline: ColorStop[];
+		colors: ColorConfig;
+		setColors: (c: ColorConfig) => void;
+		disableAnimatedTracks?: boolean;
 		onClose: () => void;
 		onSave: (name: string) => void;
 	} = $props();
 
-	let cancelSnapshot = $state<ColorConfig>(JSON.parse(JSON.stringify(viewerState.colors)));
+	let cancelSnapshot = $state<ColorConfig>(JSON.parse(JSON.stringify(colors)));
 	let selectedStopIdx = $state<number | null>(null);
 	let draggingIdx = $state<number | null>(null);
 	let barEl = $state<HTMLElement | null>(null);
@@ -26,19 +31,18 @@
 
 	// When baseline changes (new palette selected from panel), update the cancel snapshot
 	$effect(() => {
-		// Use JSON.stringify of baseline as the reactive dependency
 		const _dep = JSON.stringify(baseline);
 		untrack(() => {
-			cancelSnapshot = JSON.parse(JSON.stringify(viewerState.colors));
+			cancelSnapshot = JSON.parse(JSON.stringify(colors));
 		});
 	});
 
 	const dirty = $derived(
-		JSON.stringify(viewerState.colors.palette) !== JSON.stringify(baseline)
+		JSON.stringify(colors.palette) !== JSON.stringify(baseline)
 	);
 
 	const sortedPalette = $derived(
-		[...viewerState.colors.palette].sort((a, b) => a.stop - b.stop)
+		[...colors.palette].sort((a, b) => a.stop - b.stop)
 	);
 
 	const gradient = $derived(
@@ -50,26 +54,26 @@
 	);
 
 	function updateStop(idx: number, partial: Partial<ColorStop>) {
-		const palette = viewerState.colors.palette.map((s, i) =>
+		const palette = colors.palette.map((s, i) =>
 			i === idx ? { ...s, ...partial } : { ...s }
 		);
-		viewerState.colors = { ...viewerState.colors, palette };
+		setColors({ ...colors, palette });
 	}
 
 	function addStop(t: number) {
 		const clamped = Math.max(0, Math.min(1, t));
-		const [r, g, b] = samplePalette(viewerState.colors.palette, clamped);
+		const [r, g, b] = samplePalette(colors.palette, clamped);
 		const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-		const newPalette = [...viewerState.colors.palette.map((s) => ({ ...s })), { stop: clamped, color }];
+		const newPalette = [...colors.palette.map((s) => ({ ...s })), { stop: clamped, color }];
 		newPalette.sort((a, b) => a.stop - b.stop);
-		viewerState.colors = { ...viewerState.colors, palette: newPalette };
+		setColors({ ...colors, palette: newPalette });
 		selectedStopIdx = newPalette.findIndex((s) => s.stop === clamped && s.color === color);
 	}
 
 	function deleteStop(idx: number) {
-		if (viewerState.colors.palette.length <= 2) return;
-		const newPalette = viewerState.colors.palette.filter((_, i) => i !== idx);
-		viewerState.colors = { ...viewerState.colors, palette: newPalette };
+		if (colors.palette.length <= 2) return;
+		const newPalette = colors.palette.filter((_, i) => i !== idx);
+		setColors({ ...colors, palette: newPalette });
 		if (selectedStopIdx === idx) {
 			selectedStopIdx = null;
 		} else if (selectedStopIdx !== null && selectedStopIdx > idx) {
@@ -78,7 +82,7 @@
 	}
 
 	function cancel() {
-		viewerState.colors = JSON.parse(JSON.stringify(cancelSnapshot));
+		setColors(JSON.parse(JSON.stringify(cancelSnapshot)));
 		onClose();
 	}
 
@@ -106,7 +110,6 @@
 	}
 
 	function onBarDblClick(e: MouseEvent) {
-		// Don't add stop if click was on a handle (handles call stopPropagation)
 		if (!barEl) return;
 		const rect = barEl.getBoundingClientRect();
 		const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -120,7 +123,6 @@
 
 	function handleSaveModalSave(name: string) {
 		showSaveModal = false;
-		// Update baseline snapshot via parent
 		onSave(name);
 	}
 </script>
@@ -134,18 +136,23 @@
 		<div class="flex items-center gap-1">
 			<button
 				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-				onclick={() => { viewerState.colors = JSON.parse(JSON.stringify(cancelSnapshot)); selectedStopIdx = null; }}
+				onclick={() => { setColors(JSON.parse(JSON.stringify(cancelSnapshot))); selectedStopIdx = null; }}
 				disabled={!dirty}
 				title="Reset to pre-edit state"
 			>Reset</button>
+			<button
+				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				onclick={() => (showSaveModal = true)}
+				disabled={!dirty}
+			>Save…</button>
 			<button
 				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
 				onclick={cancel}
 			>Cancel</button>
 			<button
 				class="px-2 py-1 rounded text-xs bg-blue-700 border border-blue-600 text-white hover:bg-blue-600 transition-colors"
-				onclick={() => (showSaveModal = true)}
-			>Save</button>
+				onclick={onClose}
+			>Done</button>
 		</div>
 	</div>
 
@@ -160,7 +167,6 @@
 			role="img"
 			aria-label="Palette gradient — double-click to add a stop"
 		>
-			<!-- Stop lines (pointer-events-none) -->
 			{#each sortedPalette as stop}
 				<div
 					class="absolute top-0 bottom-0 w-px bg-white/40 pointer-events-none"
@@ -171,7 +177,7 @@
 
 		<!-- Handles row -->
 		<div class="relative h-4 mt-0.5">
-			{#each viewerState.colors.palette as stop, i}
+			{#each colors.palette as stop, i}
 				<button
 					class="absolute top-0 w-3 h-3 rounded-full border-2 cursor-ew-resize -translate-x-1/2 transition-shadow
 						{selectedStopIdx === i
@@ -189,8 +195,8 @@
 		</div>
 
 		<!-- Selected stop controls -->
-		{#if selectedStopIdx !== null && selectedStopIdx < viewerState.colors.palette.length}
-			{@const stop = viewerState.colors.palette[selectedStopIdx]}
+		{#if selectedStopIdx !== null && selectedStopIdx < colors.palette.length}
+			{@const stop = colors.palette[selectedStopIdx]}
 			<div class="flex items-center gap-2 pt-1">
 				<label for="stop-color" class="text-xs text-neutral-400 shrink-0">Color</label>
 				<input
@@ -236,7 +242,7 @@
 				<button
 					class="ml-auto px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-red-400 hover:border-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 					onclick={() => deleteStop(selectedStopIdx!)}
-					disabled={viewerState.colors.palette.length <= 2}
+					disabled={colors.palette.length <= 2}
 					title="Delete stop (minimum 2 stops)"
 				>Delete</button>
 			</div>
@@ -246,27 +252,30 @@
 
 		<!-- Cycle Period -->
 		<div class="flex items-center gap-2 pt-1">
-			<label class="text-neutral-400 text-xs shrink-0 w-20 {baseAlgorithm(viewerState.colors.algorithm) === 'histogram' ? 'opacity-30' : ''}" for="pe-cyclePeriod">Cycle Period</label>
+			<label
+				class="text-neutral-400 text-xs shrink-0 w-20 {baseAlgorithm(colors.algorithm) === 'histogram' || disableAnimatedTracks ? 'opacity-30' : ''}"
+				for="pe-cyclePeriod"
+			>Cycle Period</label>
 			<input
 				id="pe-cyclePeriod"
 				type="range"
 				min="4"
 				max="256"
 				step="1"
-				value={viewerState.colors.cyclePeriod}
-				oninput={(e) => { viewerState.colors = { ...viewerState.colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }; }}
+				value={colors.cyclePeriod}
+				oninput={(e) => { setColors({ ...colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }); }}
 				use:wheelSlider
-				disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+				disabled={baseAlgorithm(colors.algorithm) === 'histogram' || disableAnimatedTracks}
 				class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
 			/>
 			<input
 				type="text"
-				disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+				disabled={baseAlgorithm(colors.algorithm) === 'histogram' || disableAnimatedTracks}
 				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
-				value={viewerState.colors.cyclePeriod}
+				value={colors.cyclePeriod}
 				onblur={(e) => {
 					const v = parseInt((e.target as HTMLInputElement).value);
-					if (!isNaN(v) && v > 0) viewerState.colors = { ...viewerState.colors, cyclePeriod: v };
+					if (!isNaN(v) && v > 0) setColors({ ...colors, cyclePeriod: v });
 				}}
 				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 			/>
@@ -274,29 +283,38 @@
 
 		<!-- Offset -->
 		<div class="flex items-center gap-2">
-			<label class="text-neutral-400 text-xs shrink-0 w-20" for="pe-offset">Offset</label>
+			<label
+				class="text-neutral-400 text-xs shrink-0 w-20 {disableAnimatedTracks ? 'opacity-30' : ''}"
+				for="pe-offset"
+			>Offset</label>
 			<input
 				id="pe-offset"
 				type="range"
 				min="0"
 				max="1"
 				step="0.01"
-				value={viewerState.colors.offset}
-				oninput={(e) => { viewerState.colors = { ...viewerState.colors, offset: parseFloat((e.target as HTMLInputElement).value) }; }}
+				value={colors.offset}
+				oninput={(e) => { setColors({ ...colors, offset: parseFloat((e.target as HTMLInputElement).value) }); }}
 				use:wheelSlider
-				class="flex-1 min-w-0 accent-blue-500"
+				disabled={disableAnimatedTracks}
+				class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
 			/>
 			<input
 				type="text"
-				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
-				value={viewerState.colors.offset.toFixed(2)}
+				disabled={disableAnimatedTracks}
+				class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
+				value={colors.offset.toFixed(2)}
 				onblur={(e) => {
 					const v = parseFloat((e.target as HTMLInputElement).value);
-					if (!isNaN(v)) viewerState.colors = { ...viewerState.colors, offset: Math.max(0, Math.min(1, v)) };
+					if (!isNaN(v)) setColors({ ...colors, offset: Math.max(0, Math.min(1, v)) });
 				}}
 				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
 			/>
 		</div>
+
+		{#if disableAnimatedTracks}
+			<p class="text-xs text-neutral-600 -mt-1">Cycle period and offset are animated via tracks.</p>
+		{/if}
 
 		<!-- In-set color + Reverse -->
 		<div class="flex items-center gap-3">
@@ -305,30 +323,29 @@
 				id="pe-inSetColor"
 				type="color"
 				class="w-8 h-6 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
-				value={viewerState.colors.inSetColor ?? '#000000'}
-				oninput={(e) => { viewerState.colors = { ...viewerState.colors, inSetColor: (e.target as HTMLInputElement).value }; }}
+				value={colors.inSetColor ?? '#000000'}
+				oninput={(e) => { setColors({ ...colors, inSetColor: (e.target as HTMLInputElement).value }); }}
 			/>
 			<button
 				class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
-				onclick={() => { viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' }; }}
+				onclick={() => { setColors({ ...colors, inSetColor: '#000000' }); }}
 				title="Reset to black"
 			>Reset</button>
 			<button
 				class="ml-auto px-2 py-1 rounded text-xs border transition-colors
-					{viewerState.colors.reverse
+					{colors.reverse
 						? 'border-blue-600 bg-blue-900/40 text-blue-300'
 						: 'border-neutral-700 text-neutral-400 hover:text-white'}"
-				onclick={() => { viewerState.colors = { ...viewerState.colors, reverse: !viewerState.colors.reverse }; }}
+				onclick={() => { setColors({ ...colors, reverse: !colors.reverse }); }}
 				title="Reverse palette"
 			>⇄ Reverse</button>
 		</div>
-
 	</div>
 </div>
 
 {#if showSaveModal}
 	<SavePaletteModal
-		config={viewerState.colors}
+		config={colors}
 		initialName={activePaletteName ?? ''}
 		onSave={handleSaveModalSave}
 		onCancel={() => (showSaveModal = false)}
