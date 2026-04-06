@@ -10,6 +10,8 @@
 
 	const TILE = 256;
 
+	let { active = true } = $props();
+
 	let canvas: HTMLCanvasElement;
 	let wrapper: HTMLDivElement;
 	let container: HTMLDivElement;
@@ -134,7 +136,7 @@
 		wrapper.style.height = `${canvasH}px`;
 		canvas.width = canvasW;
 		canvas.height = canvasH;
-		renderFrame(animationState.currentFrame);
+		if (active) renderFrame(animationState.currentFrame);
 	}
 
 	// Re-size canvas when animation dimensions change
@@ -144,13 +146,16 @@
 		updateCanvasSize();
 	});
 
-	// Re-render when frame changes OR when project is first seeded (keyframes go from 0 → >0)
+	// Re-render when frame changes OR when project is first seeded (keyframes go from 0 → >0).
+	// `active` is checked first so that when inactive, currentFrame/hasKeyframes are never read
+	// and therefore not tracked — the effect won't re-run on every playback frame advance.
 	const hasKeyframes = $derived(
 		animationState.project.tracks.some((t) => t.keyframes.length > 0),
 	);
 	$effect(() => {
+		if (!active) { cancelActive(); return; }
 		const frame = animationState.currentFrame;
-		hasKeyframes; // also re-run when seeding completes
+		hasKeyframes;
 		renderFrame(frame);
 	});
 

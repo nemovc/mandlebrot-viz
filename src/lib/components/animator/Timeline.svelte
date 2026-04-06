@@ -2,6 +2,7 @@
 	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 	import { baseAlgorithm } from '$lib/utils/colorPalettes';
+	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
 
 	const CELL_W = 10; // px per frame
 	const GRID_BG = `repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent ${CELL_W * 10}px)`;
@@ -15,6 +16,23 @@
 	const totalFrames = $derived(project.totalFrames);
 	const currentFrame = $derived(animationState.currentFrame);
 	const isHistogram = $derived(baseAlgorithm(project.algorithm) === 'histogram');
+
+	// Cached frame ranges for the ruler strip
+	const cachedRanges = $derived.by(() => {
+		frameCache.cachedCount; // reactive dep — re-runs when a new frame is cached
+		const ranges: { start: number; end: number }[] = [];
+		let rangeStart = -1;
+		for (let f = 0; f < totalFrames; f++) {
+			if (frameCache.has(f)) {
+				if (rangeStart === -1) rangeStart = f;
+			} else if (rangeStart !== -1) {
+				ranges.push({ start: rangeStart, end: f - 1 });
+				rangeStart = -1;
+			}
+		}
+		if (rangeStart !== -1) ranges.push({ start: rangeStart, end: totalFrames });
+		return ranges;
+	});
 	const disabledTracks = $derived(new Set(
 		isHistogram ? project.tracks.map((t, i) => t.parameter === 'cyclePeriod' ? i : -1).filter(i => i >= 0) : []
 	));
@@ -196,7 +214,14 @@
 						{m.label}
 					</div>
 				{/each}
-				<!-- Hover column on ruler -->
+				<!-- Cached frames strip -->
+			{#each cachedRanges as range}
+				<div
+					class="absolute bottom-0 h-0.5 bg-blue-400/50 pointer-events-none"
+					style="left: {range.start * CELL_W}px; width: {(range.end - range.start + 1) * CELL_W}px"
+				></div>
+			{/each}
+			<!-- Hover column on ruler -->
 				{#if hoverX !== null}
 					<div
 						class="absolute top-0 h-full pointer-events-none bg-white/10"

@@ -9,6 +9,8 @@ export interface RenderJob {
 	cy: string;
 	scale: string;
 	tileSize: number;
+	tileW?: number; // override width (defaults to tileSize)
+	tileH?: number; // override height (defaults to tileSize)
 	maxIter: number;
 	power: number;
 	precisionMode: PrecisionMode;
@@ -210,4 +212,12 @@ export function getRecolorPool(): WorkerPool {
 		RecolorWorker
 	);
 	return recolorPool;
+}
+
+// Dedicated WASM pool for the frame cache. Isolated so background cache builds
+// don't compete with foreground preview rendering or WebM export.
+let frameCachePool: WorkerPool | null = null;
+export function getFrameCachePool(): WorkerPool {
+	if (!frameCachePool) frameCachePool = new WorkerPool();
+	return frameCachePool;
 }

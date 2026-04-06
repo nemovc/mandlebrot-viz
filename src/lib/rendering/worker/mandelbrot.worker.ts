@@ -31,12 +31,14 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
       await new Promise((r) => setTimeout(r, e.data.stage === 2 ? 100 : 300));
 
     const { id, tileSize, maxIter, colorConfig, recolorOnly } = e.data;
+    const tileW = e.data.tileW ?? tileSize;
+    const tileH = e.data.tileH ?? tileSize;
 
     if (recolorOnly) {
       const imageData = buildImageData(
         e.data.iters!,
-        tileSize,
-        tileSize,
+        tileW,
+        tileH,
         maxIter,
         colorConfig,
         e.data.cdf,
@@ -49,7 +51,8 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
     }
 
     const { cx, cy, scale, precisionMode, power, debug } = e.data;
-    const sz = tileSize;
+    const sz = tileSize; // kept for log messages
+    const w = tileW, h = tileH;
 
     if (debug) console.log(
       `[worker] job ${id} | ${sz}×${sz} | ${precisionMode} | cx=${cx} cy=${cy} scale=${scale} maxIter=${maxIter} power=${power}`,
@@ -61,27 +64,27 @@ self.onmessage = async (e: MessageEvent<RenderJob>) => {
 
     if (precisionMode === "f64") {
       iters = isDem
-        ? compute_tile_f64_dem(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter, power)
-        : compute_tile_f64(parseFloat(cx), parseFloat(cy), parseFloat(scale), sz, sz, maxIter, power);
+        ? compute_tile_f64_dem(parseFloat(cx), parseFloat(cy), parseFloat(scale), w, h, maxIter, power)
+        : compute_tile_f64(parseFloat(cx), parseFloat(cy), parseFloat(scale), w, h, maxIter, power);
     } else if (precisionMode === "double_double") {
       const [cxHi, cxLo] = split(parseFloat(cx));
       const [cyHi, cyLo] = split(parseFloat(cy));
       const [sHi, sLo] = split(parseFloat(scale));
       iters = isDem
-        ? compute_tile_dd_dem(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter, power)
-        : compute_tile_dd(cxHi, cxLo, cyHi, cyLo, sHi, sLo, sz, sz, maxIter, power);
+        ? compute_tile_dd_dem(cxHi, cxLo, cyHi, cyLo, sHi, sLo, w, h, maxIter, power)
+        : compute_tile_dd(cxHi, cxLo, cyHi, cyLo, sHi, sLo, w, h, maxIter, power);
     } else {
       const bits = getPrecisionBits(Math.round(-Math.log2(parseFloat(scale))));
       console.log(`[worker] arb precision: ${bits} bits`);
       iters = isDem
-        ? compute_tile_arb_dem(cx, cy, scale, bits, sz, sz, maxIter, power)
-        : compute_tile_arb(cx, cy, scale, bits, sz, sz, maxIter, power);
+        ? compute_tile_arb_dem(cx, cy, scale, bits, w, h, maxIter, power)
+        : compute_tile_arb(cx, cy, scale, bits, w, h, maxIter, power);
     }
 
     const elapsed = (performance.now() - t0).toFixed(1);
     if (debug) console.log(`[worker] job ${id} done in ${elapsed}ms`);
 
-    const imageData = buildImageData(iters, sz, sz, maxIter, colorConfig, e.data.cdf);
+    const imageData = buildImageData(iters, w, h, maxIter, colorConfig, e.data.cdf);
     const result: TileResult = { id, imageData, iters };
     (self as unknown as Worker).postMessage(result, {
       transfer: [imageData.data.buffer, iters.buffer],

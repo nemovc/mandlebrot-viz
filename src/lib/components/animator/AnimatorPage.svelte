@@ -3,21 +3,55 @@
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
 	import ShortcutsModal from './ShortcutsModal.svelte';
+	import PlaybackModal from './PlaybackModal.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
-	import { ChevronRight } from 'lucide-svelte';
+	import { Play, ChevronRight, Repeat } from 'lucide-svelte';
 	import type { ColorConfig } from '$lib/stores/viewerState.svelte';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
 	import { presetsFor, ALGORITHMS } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
+	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
 
 	let selectedTrack = $state<number | null>(null);
 	let showShortcuts = $state(false);
+	let showPlayback = $state(false);
+	let loopPlayback = $state(true);
+
+	// ---- Frame cache ----
+	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function scheduleCache(invalidateFirst: boolean, delay = 300) {
+		if (cacheTimer) { clearTimeout(cacheTimer); cacheTimer = null; }
+		const run = () => {
+			if (invalidateFirst) frameCache.invalidate();
+			frameCache.startFrom(animationState.currentFrame, animationState.project, showPlayback ? 1 : 2);
+		};
+		if (delay === 0) run(); else cacheTimer = setTimeout(run, delay);
+	}
 
 	// Seed from explorer on first load if project is empty
 	onMount(() => {
 		const hasWork = animationState.project.tracks.some((t) => t.keyframes.length > 0);
 		if (!hasWork) animationState.seedFromExplorer();
 	});
+
+	// Invalidate + rebuild on any project edit (commit bumps revision)
+	let revisionInit = false;
+	$effect(() => {
+		animationState.revision;
+		if (!revisionInit) { revisionInit = true; return; }
+		untrack(() => scheduleCache(true, 0));
+	});
+
+	// Restart cache from new position on seek (debounced)
+	$effect(() => {
+		animationState.currentFrame;
+    scheduleCache(false, 100); 
+	});
+
+	const cacheReady = $derived(
+		frameCache.cachedCount >= Math.ceil(animationState.project.fps * 1.5)
+	);
 
 	// ---- Keyboard shortcuts ----
 	function handleKey(e: KeyboardEvent) {
@@ -29,8 +63,8 @@
 			return;
 		}
 
-		// All other shortcuts are suppressed while typing
-		if (inInput) return;
+		// All other shortcuts are suppressed while typing or when the playback modal is open
+		if (inInput || showPlayback) return;
 
 		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
 			e.preventDefault();
@@ -91,16 +125,21 @@
 			}
 		} else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
-			startExport();
+      if(exportPhase === 'exporting'){
+        cancelExport();
+      }
+      startExport();
 		} else if (e.key === ' ') {
 			e.preventDefault();
-			// TODO: preview playback (not yet implemented)
+			if (cacheReady) showPlayback = true;
 		} else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
 			// TODO: save project (not yet implemented)
 		} else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
 			// TODO: new project (not yet implemented)
+		} else if (e.key === 'r' || e.key === 'R') {
+			loopPlayback = !loopPlayback;
 		} else if (e.key === 'Delete') {
 			if (kfAtFrame && !kfIsAnchor) kfDelete();
 		} else if (e.key === '?') {
@@ -285,7 +324,7 @@
 <div class="flex flex-col h-full bg-neutral-950 text-white overflow-hidden">
 	<!-- Preview (takes remaining vertical space) -->
 	<div class="flex-1 min-h-0">
-		<AnimatorPreview />
+		<AnimatorPreview active={!showPlayback} />
 	</div>
 
 	<!-- Settings bar -->
@@ -500,6 +539,28 @@
 
 		<div class="flex-1"></div>
 
+		<!-- Playback controls (centre) -->
+		<div class="flex items-center gap-1.5">
+			{#if frameCache.buildTotal > 0}
+				<div class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden" title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached">
+					<div class="h-full bg-blue-400/60 transition-all" style="width: {Math.round(frameCache.cachedCount / frameCache.buildTotal * 100)}%"></div>
+				</div>
+			{/if}
+			<button
+				onclick={() => { if (cacheReady) showPlayback = true; }}
+				disabled={!cacheReady}
+				class="px-2.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-700"
+				title="{cacheReady ? 'Play preview (Space)' : 'Building preview cache…'}"
+			><Play size={12} /></button>
+			<button
+				onclick={() => (loopPlayback = !loopPlayback)}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback ? 'text-blue-400 border-blue-700' : 'text-neutral-500 hover:text-white'}"
+				title="Loop playback (R)"
+			><Repeat size={12} /></button>
+		</div>
+
+		<div class="flex-1"></div>
+
 		<!-- Export section (right) -->
 		{#if exportPhase === 'idle'}
 			<span class="text-neutral-600">{project.totalFrames} frames · {durationSecs}s</span>
@@ -565,3 +626,4 @@
 {/if}
 
 <ShortcutsModal bind:open={showShortcuts} />
+<PlaybackModal bind:open={showPlayback} bind:loopPlayback />
