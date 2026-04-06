@@ -5,55 +5,42 @@
 	import { getPrecisionMode } from '$lib/utils/precision';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
-
-	type PoolDebug = {
-		poolSize: number;
-		idle: number;
-		activeS2: number;
-		activeS3: number;
-		queued: number;
-	};
+	import PoolDebug from './PoolDebug.svelte';
+	import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
+	import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
+	import { ViewerRecolorPool } from '$lib/rendering/worker/pools/viewerRecolorPool';
+	import { ViewerExportPool } from '$lib/rendering/worker/pools/viewerExportPool';
+	import { AnimatorPreviewPool } from '$lib/rendering/worker/pools/animatorPreviewPool';
+	import { AnimatorCachePool } from '$lib/rendering/worker/pools/animatorCachePool';
+	import { AnimatorExportPool } from '$lib/rendering/worker/pools/animatorExportPool';
+	import { AnimatorRecolorPool } from '$lib/rendering/worker/pools/animatorRecolorPool';
 
 	let {
-		s2Completed,
-		s2Total,
-		s3Completed,
-		s3Total,
-		rcCompleted,
-		rcTotal,
-		renderPoolDebug,
-		recolorPoolDebug
+		s2Completed, s2Total,
+		s3Completed, s3Total,
+		rcCompleted, rcTotal
 	}: {
-		s2Completed: number;
-		s2Total: number;
-		s3Completed: number;
-		s3Total: number;
-		rcCompleted: number;
-		rcTotal: number;
-		renderPoolDebug: PoolDebug;
-		recolorPoolDebug: PoolDebug;
+		s2Completed: number; s2Total: number;
+		s3Completed: number; s3Total: number;
+		rcCompleted: number; rcTotal: number;
 	} = $props();
 
+	// Animator pools only appear once they've been instantiated (e.g. after visiting the animator)
+	let showAnimator = $state(AnimatorPreviewPool.hasInstance);
 	let memUsed = $state<number | null>(null);
 	let memTotal = $state<number | null>(null);
 
 	onMount(() => {
 		const interval = setInterval(() => {
+			if (AnimatorPreviewPool.hasInstance) showAnimator = true;
 			const mem = (performance as any).memory;
-			if (mem) {
-				memUsed = mem.usedJSHeapSize;
-				memTotal = mem.jsHeapSizeLimit;
-			}
+			if (mem) { memUsed = mem.usedJSHeapSize; memTotal = mem.jsHeapSizeLimit; }
 		}, 2000);
 		return () => clearInterval(interval);
 	});
 
 	function fmtBytes(b: number) {
 		return (b / 1024 / 1024).toFixed(0) + ' MB';
-	}
-
-	function bar(completed: number, total: number) {
-		return total > 0 ? Math.round((completed / total) * 100) : 0;
 	}
 </script>
 
@@ -68,61 +55,25 @@
 			<ToggleButton active={debugState.showTileFlash} onclick={() => debugState.showTileFlash = !debugState.showTileFlash} checkbox>Tile flash</ToggleButton>
 		</div>
 
-		<!-- Render pool -->
-		<div class="flex flex-col gap-1.5">
-			<div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">
-				Render Pool ({renderPoolDebug.poolSize})
-			</div>
-			<div class="font-mono text-xs text-neutral-300 leading-5">
-				<div class="flex gap-3">
-					<span>idle <span class="text-white">{renderPoolDebug.idle}</span></span>
-					<span>S2 <span class="text-blue-400">{renderPoolDebug.activeS2}</span></span>
-					<span>S3 <span class="text-green-400">{renderPoolDebug.activeS3}</span></span>
-					<span>q <span class="text-white">{renderPoolDebug.queued}</span></span>
-				</div>
-			</div>
-			{#if s2Total > 0}
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-neutral-500 w-4">S2</span>
-					<div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-						<div class="h-full bg-blue-400 transition-all" style="width:{bar(s2Completed, s2Total)}%"></div>
-					</div>
-					<span class="text-xs text-neutral-500 w-12 text-right">{s2Completed}/{s2Total}</span>
-				</div>
-			{/if}
-			{#if s3Total > 0}
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-neutral-500 w-4">S3</span>
-					<div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-						<div class="h-full bg-green-500 transition-all" style="width:{bar(s3Completed, s3Total)}%"></div>
-					</div>
-					<span class="text-xs text-neutral-500 w-12 text-right">{s3Completed}/{s3Total}</span>
-				</div>
-			{/if}
+		<!-- Viewer pools -->
+		<div class="flex flex-col gap-2">
+			<div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">Viewer Pools</div>
+			<PoolDebug name="S2" pool={ViewerS2Pool.instance} color="bg-blue-400" />
+			<PoolDebug name="S3" pool={ViewerS3Pool.instance} color="bg-green-500" />
+			<PoolDebug name="Recolor" pool={ViewerRecolorPool.instance} color="bg-purple-400" />
+			<PoolDebug name="Export" pool={ViewerExportPool.instance} color="bg-yellow-400" />
 		</div>
 
-		<!-- Recolor pool -->
-		<div class="flex flex-col gap-1.5">
-			<div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">
-				Recolor Pool ({recolorPoolDebug.poolSize})
+		<!-- Animator pools (appear once instantiated) -->
+		{#if showAnimator}
+			<div class="flex flex-col gap-2">
+				<div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">Animator Pools</div>
+				<PoolDebug name="Preview" pool={AnimatorPreviewPool.instance} color="bg-blue-400" />
+				<PoolDebug name="Cache" pool={AnimatorCachePool.instance} color="bg-green-500" />
+				<PoolDebug name="Export" pool={AnimatorExportPool.instance} color="bg-yellow-400" />
+				<PoolDebug name="Recolor" pool={AnimatorRecolorPool.instance} color="bg-purple-400" />
 			</div>
-			<div class="font-mono text-xs text-neutral-300 leading-5">
-				<div class="flex gap-3">
-					<span>idle <span class="text-white">{recolorPoolDebug.idle}</span></span>
-					<span>active <span class="text-purple-400">{recolorPoolDebug.activeS3}</span></span>
-					<span>q <span class="text-white">{recolorPoolDebug.queued}</span></span>
-				</div>
-			</div>
-			{#if rcTotal > 0}
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-neutral-500 w-4">RC</span>
-					<div class="flex-1 h-1 bg-neutral-700 rounded overflow-hidden">
-						<div class="h-full bg-purple-400 transition-all" style="width:{bar(rcCompleted, rcTotal)}%"></div>
-					</div>
-					<span class="text-xs text-neutral-500 w-12 text-right">{rcCompleted}/{rcTotal}</span>
-				</div>
-			{/if}
-		</div>
+		{/if}
 
 		<!-- System info -->
 		<div class="flex flex-col gap-1.5">

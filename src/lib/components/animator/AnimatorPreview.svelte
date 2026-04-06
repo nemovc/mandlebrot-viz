@@ -3,10 +3,8 @@
   import { animationState } from "$lib/stores/animationState.svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { interpolateAll } from "$lib/utils/animator/interpolation";
-  import {
-    getWorkerPool,
-    getRecolorPool,
-  } from "$lib/rendering/worker/workerPool";
+  import { AnimatorPreviewPool } from "$lib/rendering/worker/pools/animatorPreviewPool";
+  import { AnimatorRecolorPool } from "$lib/rendering/worker/pools/animatorRecolorPool";
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
   import { buildCdf, baseAlgorithm } from "$lib/utils/colorPalettes";
   import type { ColorConfig } from "$lib/utils/colorPalettes";
@@ -21,13 +19,12 @@
   let canvasW = 0;
   let canvasH = 0;
 
-  let activeJobIds: string[] = [];
+  let activeCancels: Array<() => void> = [];
   let renderSeq = 0;
 
   function cancelActive() {
-    const pool = getWorkerPool();
-    for (const id of activeJobIds) pool.cancel(id);
-    activeJobIds = [];
+    for (const cancel of activeCancels) cancel();
+    activeCancels = [];
   }
 
   function renderFrame(frame: number) {
@@ -62,7 +59,7 @@
     const total = tilesX * tilesY;
     if (total === 0) return;
 
-    const pool = getWorkerPool();
+    const pool = AnimatorPreviewPool.instance;
     const batchId = `preview-${Date.now()}`;
     const isHistogram = baseAlgorithm(colorConfig.algorithm) === "histogram";
     const tileIters = new Map<string, Float32Array>();
@@ -79,7 +76,7 @@
           (ty * TILE + TILE / 2 - canvasH / 2) * scale
         ).toString();
         const id = `${batchId}-${tx}-${ty}`;
-        activeJobIds.push(id);
+        activeCancels.push(() => pool.cancel(id));
 
         pool.submit(
           {
@@ -87,13 +84,13 @@
             cx: tileCx,
             cy: tileCy,
             scale: scale.toString(),
-            tileSize: TILE,
+            tileW: TILE,
+            tileH: TILE,
             maxIter,
             power,
             precisionMode,
             colorConfig,
             priority: 1,
-            stage: 3,
           },
           (result) => {
             if (seq !== renderSeq) return;
@@ -104,38 +101,30 @@
             if (isHistogram && passOneDone === total) {
               // Pass 2: build CDF from all tiles and recolor
               const cdf = buildCdf([...tileIters.values()], maxIter);
-              const rcPool = getRecolorPool();
+              const rcPool = AnimatorRecolorPool.instance;
               for (let ry = 0; ry < tilesY; ry++) {
                 for (let rx = 0; rx < tilesX; rx++) {
                   const iters = tileIters.get(`${rx},${ry}`);
                   if (!iters) continue;
                   const rcId = `${batchId}-rc-${rx}-${ry}`;
-                  activeJobIds.push(rcId);
+                  const rcIters = new Float32Array(iters);
+                  activeCancels.push(() => rcPool.cancel(rcId));
                   rcPool.submit(
                     {
                       id: rcId,
-                      recolorOnly: true,
-                      iters: new Float32Array(iters),
-                      tileSize: TILE,
+                      iters: rcIters,
+                      tileW: TILE,
+                      tileH: TILE,
                       maxIter,
-                      power,
                       colorConfig,
                       cdf,
-                      cx: "",
-                      cy: "",
-                      scale: "",
-                      precisionMode: "f64",
                       priority: 1,
-                      stage: 3,
                     },
                     (rcResult) => {
                       if (seq !== renderSeq) return;
-                      ctx.putImageData(
-                        rcResult.imageData,
-                        rx * TILE,
-                        ry * TILE,
-                      );
+                      ctx.putImageData(rcResult.imageData, rx * TILE, ry * TILE);
                     },
+                    [rcIters.buffer],
                   );
                 }
               }

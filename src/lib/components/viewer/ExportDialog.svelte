@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
-  import { getWorkerPool } from "$lib/rendering/worker/workerPool";
+  import { ViewerExportPool } from "$lib/rendering/worker/pools/viewerExportPool";
   import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
   import { presetsFor } from "$lib/utils/colorPalettes";
   import { savedPalettes } from "$lib/stores/savedPalettes.svelte";
@@ -152,7 +152,7 @@
     const cy = viewerState.cy;
     const scale = scaleForZoom(zoom, TILE);
     const precisionMode = getPrecisionMode(zoom);
-    const pool = getWorkerPool();
+    const pool = ViewerExportPool.instance;
     const cxCenter = parseFloat(cx);
     const cyCenter = parseFloat(cy);
     const colorConfig: ColorConfig = JSON.parse(
@@ -195,13 +195,13 @@
                 cx: tileCx,
                 cy: tileCy,
                 scale: scale.toString(),
-                tileSize: TILE,
+                tileW: TILE,
+                tileH: TILE,
                 maxIter,
                 power,
                 precisionMode,
                 colorConfig,
                 priority: 0,
-                stage: 3,
               },
               (result) => {
                 ctx.putImageData(result.imageData, tx * TILE, ty * TILE);

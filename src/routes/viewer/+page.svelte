@@ -11,38 +11,20 @@
   import { debugState } from "$lib/stores/debugState.svelte";
   import { encodeState, decodeState } from "$lib/utils/urlSerializer";
   import { Code2, CircleUserRound } from "lucide-svelte";
-  import {
-    getWorkerPool,
-    getRecolorPool,
-  } from "$lib/rendering/worker/workerPool";
+  import { ViewerS2Pool } from "$lib/rendering/worker/pools/viewerS2Pool";
+  import { ViewerS3Pool } from "$lib/rendering/worker/pools/viewerS3Pool";
+  import { ViewerRecolorPool } from "$lib/rendering/worker/pools/viewerRecolorPool";
 
   let showExport = $state(false);
   let mapComponent: MandelbrotMap;
 
-  // Pool progress
+  // Pool progress (drives the HUD progress bars)
   let s2Completed = $state(0),
     s2Total = $state(0);
   let s3Completed = $state(0),
     s3Total = $state(0);
   let rcCompleted = $state(0),
     rcTotal = $state(0);
-
-  type PoolDebug = {
-    poolSize: number;
-    idle: number;
-    activeS2: number;
-    activeS3: number;
-    queued: number;
-  };
-  const emptyPool: PoolDebug = {
-    poolSize: 0,
-    idle: 0,
-    activeS2: 0,
-    activeS3: 0,
-    queued: 0,
-  };
-  let renderPoolDebug = $state<PoolDebug>(emptyPool);
-  let recolorPoolDebug = $state<PoolDebug>(emptyPool);
 
   // Restore debug state from URL on load
   if (browser && window.location.hash) {
@@ -51,23 +33,16 @@
   }
 
   onMount(() => {
-    const renderPool = getWorkerPool();
-    renderPool.onProgress = (stage, completed, total) => {
-      if (stage === 2) {
-        s2Completed = completed;
-        s2Total = total;
-      } else {
-        s3Completed = completed;
-        s3Total = total;
-      }
-      renderPoolDebug = renderPool.debugState;
-    };
-
-    const rcPool = getRecolorPool();
-    rcPool.onProgress = (_stage, completed, total) => {
-      rcCompleted = completed;
-      rcTotal = total;
-      recolorPoolDebug = rcPool.debugState;
+    const s2Handler = (completed: number, total: number) => { s2Completed = completed; s2Total = total; };
+    const s3Handler = (completed: number, total: number) => { s3Completed = completed; s3Total = total; };
+    const rcHandler = (completed: number, total: number) => { rcCompleted = completed; rcTotal = total; };
+    ViewerS2Pool.instance.onProgress.push(s2Handler);
+    ViewerS3Pool.instance.onProgress.push(s3Handler);
+    ViewerRecolorPool.instance.onProgress.push(rcHandler);
+    return () => {
+      ViewerS2Pool.instance.onProgress.splice(ViewerS2Pool.instance.onProgress.indexOf(s2Handler), 1);
+      ViewerS3Pool.instance.onProgress.splice(ViewerS3Pool.instance.onProgress.indexOf(s3Handler), 1);
+      ViewerRecolorPool.instance.onProgress.splice(ViewerRecolorPool.instance.onProgress.indexOf(rcHandler), 1);
     };
   });
 
@@ -86,7 +61,6 @@
     return () => window.removeEventListener('hashchange', handleHashChange);
   });
 
-  // Sync state to URL hash whenever it changes.
   $effect(() => {
     if (!browser) return;
     const encoded = encodeState(viewerState.toJSON(), debugState.toJSON());
@@ -169,8 +143,6 @@
       {s3Total}
       {rcCompleted}
       {rcTotal}
-      {renderPoolDebug}
-      {recolorPoolDebug}
     />
   </div>
 

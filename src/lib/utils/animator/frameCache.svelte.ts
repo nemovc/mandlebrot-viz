@@ -1,7 +1,5 @@
-import {
-  getFrameCachePool,
-  getRecolorPool,
-} from "$lib/rendering/worker/workerPool";
+import { AnimatorCachePool } from "$lib/rendering/worker/pools/animatorCachePool";
+import { AnimatorRecolorPool } from "$lib/rendering/worker/pools/animatorRecolorPool";
 import { interpolateAll } from "$lib/utils/animator/interpolation";
 import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
 import { buildCdf, baseAlgorithm } from "$lib/utils/colorPalettes";
@@ -164,7 +162,7 @@ async function renderFrameLowRes(
   const isHistogram = baseAlgorithm(colorConfig.algorithm) === "histogram";
 
   const id = `cache-f${frame}-${seq}`;
-  const pool = getFrameCachePool();
+  const pool = AnimatorCachePool.instance;
 
   return new Promise<ImageBitmap | null>((resolve) => {
     if (signal.aborted) {
@@ -184,7 +182,6 @@ async function renderFrameLowRes(
         cx: state.cx,
         cy: state.cy,
         scale: scale.toString(),
-        tileSize: Math.max(lw, lh),
         tileW: lw,
         tileH: lh,
         maxIter,
@@ -192,7 +189,6 @@ async function renderFrameLowRes(
         precisionMode,
         colorConfig,
         priority,
-        stage: 3,
       },
       async (result) => {
         signal.removeEventListener("abort", onAbort);
@@ -205,7 +201,7 @@ async function renderFrameLowRes(
           // Single-tile histogram: build CDF from this tile, then recolor
           const cdf = buildCdf([result.iters], maxIter);
           const rcId = `${id}-rc`;
-          const rcPool = getRecolorPool();
+          const rcPool = AnimatorRecolorPool.instance;
 
           const onAbortRc = () => {
             rcPool.cancel(rcId);
@@ -213,24 +209,17 @@ async function renderFrameLowRes(
           };
           signal.addEventListener("abort", onAbortRc, { once: true });
 
+          const rcIters = new Float32Array(result.iters);
           rcPool.submit(
             {
               id: rcId,
-              recolorOnly: true,
-              iters: new Float32Array(result.iters),
-              tileSize: Math.max(lw, lh),
+              iters: rcIters,
               tileW: lw,
               tileH: lh,
               maxIter,
-              power,
               colorConfig,
               cdf,
-              cx: "",
-              cy: "",
-              scale: "",
-              precisionMode: "f64",
               priority,
-              stage: 3,
             },
             async (rcResult) => {
               signal.removeEventListener("abort", onAbortRc);
@@ -240,6 +229,7 @@ async function renderFrameLowRes(
               }
               resolve(await createImageBitmap(rcResult.imageData));
             },
+            [rcIters.buffer],
           );
         } else {
           resolve(await createImageBitmap(result.imageData));

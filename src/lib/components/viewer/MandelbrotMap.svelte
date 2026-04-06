@@ -2,7 +2,6 @@
   import { onMount, onDestroy, untrack } from "svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
-  import { getWorkerPool } from "$lib/rendering/worker/workerPool";
   import type { MandelbrotLayerInstance } from "$lib/rendering/leaflet/MandelbrotLayer";
 
   let mapContainer: HTMLDivElement;
@@ -70,13 +69,14 @@
   // Recolor in-place when palette/algorithm changes.
   // Switching to/from distance_estimation requires a full recompute since a different
   // WASM function runs and the cached iters are incompatible.
-  let _lastAlgorithm = '';
+  let _lastAlgorithm = "";
   $effect(() => {
     viewerState.colors;
     if (mandelbrotLayer) {
       mandelbrotLayer.colorConfig = viewerState.colors;
       const alg = viewerState.colors.algorithm;
-      const isDem = (a: string) => a === 'distance_estimation' || a === 'distance_estimation_banded';
+      const isDem = (a: string) =>
+        a === "distance_estimation" || a === "distance_estimation_banded";
       const needsRecompute = isDem(alg) !== isDem(_lastAlgorithm);
       _lastAlgorithm = alg;
       if (needsRecompute) {
@@ -133,16 +133,29 @@
 </script>
 
 <div class="relative w-full h-full" bind:this={mapContainer}>
-  <div class="absolute inset-0 flex items-center justify-center z-[2000] pointer-events-none">
+  <div
+    class="absolute inset-0 flex items-center justify-center z-[2000] pointer-events-none"
+  >
     {#if debugState.showTileSquare}
-      <div class="absolute w-64 h-64" style="box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.5); outline: 1px solid rgba(255,255,255,0.6);"></div>
+      <div
+        class="absolute w-64 h-64"
+        style="box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.5); outline: 1px solid rgba(255,255,255,0.6);"
+      ></div>
     {/if}
     {#if debugState.showCrosshair}
       <div class="relative w-16 h-16">
-        <div class="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-black/50"></div>
-        <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 bg-black/50"></div>
-        <div class="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/80"></div>
-        <div class="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/80"></div>
+        <div
+          class="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-black/50"
+        ></div>
+        <div
+          class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 bg-black/50"
+        ></div>
+        <div
+          class="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/80"
+        ></div>
+        <div
+          class="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/80"
+        ></div>
       </div>
     {/if}
   </div>

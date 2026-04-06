@@ -1,8 +1,6 @@
 import { Muxer, ArrayBufferTarget } from "webm-muxer";
-import {
-  getWorkerPool,
-  getRecolorPool,
-} from "$lib/rendering/worker/workerPool";
+import { AnimatorExportPool } from "$lib/rendering/worker/pools/animatorExportPool";
+import { AnimatorRecolorPool } from "$lib/rendering/worker/pools/animatorRecolorPool";
 import { interpolateAll } from "$lib/utils/animator/interpolation";
 import { getPrecisionMode, scaleForZoom } from "$lib/utils/precision";
 import { buildCdf, baseAlgorithm } from "$lib/utils/colorPalettes";
@@ -51,7 +49,7 @@ export async function exportWebM(
 
   const offscreen = new OffscreenCanvas(width, height);
   const ctx = offscreen.getContext("2d")!;
-  const pool = getWorkerPool();
+  const pool = AnimatorExportPool.instance;
   const tilesX = Math.ceil(width / TILE);
   const tilesY = Math.ceil(height / TILE);
   const tileCount = tilesX * tilesY;
@@ -108,13 +106,13 @@ export async function exportWebM(
               cx: tileCx,
               cy: tileCy,
               scale: scale.toString(),
-              tileSize: TILE,
+              tileW: TILE,
+              tileH: TILE,
               maxIter,
               power,
               precisionMode,
               colorConfig,
               priority: 0,
-              stage: 3,
             },
             (result) => {
               ctx.putImageData(result.imageData, tx * TILE, ty * TILE);
@@ -138,7 +136,7 @@ export async function exportWebM(
         throw new DOMException("Export cancelled", "AbortError");
       }
       const cdf = buildCdf([...tileIters.values()], maxIter);
-      const rcPool = getRecolorPool();
+      const rcPool = AnimatorRecolorPool.instance;
       const rcJobIds: string[] = [];
       await new Promise<void>((resolve, reject) => {
         let done = 0;
@@ -149,28 +147,24 @@ export async function exportWebM(
             if (!iters) continue;
             const rcId = `${batchId}-rc-${tx}-${ty}`;
             rcJobIds.push(rcId);
+            const rcIters = new Float32Array(iters);
             rcPool.submit(
               {
                 id: rcId,
-                recolorOnly: true,
-                iters: new Float32Array(iters),
-                tileSize: TILE,
+                iters: rcIters,
+                tileW: TILE,
+                tileH: TILE,
                 maxIter,
-                power,
                 colorConfig,
                 cdf,
-                cx: "",
-                cy: "",
-                scale: "",
-                precisionMode: "f64",
                 priority: 0,
-                stage: 3,
               },
               (result) => {
                 ctx.putImageData(result.imageData, tx * TILE, ty * TILE);
                 done++;
                 if (done === count) resolve();
               },
+              [rcIters.buffer],
             );
           }
         }
