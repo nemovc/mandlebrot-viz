@@ -53,6 +53,27 @@ export interface PresetEntry {
   histogram: ColorConfig;
 }
 
+/**
+ * When switching algorithms across the histogram/non-histogram boundary, returns
+ * the palette for the appropriate preset variant. Returns null if no swap is needed
+ * (same boundary side, or not currently on a named preset).
+ */
+export function paletteForAlgorithmChange(
+  oldAlgorithm: Algorithm,
+  newAlgorithm: Algorithm,
+  presetName: string | null,
+): ColorStop[] | null {
+  const crossingHistogram =
+    (baseAlgorithm(oldAlgorithm) === "histogram") !==
+    (baseAlgorithm(newAlgorithm) === "histogram");
+  if (!crossingHistogram || !presetName || !PRESETS[presetName]) return null;
+  const variant =
+    baseAlgorithm(newAlgorithm) === "histogram"
+      ? PRESETS[presetName].histogram
+      : PRESETS[presetName].cyclic;
+  return JSON.parse(JSON.stringify(variant.palette));
+}
+
 /** Returns the algorithm-appropriate ColorConfig for each preset. */
 export function presetsFor(
   algorithm: ColorConfig["algorithm"],

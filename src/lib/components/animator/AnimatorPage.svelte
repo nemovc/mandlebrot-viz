@@ -8,7 +8,7 @@
 	import { Play, ChevronRight, Repeat } from 'lucide-svelte';
   import type { ColorConfig } from '$lib/utils/colorPalettes';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
-	import { presetsFor, ALGORITHMS } from '$lib/utils/colorPalettes';
+	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange } from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
 
@@ -180,7 +180,9 @@
 
 	// Algorithm selector
 	function setAlgorithm(v: string) {
-		animationState.updateProject({ algorithm: v as ColorConfig['algorithm'] });
+		const newAlgorithm = v as ColorConfig['algorithm'];
+		const swappedPalette = paletteForAlgorithmChange(project.algorithm, newAlgorithm, currentPresetName === 'Custom' ? null : currentPresetName);
+		animationState.updateProject({ algorithm: newAlgorithm, ...(swappedPalette && { palette: swappedPalette }) });
 	}
 
 	// Palette selector — show preset names appropriate for the current algorithm

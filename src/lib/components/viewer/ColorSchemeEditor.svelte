@@ -2,9 +2,8 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { presetsFor, ALGORITHMS, baseAlgorithm } from '$lib/utils/colorPalettes';
+	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange, baseAlgorithm, type ColorStop } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
-	import type { ColorStop } from '$lib/stores/viewerState.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 	import ToggleButton from './ToggleButton.svelte';
 	import PalettePreview from './PalettePreview.svelte';
@@ -68,9 +67,13 @@
 	}
 
 	function onAlgorithmChange(e: Event) {
+		const newAlgorithm = (e.target as HTMLSelectElement).value as typeof viewerState.colors.algorithm;
+		const swappedPalette = paletteForAlgorithmChange(viewerState.colors.algorithm, newAlgorithm, activePaletteName);
+		if (swappedPalette) baseline = JSON.parse(JSON.stringify(swappedPalette));
 		viewerState.colors = {
 			...viewerState.colors,
-			algorithm: (e.target as HTMLSelectElement).value as typeof viewerState.colors.algorithm
+			algorithm: newAlgorithm,
+			...(swappedPalette && { palette: swappedPalette })
 		};
 	}
 </script>
