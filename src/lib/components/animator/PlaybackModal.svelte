@@ -73,11 +73,21 @@
     if (!isOpen) {
       isPlaying = false;
       cancelAnimationFrame(rafId);
+      frameCache.startFrom(
+        animationState.currentFrame,
+        animationState.project,
+        2,
+      );
       return;
     }
     const timer = setTimeout(() => {
       lastFrameTime = 0;
       isPlaying = true;
+      frameCache.startFrom(
+        animationState.currentFrame,
+        animationState.project,
+        1,
+      );
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(rafLoop);
     }, 0);
