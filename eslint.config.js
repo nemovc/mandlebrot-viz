@@ -20,13 +20,21 @@ export default [
 		}
 	},
 	{
-		files: ['**/*.svelte'],
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				parser: tseslint.parser
+				parser: tseslint.parser,
+				extraFileExtensions: ['.svelte']
 			}
 		}
 	},
+	{
+		rules: {
+			'@typescript-eslint/no-unused-expressions': 'off', // Svelte 5 runes often use expressions
+			'@typescript-eslint/no-explicit-any': 'warn'
+		}
+	},
+
 	{
 		ignores: ['build/', '.svelte-kit/', 'dist/', 'wasm/mandelbrot/target/', 'static/wasm/']
 	}
