@@ -4,7 +4,17 @@
 	import { encodeState } from '$lib/utils/urlSerializer';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
 
-	let { onResetView, onExport }: { onResetView: () => void; onExport: () => void } = $props();
+	let {
+		onResetView,
+		onExport,
+		onToggleInspector,
+		inspectorActive = false,
+	}: {
+		onResetView: () => void;
+		onExport: () => void;
+		onToggleInspector: () => void;
+		inspectorActive?: boolean;
+	} = $props();
 
 	let shareCopied = $state(false);
 
@@ -26,6 +36,15 @@
 			class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
 			onclick={shareLink}
 			>{#if shareCopied}<span class="text-green-400">✓ Copied</span>{:else}Share Link{/if}</button
+		>
+		<button
+			class="w-full px-2 py-1.5 text-xs rounded transition-colors border text-white"
+			class:bg-blue-700={inspectorActive}
+			class:border-blue-600={inspectorActive}
+			class:bg-neutral-800={!inspectorActive}
+			class:hover:bg-neutral-700={!inspectorActive}
+			class:border-neutral-700={!inspectorActive}
+			onclick={onToggleInspector}>Inspector {inspectorActive ? "On" : "Off"}</button
 		>
 		<button
 			class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"

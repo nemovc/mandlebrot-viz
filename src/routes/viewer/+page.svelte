@@ -7,6 +7,7 @@
   import ExportDialog from "$lib/components/viewer/ExportDialog.svelte";
   import ActionsPanel from "$lib/components/viewer/ActionsPanel.svelte";
   import DebugPanel from "$lib/components/viewer/DebugPanel.svelte";
+  import InspectorTooltip from "$lib/components/viewer/InspectorTooltip.svelte";
   import { viewerState } from "$lib/stores/viewerState.svelte";
   import { debugState } from "$lib/stores/debugState.svelte";
   import { encodeState, decodeState } from "$lib/utils/urlSerializer";
@@ -17,6 +18,61 @@
 
   let showExport = $state(false);
   let mapComponent: MandelbrotMap;
+
+  let inspectorActive = $state(false);
+  let inspectorLocked = $state(false);
+  let inspectorZooming = $state(false);
+  let inspectorRe = $state(0);
+  let inspectorIm = $state(0);
+  let inspectorScreenX = $state(0);
+  let inspectorScreenY = $state(0);
+  let mouseX = 0;
+  let mouseY = 0;
+
+  function onInspectorMove(re: number, im: number, sx: number, sy: number) {
+    if (inspectorLocked) return;
+    inspectorRe = re;
+    inspectorIm = im;
+    inspectorScreenX = sx;
+    inspectorScreenY = sy;
+  }
+
+  function onInspectorClick() {
+    inspectorLocked = !inspectorLocked;
+    if (!inspectorLocked) {
+      inspectorScreenX = mouseX;
+      inspectorScreenY = mouseY;
+      const coords = mapComponent?.screenToComplex(mouseX, mouseY);
+      if (coords) { inspectorRe = coords.re; inspectorIm = coords.im; }
+    }
+  }
+
+  // Sync lock anchor into Leaflet pane when locked state or position changes
+  $effect(() => {
+    if (inspectorLocked) {
+      mapComponent?.setLockPoint(inspectorRe, inspectorIm);
+    } else {
+      mapComponent?.clearLockPoint();
+    }
+  });
+
+  function updateInspectorFromAnchor() {
+    if (!inspectorLocked) return;
+    const pos = mapComponent?.getLockAnchorPos();
+    if (pos) { inspectorScreenX = pos.x; inspectorScreenY = pos.y; }
+  }
+
+  function toggleInspector() {
+    inspectorActive = !inspectorActive;
+    if (inspectorActive) {
+      inspectorScreenX = mouseX;
+      inspectorScreenY = mouseY;
+      const coords = mapComponent?.screenToComplex(mouseX, mouseY);
+      if (coords) { inspectorRe = coords.re; inspectorIm = coords.im; }
+    } else {
+      inspectorLocked = false;
+    }
+  }
 
   // Pool progress (drives the HUD progress bars)
   let s2Completed = $state(0),
@@ -76,8 +132,32 @@
   <title>Mandelbrot Explorer — Viewer</title>
 </svelte:head>
 
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'i' || e.key === 'I') {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      toggleInspector();
+    }
+  }}
+  onmousemove={(e) => { mouseX = e.clientX; mouseY = e.clientY; }}
+/>
+
 <div class="relative w-full h-full">
-  <MandelbrotMap bind:this={mapComponent} />
+  <MandelbrotMap
+    bind:this={mapComponent}
+    {inspectorActive}
+    {onInspectorMove}
+    {onInspectorClick}
+    onMove={updateInspectorFromAnchor}
+    onZoomStart={() => {
+      inspectorZooming = true;
+      // viewreset fires synchronously within zoomstart, updating the anchor.
+      // Delay position read by one frame so the DOM paints the transition-enabled
+      // element at the old position first — then the CSS transition plays.
+      requestAnimationFrame(updateInspectorFromAnchor);
+    }}
+    onZoomEnd={() => { inspectorZooming = false; }}
+  />
 
   <!-- Render progress bars (hidden during export, which has its own progress UI) -->
   {#if !showExport && s2Total > 0 && s2Completed < s2Total}
@@ -131,6 +211,8 @@
     <ActionsPanel
       onResetView={() => mapComponent.resetView()}
       onExport={() => (showExport = true)}
+      onToggleInspector={toggleInspector}
+      {inspectorActive}
     />
   </div>
 
@@ -171,6 +253,34 @@
     </div>
   </div>
 </div>
+
+{#if inspectorActive && inspectorLocked}
+  <div
+    class="fixed z-[9998] pointer-events-none"
+    style="left: {inspectorScreenX}px; top: {inspectorScreenY}px; {inspectorZooming ? 'transition: left 0.25s ease, top 0.25s ease;' : ''}"
+  >
+    <div class="absolute w-px bg-white/60" style="height:12px; left:0; top:-6px"></div>
+    <div class="absolute h-px bg-white/60" style="width:12px; top:0; left:-6px"></div>
+    <div class="absolute w-1.5 h-1.5 rounded-full border border-white/80 bg-transparent" style="left:-3px; top:-3px"></div>
+  </div>
+{/if}
+
+{#if inspectorActive}
+  <InspectorTooltip
+    re={inspectorRe}
+    im={inspectorIm}
+    screenX={inspectorScreenX}
+    screenY={inspectorScreenY}
+    locked={inspectorLocked}
+    zooming={inspectorZooming}
+    maxIter={viewerState.maxIter}
+    power={viewerState.power}
+    colorConfig={viewerState.colors}
+    lastCdf={mapComponent?.getLastCdf() ?? null}
+    getIterAt={(re, im) => mapComponent?.getIterAt(re, im) ?? null}
+    onCenterPoint={() => mapComponent?.panTo(inspectorRe, inspectorIm)}
+  />
+{/if}
 
 {#if showExport}
   <ExportDialog onclose={() => (showExport = false)} />

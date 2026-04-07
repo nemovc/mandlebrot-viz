@@ -8,6 +8,10 @@ export type Algorithm =
 
 export type BaseAlgorithm = "escape_time" | "distance_estimation" | "histogram";
 
+export function isBanded(a: Algorithm): boolean {
+  return a.endsWith("_banded");
+}
+
 export function baseAlgorithm(a: Algorithm): BaseAlgorithm {
   if (a === "distance_estimation" || a === "distance_estimation_banded")
     return "distance_estimation";
