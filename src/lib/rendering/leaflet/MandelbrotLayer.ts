@@ -1,4 +1,5 @@
 import type { ColorConfig } from "$lib/utils/colorPalettes";
+import type { DoneCallback, InternalTiles } from "leaflet";
 import { ViewerS2Pool } from "$lib/rendering/worker/pools/viewerS2Pool";
 import { ViewerS3Pool } from "$lib/rendering/worker/pools/viewerS3Pool";
 import { ViewerRecolorPool } from "$lib/rendering/worker/pools/viewerRecolorPool";
@@ -22,14 +23,6 @@ type ItersCache = Map<
 // Augment Leaflet's GridLayer with the internal properties we need.
 declare module "leaflet" {
   interface GridLayer {
-    _tiles: Record<
-      string,
-      {
-        el: HTMLElement;
-        coords: { x: number; y: number; z: number };
-        current: boolean;
-      }
-    >;
     _removeTile(key: string): void;
   }
 }
@@ -97,7 +90,7 @@ export function createMandelbrotLayer(L: typeof import("leaflet")) {
 
     override createTile(
       coords: { x: number; y: number; z: number },
-      done: (err: Error | null, tile: HTMLElement) => void,
+      done: DoneCallback,
     ): HTMLElement {
       const { x, y, z } = coords;
 
@@ -162,8 +155,9 @@ export function createMandelbrotLayer(L: typeof import("leaflet")) {
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
           ctx.drawImage(tmpCanvas, 0, 0, TILE_SIZE, TILE_SIZE);
-          done(null, wrapper);
+          done(undefined, wrapper);
           flashTile(wrapper, FLASH_S2);
+
 
           // Stage 3: full-res refinement
           s3Pool.submit(

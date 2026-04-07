@@ -15,6 +15,7 @@
 		children?: import('svelte').Snippet;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally
 	let open = $state(defaultOpen);
 
 	function toggle() {

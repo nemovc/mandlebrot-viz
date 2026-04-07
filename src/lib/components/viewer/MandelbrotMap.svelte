@@ -121,9 +121,9 @@
       const needsRecompute = isDem(alg) !== isDem(_lastAlgorithm);
       _lastAlgorithm = alg;
       if (needsRecompute) {
-        untrack(() => mandelbrotLayer.recompute());
+        untrack(() => mandelbrotLayer?.recompute());
       } else {
-        untrack(() => mandelbrotLayer.recolor());
+        untrack(() => mandelbrotLayer?.recolor());
       }
     }
   });
@@ -133,7 +133,7 @@
     viewerState.maxIter;
     if (mandelbrotLayer) {
       mandelbrotLayer.maxIter = viewerState.maxIter;
-      untrack(() => mandelbrotLayer.recompute());
+      untrack(() => mandelbrotLayer?.recompute());
     }
   });
 
@@ -142,7 +142,7 @@
     viewerState.power;
     if (mandelbrotLayer) {
       mandelbrotLayer.power = viewerState.power;
-      untrack(() => mandelbrotLayer.recompute());
+      untrack(() => mandelbrotLayer?.recompute());
     }
   });
 

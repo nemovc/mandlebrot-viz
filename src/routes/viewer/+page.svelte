@@ -17,7 +17,7 @@
   import { ViewerRecolorPool } from "$lib/rendering/worker/pools/viewerRecolorPool";
 
   let showExport = $state(false);
-  let mapComponent: MandelbrotMap;
+  let mapComponent = $state<MandelbrotMap>();
 
   let inspectorActive = $state(false);
   let inspectorLocked = $state(false);
@@ -184,7 +184,7 @@
   <!-- HUD overlays -->
   <div class="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
     <ControlPanel
-      onNavigate={(re, im, zoom) => mapComponent.panTo(re, im, zoom)}
+      onNavigate={(re, im, zoom) => mapComponent?.panTo(re, im, zoom)}
     />
   </div>
 
@@ -196,12 +196,12 @@
   <div class="absolute right-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col">
     <button
       class="w-8 h-8 flex items-center justify-center bg-neutral-900/90 hover:bg-neutral-700 border border-neutral-700 border-b-0 text-white text-lg rounded-t transition-colors select-none"
-      onclick={() => mapComponent.zoomIn()}
+      onclick={() => mapComponent?.zoomIn()}
       title="Zoom in"
     >+</button>
     <button
       class="w-8 h-8 flex items-center justify-center bg-neutral-900/90 hover:bg-neutral-700 border border-neutral-700 text-white text-lg rounded-b transition-colors select-none"
-      onclick={() => mapComponent.zoomOut()}
+      onclick={() => mapComponent?.zoomOut()}
       title="Zoom out"
     >−</button>
   </div>
@@ -209,7 +209,7 @@
   <!-- Actions -->
   <div class="absolute bottom-3 right-3 z-[1000]">
     <ActionsPanel
-      onResetView={() => mapComponent.resetView()}
+      onResetView={() => mapComponent?.resetView()}
       onExport={() => (showExport = true)}
       onToggleInspector={toggleInspector}
       {inspectorActive}

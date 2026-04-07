@@ -14,6 +14,7 @@
     onCancel: () => void;
   } = $props();
 
+  // svelte-ignore state_referenced_locally
   let nameInput = $state(initialName);
   let errorMsg = $state<string | null>(null);
   let confirmOverwrite = $state(false);

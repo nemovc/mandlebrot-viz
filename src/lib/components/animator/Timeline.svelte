@@ -88,12 +88,14 @@
 		(document.activeElement as HTMLElement)?.blur();
 		scrubbing = true;
 		if (trackIdx !== undefined) selectedTrack = trackIdx;
-		animationState.currentFrame = frameFromClientX(e.clientX);
+		const frame = frameFromClientX(e.clientX);
+		if (frame !== null) animationState.currentFrame = frame;
 	}
 
 	// ---- Double-click: create or delete keyframe ----
 	function handleDblClick(e: MouseEvent, trackIdx: number) {
 		const frame = frameFromClientX(e.clientX);
+		if (frame === null) return;
 		const track = project.tracks[trackIdx];
 		selectedTrack = trackIdx;
 		animationState.currentFrame = frame;
@@ -101,7 +103,7 @@
 		if (existing) {
 			if (frame !== 0 && frame !== totalFrames) animationState.removeKeyframe(trackIdx, frame);
 		} else {
-			animationState.addKeyframe(trackIdx, frame, interpolateTrack(track, frame));
+			animationState.addKeyframe(trackIdx, frame, interpolateTrack(track, frame, totalFrames));
 		}
 	}
 
@@ -130,7 +132,8 @@
 			const clamped = Math.max(0, Math.min(dragInfo.fromFrame + delta, totalFrames - 1));
 			if (clamped !== dragInfo.toFrame) dragInfo = { ...dragInfo, toFrame: clamped };
 		} else if (scrubbing) {
-			animationState.currentFrame = frameFromClientX(e.clientX);
+			const frame = frameFromClientX(e.clientX);
+			if (frame !== null) animationState.currentFrame = frame;
 		}
 	}
 

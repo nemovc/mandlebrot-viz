@@ -14,12 +14,19 @@
     barColor: string;
   } = $props();
 
+  // svelte-ignore state_referenced_locally
   const initial = pool.debugState;
+  // svelte-ignore state_referenced_locally
   let poolSize = $state(initial.poolSize);
+  // svelte-ignore state_referenced_locally
   let idle = $state(initial.idle);
+  // svelte-ignore state_referenced_locally
   let active = $state(initial.active);
+  // svelte-ignore state_referenced_locally
   let queued = $state(initial.queued);
+  // svelte-ignore state_referenced_locally
   let batchCompleted = $state(pool.batchCompleted);
+  // svelte-ignore state_referenced_locally
   let batchTotal = $state(pool.batchTotal);
 
   const pct = $derived(

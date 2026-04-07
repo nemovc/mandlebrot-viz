@@ -23,6 +23,7 @@
 		onSave: (name: string) => void;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally
 	let cancelSnapshot = $state<ColorConfig>(JSON.parse(JSON.stringify(colors)));
 	let selectedStopIdx = $state<number | null>(null);
 	let draggingIdx = $state<number | null>(null);

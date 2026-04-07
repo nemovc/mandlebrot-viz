@@ -1,5 +1,5 @@
 import { WorkerPool } from "../workerPool";
-import type { RecolorResult } from "../jobs";
+import type { RecolorJob, RecolorResult } from "../jobs";
 import RecolorWorker from "../recolor.worker.ts?worker";
 
 class ViewerRecolorPool extends WorkerPool<RecolorJob, RecolorResult> {

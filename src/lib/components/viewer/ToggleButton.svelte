@@ -34,11 +34,11 @@
 		children: import('svelte').Snippet;
 	} = $props();
 
-	const { active: activeClass, inactive: inactiveClass } = VARIANTS[variant];
+	const classes = $derived(VARIANTS[variant]);
 </script>
 
 <button
-	class="flex items-center gap-1.5 text-left px-2 py-1 rounded text-xs transition-colors border {active ? activeClass : inactiveClass} {disabled ? 'opacity-40 cursor-not-allowed' : ''} {extraClass}"
+	class="flex items-center gap-1.5 text-left px-2 py-1 rounded text-xs transition-colors border {active ? classes.active : classes.inactive} {disabled ? 'opacity-40 cursor-not-allowed' : ''} {extraClass}"
 	{onclick}
 	{title}
 	{disabled}

@@ -6,7 +6,7 @@
 
   let { open = $bindable(false), loopPlayback = $bindable(true) } = $props();
 
-  let canvas: HTMLCanvasElement;
+  let canvas = $state<HTMLCanvasElement>();
   let isPlaying = $state(false);
   let rafId = 0;
   let lastFrameTime = 0;
@@ -97,11 +97,12 @@
   onDestroy(pause);
 
   // ---- Scrub bar ----
-  let scrubBar: HTMLDivElement;
+  let scrubBar = $state<HTMLDivElement>();
   let scrubbing = $state(false);
   let scrubPlaying = $state(false);
 
   function frameFromScrubX(clientX: number): number {
+    if (!scrubBar) return 0;
     const rect = scrubBar.getBoundingClientRect();
     const t = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     return Math.round(t * totalFrames);
