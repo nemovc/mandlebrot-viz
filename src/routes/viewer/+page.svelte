@@ -15,7 +15,6 @@
 	import { Code2, CircleUserRound } from 'lucide-svelte';
 	import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
 	import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
-	import { ViewerRecolorPool } from '$lib/rendering/worker/pools/viewerRecolorPool';
 
 	let showExport = $state(false);
 	let mapComponent = $state<MandelbrotMap>();
@@ -83,8 +82,6 @@
 		s2Total = $state(0);
 	let s3Completed = $state(0),
 		s3Total = $state(0);
-	let rcCompleted = $state(0),
-		rcTotal = $state(0);
 
 	// Restore debug state from URL on load
 	if (browser && window.location.hash) {
@@ -101,13 +98,8 @@
 			s3Completed = completed;
 			s3Total = total;
 		};
-		const rcHandler = (completed: number, total: number) => {
-			rcCompleted = completed;
-			rcTotal = total;
-		};
 		ViewerS2Pool.instance.onProgress.push(s2Handler);
 		ViewerS3Pool.instance.onProgress.push(s3Handler);
-		ViewerRecolorPool.instance.onProgress.push(rcHandler);
 		return () => {
 			ViewerS2Pool.instance.onProgress.splice(
 				ViewerS2Pool.instance.onProgress.indexOf(s2Handler),
@@ -115,10 +107,6 @@
 			);
 			ViewerS3Pool.instance.onProgress.splice(
 				ViewerS3Pool.instance.onProgress.indexOf(s3Handler),
-				1
-			);
-			ViewerRecolorPool.instance.onProgress.splice(
-				ViewerRecolorPool.instance.onProgress.indexOf(rcHandler),
 				1
 			);
 		};
@@ -223,7 +211,7 @@
 
 	<!-- Debug panel -->
 	<div class="absolute bottom-3 left-3 z-[1000]">
-		<DebugPanel {s2Completed} {s2Total} {s3Completed} {s3Total} {rcCompleted} {rcTotal} />
+		<DebugPanel />
 	</div>
 
 	<!-- Info bar -->
