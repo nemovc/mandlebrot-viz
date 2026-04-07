@@ -1,8 +1,11 @@
 <script lang="ts">
+	import type { MandelbrotLayerInstance } from '$lib/rendering/leaflet/MandelbrotLayer';
+	import type * as Leaflet from 'leaflet';
+	import type { PointExpression } from 'leaflet';
+
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { debugState } from '$lib/stores/debugState.svelte';
-	import type { MandelbrotLayerInstance } from '$lib/rendering/leaflet/MandelbrotLayer';
 	import { scaleForZoom } from '$lib/utils/precision';
 
 	const TILE_SIZE = 256;
@@ -10,18 +13,19 @@
 	let {
 		inspectorActive = false,
 		onInspectorMove,
-		onInspectorClick,
-		onMove
+		onInspectorClick
 	}: {
 		inspectorActive?: boolean;
 		onInspectorMove?: (re: number, im: number, sx: number, sy: number) => void;
 		onInspectorClick?: () => void;
-		onMove?: () => void;
 	} = $props();
 
 	let mapContainer: HTMLDivElement;
-	let leafletMap: import('leaflet').Map | null = null;
+	let leafletMap: Leaflet.Map | null = null;
 	let mandelbrotLayer: MandelbrotLayerInstance | null = null;
+	let _L: typeof Leaflet | null = null;
+	let _lockMarker: Leaflet.Marker | null = null;
+	let _lockContainer: HTMLDivElement | null = null;
 
 	// CRS.Simple uses pixel units. Our world [-4,4] maps to [0,256] at zoom 0.
 	// Scale = 256/8 = 32 pixels per complex unit.
@@ -59,9 +63,7 @@
 		mandelbrotLayer.power = viewerState.power;
 		mandelbrotLayer.colorConfig = viewerState.colors;
 		mandelbrotLayer.addTo(leafletMap);
-
-		leafletMap.on('move', () => onMove?.());
-		leafletMap.on('viewreset', () => _updateLockAnchor());
+		_L = L;
 
 		leafletMap.on('moveend zoomend', () => {
 			if (!leafletMap) return;
@@ -69,7 +71,6 @@
 			viewerState.cx = lngToRe(center.lng).toString();
 			viewerState.cy = latToIm(center.lat).toString();
 			viewerState.zoom = leafletMap.getZoom();
-			_updateLockAnchor();
 		});
 
 		mapContainer.addEventListener('mousemove', (e) => {
@@ -157,45 +158,41 @@
 		return cached.iters[clampedPy * TILE_SIZE + clampedPx] ?? null;
 	}
 
-	// ---------------------------------------------------------------------------
-	// Lock anchor — an invisible div inside the Leaflet popup pane so that
-	// Leaflet's own CSS transforms (pan AND zoom animation) keep it positioned
-	// correctly without any JS polling. getBoundingClientRect() on it always
-	// returns the visually-correct screen position mid-animation.
-	// ---------------------------------------------------------------------------
-	let _lockAnchorEl: HTMLDivElement | null = null;
-	let _lockRe = 0;
-	let _lockIm = 0;
+	// Lock point — a zero-size Leaflet marker whose divIcon container is returned
+	// to the caller, who mounts the locked tooltip Svelte component into it.
+	// Leaflet handles all positioning (pan + zoom animations) natively.
 
-	function _updateLockAnchor() {
+	export function setLockPoint(re: number, im: number): HTMLDivElement | null {
 		const map = leafletMap;
-		if (!map || !_lockAnchorEl) return;
-		const pt = map.latLngToLayerPoint([imToLat(_lockIm), reToLng(_lockRe)]);
-		_lockAnchorEl.style.transform = `translate(${pt.x}px, ${pt.y}px)`;
-	}
-
-	export function setLockPoint(re: number, im: number) {
-		const map = leafletMap;
-		if (!map) return;
-		_lockRe = re;
-		_lockIm = im;
-		if (!_lockAnchorEl) {
-			_lockAnchorEl = document.createElement('div');
-			_lockAnchorEl.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none;';
-			map.getPanes().popupPane.appendChild(_lockAnchorEl);
+		const L = _L;
+		if (!map || !L) return null;
+		const latlng: [number, number] = [imToLat(im), reToLng(re)];
+		if (_lockMarker) {
+			_lockMarker.setLatLng(latlng);
+			return _lockContainer;
 		}
-		_updateLockAnchor();
+		_lockContainer = document.createElement('div');
+		_lockMarker = L.marker(latlng, {
+			icon: L.divIcon({
+				html: _lockContainer,
+				className: '',
+				iconSize: [0, 0],
+				iconAnchor: [0, 0]
+			}),
+			interactive: false,
+			keyboard: false
+		}).addTo(map);
+		// Prevent clicks inside the container from bubbling to the Leaflet map.
+		// Must be a real DOM listener (not Svelte-delegated) to fire before Leaflet's
+		// map-container handler.
+		L.DomEvent.disableClickPropagation(_lockContainer);
+		return _lockContainer;
 	}
 
 	export function clearLockPoint() {
-		_lockAnchorEl?.remove();
-		_lockAnchorEl = null;
-	}
-
-	export function getLockAnchorPos(): { x: number; y: number } | null {
-		if (!_lockAnchorEl) return null;
-		const rect = _lockAnchorEl.getBoundingClientRect();
-		return { x: rect.left, y: rect.top };
+		_lockMarker?.remove();
+		_lockMarker = null;
+		_lockContainer = null;
 	}
 
 	export function screenToComplex(
@@ -208,7 +205,7 @@
 		const latlng = map.containerPointToLatLng({
 			x: clientX - rect.left,
 			y: clientY - rect.top
-		} as import('leaflet').PointExpression);
+		} as PointExpression);
 		return { re: lngToRe(latlng.lng), im: latToIm(latlng.lat) };
 	}
 

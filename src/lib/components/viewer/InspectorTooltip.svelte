@@ -13,9 +13,10 @@
 	let {
 		re,
 		im,
-		screenX,
-		screenY,
+		screenX = 0,
+		screenY = 0,
 		locked,
+		embedded = false,
 		maxIter,
 		power,
 		colorConfig,
@@ -25,9 +26,10 @@
 	}: {
 		re: number;
 		im: number;
-		screenX: number;
-		screenY: number;
+		screenX?: number;
+		screenY?: number;
 		locked: boolean;
+		embedded?: boolean;
 		maxIter: number;
 		power: number;
 		colorConfig: ColorConfig;
@@ -116,10 +118,10 @@
 </script>
 
 <div
-	class="fixed z-[9999] bg-neutral-900/95 border border-neutral-700 rounded-lg shadow-xl text-[11px] font-mono p-3 w-56 {locked
+	class="bg-neutral-900/95 border border-neutral-700 rounded-lg shadow-xl text-[11px] font-mono p-3 w-56 {locked
 		? 'pointer-events-auto select-text'
-		: 'pointer-events-none select-none'}"
-	style="left: {tipX}px; top: {tipY}px;"
+		: 'pointer-events-none select-none'} {embedded ? 'absolute' : 'fixed z-[9999]'}"
+	style={embedded ? 'left: 16px; top: 0;' : `left: ${tipX}px; top: ${tipY}px;`}
 >
 	<div class="flex items-center justify-between">
 		<div>

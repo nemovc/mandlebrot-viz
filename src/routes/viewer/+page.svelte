@@ -8,6 +8,7 @@
 	import ActionsPanel from '$lib/components/viewer/ActionsPanel.svelte';
 	import DebugPanel from '$lib/components/viewer/DebugPanel.svelte';
 	import InspectorTooltip from '$lib/components/viewer/InspectorTooltip.svelte';
+	import LockedInspector from '$lib/components/viewer/LockedInspector.svelte';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { debugState } from '$lib/stores/debugState.svelte';
 	import { encodeState, decodeState } from '$lib/utils/urlSerializer';
@@ -25,6 +26,7 @@
 	let inspectorIm = $state(0);
 	let inspectorScreenX = $state(0);
 	let inspectorScreenY = $state(0);
+	let tooltipContainer = $state<HTMLElement | null>(null);
 	let mouseX = 0;
 	let mouseY = 0;
 
@@ -49,23 +51,17 @@
 		}
 	}
 
-	// Sync lock anchor into Leaflet pane when locked state or position changes
+	// Create/remove the Leaflet marker that acts as the locked tooltip anchor.
+	// setLockPoint returns the marker's icon container, which LockedInspector
+	// portals itself into.
 	$effect(() => {
 		if (inspectorLocked) {
-			mapComponent?.setLockPoint(inspectorRe, inspectorIm);
+			tooltipContainer = mapComponent?.setLockPoint(inspectorRe, inspectorIm) ?? null;
 		} else {
 			mapComponent?.clearLockPoint();
+			tooltipContainer = null;
 		}
 	});
-
-	function updateInspectorFromAnchor() {
-		if (!inspectorLocked) return;
-		const pos = mapComponent?.getLockAnchorPos();
-		if (pos) {
-			inspectorScreenX = pos.x;
-			inspectorScreenY = pos.y;
-		}
-	}
 
 	function toggleInspector() {
 		inspectorActive = !inspectorActive;
@@ -172,13 +168,7 @@
 />
 
 <div class="relative w-full h-full">
-	<MandelbrotMap
-		bind:this={mapComponent}
-		{inspectorActive}
-		{onInspectorMove}
-		{onInspectorClick}
-		onMove={updateInspectorFromAnchor}
-	/>
+	<MandelbrotMap bind:this={mapComponent} {inspectorActive} {onInspectorMove} {onInspectorClick} />
 
 	<!-- Render progress bars (hidden during export, which has its own progress UI) -->
 	{#if !showExport && s2Total > 0 && s2Completed < s2Total}
@@ -264,27 +254,29 @@
 	</div>
 </div>
 
-{#if inspectorActive && inspectorLocked}
-	<div
-		class="fixed z-[9998] pointer-events-none"
-		style="left: {inspectorScreenX}px; top: {inspectorScreenY}px;"
-	>
-		<div class="absolute w-px bg-white/60" style="height:12px; left:0; top:-6px"></div>
-		<div class="absolute h-px bg-white/60" style="width:12px; top:0; left:-6px"></div>
-		<div
-			class="absolute w-1.5 h-1.5 rounded-full border border-white/80 bg-transparent"
-			style="left:-3px; top:-3px"
-		></div>
-	</div>
-{/if}
-
-{#if inspectorActive}
+<!-- Hover tooltip (unlocked only — locked tooltip lives inside the Leaflet marker) -->
+{#if inspectorActive && !inspectorLocked}
 	<InspectorTooltip
 		re={inspectorRe}
 		im={inspectorIm}
 		screenX={inspectorScreenX}
 		screenY={inspectorScreenY}
-		locked={inspectorLocked}
+		locked={false}
+		maxIter={viewerState.maxIter}
+		power={viewerState.power}
+		colorConfig={viewerState.colors}
+		lastCdf={mapComponent?.getLastCdf() ?? null}
+		getIterAt={(re, im) => mapComponent?.getIterAt(re, im) ?? null}
+		onCenterPoint={() => mapComponent?.panTo(inspectorRe, inspectorIm)}
+	/>
+{/if}
+
+<!-- Locked tooltip + crosshair, portalled into the Leaflet marker container -->
+{#if inspectorActive && inspectorLocked && tooltipContainer}
+	<LockedInspector
+		target={tooltipContainer}
+		re={inspectorRe}
+		im={inspectorIm}
 		maxIter={viewerState.maxIter}
 		power={viewerState.power}
 		colorConfig={viewerState.colors}
