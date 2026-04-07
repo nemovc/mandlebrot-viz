@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
 	import { slide } from 'svelte/transition';
 
 	let {
@@ -12,7 +14,7 @@
 		defaultOpen?: boolean;
 		position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 		oncollapse?: () => void;
-		children?: import('svelte').Snippet;
+		children?: Snippet;
 	} = $props();
 
 	// svelte-ignore state_referenced_locally
@@ -24,7 +26,7 @@
 	}
 
 	const isTop = $derived(position.startsWith('top'));
-	const chevron = $derived(isTop ? (open ? '▼' : '▲') : (open ? '▲' : '▼'));
+	const chevron = $derived(isTop ? (open ? '▼' : '▲') : open ? '▲' : '▼');
 
 	const collapsedMargin = $derived(
 		!open
@@ -37,7 +39,9 @@
 </script>
 
 <div
-	class="{open ? 'w-56' : 'w-fit'} rounded-lg border overflow-hidden transition-all duration-200 {open
+	class="{open
+		? 'w-56'
+		: 'w-fit'} rounded-lg border overflow-hidden transition-all duration-200 {open
 		? 'bg-neutral-900 border-neutral-800'
 		: `bg-neutral-900/40 border-neutral-800/40 backdrop-blur-sm ${collapsedMargin}`}"
 >

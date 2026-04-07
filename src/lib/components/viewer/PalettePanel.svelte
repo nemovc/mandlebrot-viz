@@ -51,15 +51,19 @@
 	const isHorizontal = $derived(layout === 'horizontal');
 </script>
 
-<div class="rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col overflow-hidden {isHorizontal ? 'w-[520px]' : 'w-64'}">
+<div
+	class="rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col overflow-hidden {isHorizontal
+		? 'w-[520px]'
+		: 'w-64'}"
+>
 	<!-- Header -->
 	<div class="flex items-center justify-between px-3 py-2 border-b border-neutral-800">
 		<span class="text-xs font-medium uppercase tracking-wider text-neutral-400">Palettes</span>
 		<button
 			class="text-neutral-500 hover:text-white transition-colors text-sm leading-none"
 			onclick={onClose}
-			aria-label="Close"
-		>✕</button>
+			aria-label="Close">✕</button
+		>
 	</div>
 
 	<!-- Include cycle/offset toggle -->
@@ -78,10 +82,11 @@
 	<!-- Scrollable palette list -->
 	<div class="overflow-y-auto {isHorizontal ? 'max-h-56' : 'max-h-[50vh]'} p-2 flex flex-col gap-0">
 		<!-- Built-in presets -->
-		<div class="{isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}">
+		<div class={isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}>
 			{#each Object.entries(presets) as [name, config] (name)}
 				<button
-					class="flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName === name
+					class="flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName ===
+					name
 						? 'border-blue-500'
 						: 'border-neutral-700 hover:border-neutral-500'}"
 					onclick={() => applyPalette(name)}
@@ -99,24 +104,27 @@
 				<span class="text-[10px] text-neutral-600 uppercase tracking-wider">Saved</span>
 				<div class="flex-1 border-t border-neutral-700"></div>
 			</div>
-			<div class="{isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}">
-				{#each savedPalettes.all as saved}
+			<div class={isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}>
+				{#each savedPalettes.all as saved (saved.name)}
 					{#if pendingDelete === saved.name}
-						<div class="col-span-2 flex items-center gap-2 px-2 py-1 rounded bg-neutral-800 border border-neutral-700">
+						<div
+							class="col-span-2 flex items-center gap-2 px-2 py-1 rounded bg-neutral-800 border border-neutral-700"
+						>
 							<span class="text-xs text-neutral-300 flex-1 truncate">Delete "{saved.name}"?</span>
 							<button
 								class="text-xs px-2 py-0.5 rounded bg-red-700 border border-red-600 text-white hover:bg-red-600 transition-colors"
-								onclick={() => doDelete(saved.name)}
-							>Yes</button>
+								onclick={() => doDelete(saved.name)}>Yes</button
+							>
 							<button
 								class="text-xs px-2 py-0.5 rounded border border-neutral-600 text-neutral-400 hover:text-white transition-colors"
-								onclick={() => (pendingDelete = null)}
-							>No</button>
+								onclick={() => (pendingDelete = null)}>No</button
+							>
 						</div>
 					{:else}
 						<div class="relative group">
 							<button
-								class="w-full flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName === saved.name
+								class="w-full flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName ===
+								saved.name
 									? 'border-blue-500'
 									: 'border-neutral-700 hover:border-neutral-500'}"
 								onclick={() => applyPalette(saved.name)}
@@ -126,9 +134,12 @@
 							</button>
 							<button
 								class="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-all opacity-0 group-hover:opacity-100 text-[10px] leading-none"
-								onclick={(e) => { e.stopPropagation(); confirmDelete(saved.name); }}
-								aria-label="Delete {saved.name}"
-							>✕</button>
+								onclick={(e) => {
+									e.stopPropagation();
+									confirmDelete(saved.name);
+								}}
+								aria-label="Delete {saved.name}">✕</button
+							>
 						</div>
 					{/if}
 				{/each}

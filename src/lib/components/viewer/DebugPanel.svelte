@@ -21,7 +21,6 @@
 
 	onMount(() => {
 		const interval = setInterval(() => {
-			if (AnimatorPreviewPool.hasInstance) showAnimator = true;
 			const mem = (performance as any).memory;
 			if (mem) {
 				memUsed = mem.usedJSHeapSize;

@@ -1,11 +1,11 @@
-import type { Map as LeafletMap } from 'leaflet';
+import type * as Leaflet from 'leaflet';
 
 /**
  * Custom CRS mapping Leaflet tile coords to the complex plane.
  * Zoom 0: world = [-4, 4] × [-4i, 4i] (8 units wide).
  * At zoom Z, tile (x,y): re ∈ [-4 + 8x/2^Z, -4 + 8(x+1)/2^Z]
  */
-export function createMandelbrotCRS(L: typeof import('leaflet')) {
+export function createMandelbrotCRS(L: typeof Leaflet) {
 	return L.extend({}, L.CRS.Simple, {
 		// Tile size in Leaflet's internal units
 		projection: L.Projection.LonLat,
@@ -17,7 +17,7 @@ export function createMandelbrotCRS(L: typeof import('leaflet')) {
 		},
 
 		/** Complex center for tile (x, y) at zoom z */
-		tileCenter(x: number, y: number, z: number, tileSize = 256): { re: number; im: number } {
+		tileCenter(x: number, y: number, z: number): { re: number; im: number } {
 			const scale = 8 / Math.pow(2, z); // units per tile
 			const re = -4 + (x + 0.5) * scale;
 			const im = -4 + (y + 0.5) * scale;
@@ -25,7 +25,11 @@ export function createMandelbrotCRS(L: typeof import('leaflet')) {
 		},
 
 		/** Complex bounds for tile (x, y, z) */
-		tileBounds(x: number, y: number, z: number): { reMin: number; reMax: number; imMin: number; imMax: number } {
+		tileBounds(
+			x: number,
+			y: number,
+			z: number
+		): { reMin: number; reMax: number; imMin: number; imMax: number } {
 			const scale = 8 / Math.pow(2, z);
 			return {
 				reMin: -4 + x * scale,

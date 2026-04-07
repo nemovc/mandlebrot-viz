@@ -356,6 +356,7 @@
 	const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);
 	const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
 
+	// eslint-disable-next-line svelte/prefer-writable-derived -- bind:value requires a writable $state
 	let kfEditValue = $state('');
 	let kfValueInput = $state<HTMLInputElement | null>(null);
 	$effect(() => {
@@ -554,7 +555,7 @@
 				onchange={(e) => setAlgorithm((e.target as HTMLSelectElement).value)}
 				class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
 			>
-				{#each ALGORITHMS as a}
+				{#each ALGORITHMS as a (a.value)}
 					<option value={a.value}>{a.label}</option>
 				{/each}
 			</select>
