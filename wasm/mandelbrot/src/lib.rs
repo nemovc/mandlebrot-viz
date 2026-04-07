@@ -67,6 +67,21 @@ pub fn compute_tile_dd_dem(
 }
 
 #[wasm_bindgen]
+pub fn compute_tile_f64_julia(
+    c_re: f64,
+    c_im: f64,
+    view_cx: f64,
+    view_cy: f64,
+    scale: f64,
+    w: u32,
+    h: u32,
+    max_iter: u32,
+    power: u32,
+) -> Vec<f32> {
+    mandelbrot::compute_tile_f64_julia(c_re, c_im, view_cx, view_cy, scale, w as usize, h as usize, max_iter, power)
+}
+
+#[wasm_bindgen]
 pub fn compute_tile_arb_dem(
     cx: &str,
     cy: &str,

@@ -45,3 +45,20 @@ export interface RecolorJob extends BaseJob {
 export interface RecolorResult extends BaseResult {
   imageData: ImageData;
 }
+
+/** A Julia set render job — always f64, c is fixed at (cRe, cIm). */
+export interface JuliaJob extends BaseJob {
+  cRe: number;
+  cIm: number;
+  viewCx: number;
+  viewCy: number;
+  scale: number;
+  size: number;
+  maxIter: number;
+  power: number;
+  colorConfig: ColorConfig;
+}
+
+export interface JuliaResult extends BaseResult {
+  imageData: ImageData;
+}

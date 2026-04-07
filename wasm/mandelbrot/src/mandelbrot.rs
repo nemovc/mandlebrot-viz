@@ -179,6 +179,58 @@ pub fn compute_tile_f64_dem(
 }
 
 // ---------------------------------------------------------------------------
+// f64 Julia set
+// ---------------------------------------------------------------------------
+
+/// Smooth iteration count for a Julia set point using f64.
+/// c is fixed; z starts at (z_re, z_im) (the pixel coordinate).
+fn iterate_f64_julia(z_re: f64, z_im: f64, c_re: f64, c_im: f64, max_iter: u32, power: u32) -> f32 {
+    let mut zr = z_re;
+    let mut zi = z_im;
+    let mut iter = 0u32;
+
+    while iter < max_iter {
+        if zr * zr + zi * zi > 65536.0 {
+            break;
+        }
+        let (new_re, new_im) = complex_pow_f64(zr, zi, power);
+        zr = new_re + c_re;
+        zi = new_im + c_im;
+        iter += 1;
+    }
+
+    if iter < max_iter {
+        smooth_color_f64(zr, zi, iter, power)
+    } else {
+        max_iter as f32
+    }
+}
+
+pub fn compute_tile_f64_julia(
+    c_re: f64,
+    c_im: f64,
+    view_cx: f64,
+    view_cy: f64,
+    scale: f64,
+    w: usize,
+    h: usize,
+    max_iter: u32,
+    power: u32,
+) -> Vec<f32> {
+    let w_half = w as f64 / 2.0;
+    let h_half = h as f64 / 2.0;
+    let mut result = vec![0.0f32; w * h];
+    for py in 0..h {
+        for px in 0..w {
+            let z_re = view_cx + (px as f64 - w_half) * scale;
+            let z_im = view_cy + (py as f64 - h_half) * scale;
+            result[py * w + px] = iterate_f64_julia(z_re, z_im, c_re, c_im, max_iter, power);
+        }
+    }
+    result
+}
+
+// ---------------------------------------------------------------------------
 // Double-double iteration
 // ---------------------------------------------------------------------------
 
