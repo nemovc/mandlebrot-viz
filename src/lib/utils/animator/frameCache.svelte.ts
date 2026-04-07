@@ -23,7 +23,7 @@ function createFrameCache() {
   let isBuilding = $state(false);
   let abortCtrl: AbortController | null = null;
 
-  let ranges = $derived.by(() => {
+  const ranges = $derived.by(() => {
     cachedCount;
     const arr: { start: number; end: number }[] = [];
     let rangeStart = -1;
@@ -39,7 +39,7 @@ function createFrameCache() {
     return arr;
   });
 
-  let isReady = $derived.by(() => {
+  const isReady = $derived.by(() => {
     cachedCount;
     return Array.from(
       { length: animationState.project.fps },

@@ -84,7 +84,7 @@
       </p>
     {/if}
     <div class="grid grid-cols-2 gap-1">
-      {#each PRESET_LOCATIONS as loc}
+      {#each PRESET_LOCATIONS as loc (loc.name)}
         <ToggleButton
           active={isAt(loc)}
           disabled={viewerState.power !== 2}
@@ -108,7 +108,7 @@
         </p>
       {/if}
       <div class="grid grid-cols-2 gap-1">
-        {#each savedLocations.all as loc}
+        {#each savedLocations.all as loc (loc.name)}
           {#if pendingDelete === loc.name}
             <div
               class="col-span-2 flex items-center gap-2 px-2 py-1 rounded bg-neutral-800 border border-neutral-700"

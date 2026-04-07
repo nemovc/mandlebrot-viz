@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	if (browser) goto('/viewer');
+	import { resolve } from '$app/paths';
+	if (browser) goto(resolve('/viewer'));
 </script>

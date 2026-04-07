@@ -32,19 +32,14 @@
 
 	// When baseline changes (new palette selected from panel), update the cancel snapshot
 	$effect(() => {
-		const _dep = JSON.stringify(baseline);
 		untrack(() => {
 			cancelSnapshot = JSON.parse(JSON.stringify(colors));
 		});
 	});
 
-	const dirty = $derived(
-		JSON.stringify(colors.palette) !== JSON.stringify(baseline)
-	);
+	const dirty = $derived(JSON.stringify(colors.palette) !== JSON.stringify(baseline));
 
-	const sortedPalette = $derived(
-		[...colors.palette].sort((a, b) => a.stop - b.stop)
-	);
+	const sortedPalette = $derived([...colors.palette].sort((a, b) => a.stop - b.stop));
 
 	const gradient = $derived(
 		`linear-gradient(to right, ${sortedPalette.map((s) => `${s.color} ${(s.stop * 100).toFixed(2)}%`).join(', ')})`
@@ -55,9 +50,7 @@
 	);
 
 	function updateStop(idx: number, partial: Partial<ColorStop>) {
-		const palette = colors.palette.map((s, i) =>
-			i === idx ? { ...s, ...partial } : { ...s }
-		);
+		const palette = colors.palette.map((s, i) => (i === idx ? { ...s, ...partial } : { ...s }));
 		setColors({ ...colors, palette });
 	}
 
@@ -106,7 +99,7 @@
 		updateStop(draggingIdx, { stop: t });
 	}
 
-	function onHandlePointerUp(_e: PointerEvent) {
+	function onHandlePointerUp() {
 		draggingIdx = null;
 	}
 
@@ -128,7 +121,9 @@
 	}
 </script>
 
-<div class="w-[33vw] min-w-72 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden flex flex-col">
+<div
+	class="w-[33vw] min-w-72 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden flex flex-col"
+>
 	<!-- Header -->
 	<div class="flex items-center justify-between px-3 py-2 border-b border-neutral-800 gap-2">
 		<span class="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate flex-1">
@@ -137,23 +132,26 @@
 		<div class="flex items-center gap-1">
 			<button
 				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-				onclick={() => { setColors(JSON.parse(JSON.stringify(cancelSnapshot))); selectedStopIdx = null; }}
+				onclick={() => {
+					setColors(JSON.parse(JSON.stringify(cancelSnapshot)));
+					selectedStopIdx = null;
+				}}
 				disabled={!dirty}
-				title="Reset to pre-edit state"
-			>Reset</button>
+				title="Reset to pre-edit state">Reset</button
+			>
 			<button
 				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				onclick={() => (showSaveModal = true)}
-				disabled={!dirty}
-			>Save…</button>
+				disabled={!dirty}>Save…</button
+			>
 			<button
 				class="px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
-				onclick={cancel}
-			>Cancel</button>
+				onclick={cancel}>Cancel</button
+			>
 			<button
 				class="px-2 py-1 rounded text-xs bg-blue-700 border border-blue-600 text-white hover:bg-blue-600 transition-colors"
-				onclick={onClose}
-			>Done</button>
+				onclick={onClose}>Done</button
+			>
 		</div>
 	</div>
 
@@ -168,7 +166,7 @@
 			role="img"
 			aria-label="Palette gradient — double-click to add a stop"
 		>
-			{#each sortedPalette as stop}
+			{#each sortedPalette as stop (stop.stop)}
 				<div
 					class="absolute top-0 bottom-0 w-px bg-white/40 pointer-events-none"
 					style="left: {(stop.stop * 100).toFixed(2)}%"
@@ -178,12 +176,12 @@
 
 		<!-- Handles row -->
 		<div class="relative h-4 mt-0.5">
-			{#each colors.palette as stop, i}
+			{#each colors.palette as stop, i (i)}
 				<button
 					class="absolute top-0 w-3 h-3 rounded-full border-2 cursor-ew-resize -translate-x-1/2 transition-shadow
 						{selectedStopIdx === i
-							? 'border-white shadow-[0_0_0_2px_rgba(59,130,246,0.8)]'
-							: 'border-neutral-300 hover:border-white'}"
+						? 'border-white shadow-[0_0_0_2px_rgba(59,130,246,0.8)]'
+						: 'border-neutral-300 hover:border-white'}"
 					style="left: {(stop.stop * 100).toFixed(2)}%; background: {stop.color}"
 					onpointerdown={(e) => onHandlePointerDown(e, i)}
 					onpointermove={onHandlePointerMove}
@@ -205,7 +203,8 @@
 					type="color"
 					class="w-8 h-7 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
 					value={stop.color}
-					oninput={(e) => updateStop(selectedStopIdx!, { color: (e.target as HTMLInputElement).value })}
+					oninput={(e) =>
+						updateStop(selectedStopIdx!, { color: (e.target as HTMLInputElement).value })}
 				/>
 				<label for="stop-position" class="text-xs text-neutral-400 shrink-0">Position</label>
 				<input
@@ -220,7 +219,9 @@
 						const v = parseFloat((e.target as HTMLInputElement).value);
 						if (!isNaN(v)) updateStop(selectedStopIdx!, { stop: Math.max(0, Math.min(1, v)) });
 					}}
-					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') (e.target as HTMLElement).blur();
+					}}
 				/>
 				<label for="stop-hex" class="text-xs text-neutral-400 shrink-0">Hex</label>
 				<input
@@ -238,25 +239,32 @@
 						if (/^#[0-9a-fA-F]{6}$/.test(hex)) updateStop(selectedStopIdx!, { color: hex });
 						else (e.target as HTMLInputElement).value = stop.color;
 					}}
-					onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') (e.target as HTMLElement).blur();
+					}}
 				/>
 				<button
 					class="ml-auto px-2 py-1 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-red-400 hover:border-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 					onclick={() => deleteStop(selectedStopIdx!)}
 					disabled={colors.palette.length <= 2}
-					title="Delete stop (minimum 2 stops)"
-				>Delete</button>
+					title="Delete stop (minimum 2 stops)">Delete</button
+				>
 			</div>
 		{:else}
-			<p class="text-xs text-neutral-600 pt-1">Click a handle to edit. Double-click bar to add. Double-click handle to delete.</p>
+			<p class="text-xs text-neutral-600 pt-1">
+				Click a handle to edit. Double-click bar to add. Double-click handle to delete.
+			</p>
 		{/if}
 
 		<!-- Cycle Period -->
 		<div class="flex items-center gap-2 pt-1">
 			<label
-				class="text-neutral-400 text-xs shrink-0 w-20 {baseAlgorithm(colors.algorithm) === 'histogram' || disableAnimatedTracks ? 'opacity-30' : ''}"
-				for="pe-cyclePeriod"
-			>Cycle Period</label>
+				class="text-neutral-400 text-xs shrink-0 w-20 {baseAlgorithm(colors.algorithm) ===
+					'histogram' || disableAnimatedTracks
+					? 'opacity-30'
+					: ''}"
+				for="pe-cyclePeriod">Cycle Period</label
+			>
 			<input
 				id="pe-cyclePeriod"
 				type="range"
@@ -264,7 +272,9 @@
 				max="256"
 				step="1"
 				value={colors.cyclePeriod}
-				oninput={(e) => { setColors({ ...colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) }); }}
+				oninput={(e) => {
+					setColors({ ...colors, cyclePeriod: parseInt((e.target as HTMLInputElement).value) });
+				}}
 				use:wheelSlider
 				disabled={baseAlgorithm(colors.algorithm) === 'histogram' || disableAnimatedTracks}
 				class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
@@ -278,7 +288,9 @@
 					const v = parseInt((e.target as HTMLInputElement).value);
 					if (!isNaN(v) && v > 0) setColors({ ...colors, cyclePeriod: v });
 				}}
-				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') (e.target as HTMLElement).blur();
+				}}
 			/>
 		</div>
 
@@ -286,8 +298,8 @@
 		<div class="flex items-center gap-2">
 			<label
 				class="text-neutral-400 text-xs shrink-0 w-20 {disableAnimatedTracks ? 'opacity-30' : ''}"
-				for="pe-offset"
-			>Offset</label>
+				for="pe-offset">Offset</label
+			>
 			<input
 				id="pe-offset"
 				type="range"
@@ -295,7 +307,9 @@
 				max="1"
 				step="0.01"
 				value={colors.offset}
-				oninput={(e) => { setColors({ ...colors, offset: parseFloat((e.target as HTMLInputElement).value) }); }}
+				oninput={(e) => {
+					setColors({ ...colors, offset: parseFloat((e.target as HTMLInputElement).value) });
+				}}
 				use:wheelSlider
 				disabled={disableAnimatedTracks}
 				class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
@@ -309,7 +323,9 @@
 					const v = parseFloat((e.target as HTMLInputElement).value);
 					if (!isNaN(v)) setColors({ ...colors, offset: Math.max(0, Math.min(1, v)) });
 				}}
-				onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') (e.target as HTMLElement).blur();
+				}}
 			/>
 		</div>
 
@@ -325,21 +341,27 @@
 				type="color"
 				class="w-8 h-6 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
 				value={colors.inSetColor ?? '#000000'}
-				oninput={(e) => { setColors({ ...colors, inSetColor: (e.target as HTMLInputElement).value }); }}
+				oninput={(e) => {
+					setColors({ ...colors, inSetColor: (e.target as HTMLInputElement).value });
+				}}
 			/>
 			<button
 				class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
-				onclick={() => { setColors({ ...colors, inSetColor: '#000000' }); }}
-				title="Reset to black"
-			>Reset</button>
+				onclick={() => {
+					setColors({ ...colors, inSetColor: '#000000' });
+				}}
+				title="Reset to black">Reset</button
+			>
 			<button
 				class="ml-auto px-2 py-1 rounded text-xs border transition-colors
 					{colors.reverse
-						? 'border-blue-600 bg-blue-900/40 text-blue-300'
-						: 'border-neutral-700 text-neutral-400 hover:text-white'}"
-				onclick={() => { setColors({ ...colors, reverse: !colors.reverse }); }}
-				title="Reverse palette"
-			>⇄ Reverse</button>
+					? 'border-blue-600 bg-blue-900/40 text-blue-300'
+					: 'border-neutral-700 text-neutral-400 hover:text-white'}"
+				onclick={() => {
+					setColors({ ...colors, reverse: !colors.reverse });
+				}}
+				title="Reverse palette">⇄ Reverse</button
+			>
 		</div>
 	</div>
 </div>

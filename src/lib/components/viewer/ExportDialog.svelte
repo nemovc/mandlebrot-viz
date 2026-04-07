@@ -255,7 +255,7 @@
         <div class="flex flex-col gap-2">
           <div class="text-neutral-400 text-xs">Resolution</div>
           <div class="grid grid-cols-2 gap-1">
-            {#each resolutions as r, i}
+            {#each resolutions as r, i (r.label)}
               <ToggleButton
                 active={selectedRes === i}
                 onclick={() => (selectedRes = i)}
@@ -280,7 +280,7 @@
         <div class="flex flex-col gap-2">
           <div class="text-neutral-400 text-xs">Format</div>
           <div class="flex gap-1">
-            {#each formats as f, i}
+            {#each formats as f, i (f.label)}
               <ToggleButton
                 active={selectedFormat === i}
                 onclick={() => (selectedFormat = i)}

@@ -27,12 +27,20 @@
 	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
 
 	function scheduleCache(invalidateFirst: boolean, delay = 300) {
-		if (cacheTimer) { clearTimeout(cacheTimer); cacheTimer = null; }
+		if (cacheTimer) {
+			clearTimeout(cacheTimer);
+			cacheTimer = null;
+		}
 		const run = () => {
 			if (invalidateFirst) frameCache.invalidate();
-			frameCache.startFrom(animationState.currentFrame, animationState.project, showPlayback ? 1 : 2);
+			frameCache.startFrom(
+				animationState.currentFrame,
+				animationState.project,
+				showPlayback ? 1 : 2
+			);
 		};
-		if (delay === 0) run(); else cacheTimer = setTimeout(run, delay);
+		if (delay === 0) run();
+		else cacheTimer = setTimeout(run, delay);
 	}
 
 	// Seed from explorer on first load if project is empty
@@ -45,7 +53,10 @@
 	let revisionInit = false;
 	$effect(() => {
 		animationState.revision;
-		if (!revisionInit) { revisionInit = true; return; }
+		if (!revisionInit) {
+			revisionInit = true;
+			return;
+		}
 		untrack(() => scheduleCache(true, 0));
 	});
 
@@ -80,7 +91,9 @@
 		} else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
 			if (kfTrack) {
-				const prev = [...kfTrack.keyframes].reverse().find((k) => k.frame < animationState.currentFrame);
+				const prev = [...kfTrack.keyframes]
+					.reverse()
+					.find((k) => k.frame < animationState.currentFrame);
 				if (prev) animationState.currentFrame = prev.frame;
 			}
 		} else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
@@ -159,10 +172,17 @@
 		if (n <= 0 || n > 100_000) return;
 		if (n < project.totalFrames) {
 			const dropping = project.tracks.reduce(
-				(sum, t) => sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
-				0,
+				(sum, t) =>
+					sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
+				0
 			);
-			if (dropping > 0 && !confirm(`Shortening will delete ${dropping} keyframe${dropping === 1 ? '' : 's'} outside the new length. Continue?`)) return;
+			if (
+				dropping > 0 &&
+				!confirm(
+					`Shortening will delete ${dropping} keyframe${dropping === 1 ? '' : 's'} outside the new length. Continue?`
+				)
+			)
+				return;
 		}
 		animationState.updateProject({ totalFrames: n });
 	}
@@ -189,15 +209,15 @@
 		cyclePeriod: interpolateTrack(
 			project.tracks.find((t) => t.parameter === 'cyclePeriod')!,
 			animationState.currentFrame,
-			project.totalFrames,
+			project.totalFrames
 		),
 		offset: interpolateTrack(
 			project.tracks.find((t) => t.parameter === 'offset')!,
 			animationState.currentFrame,
-			project.totalFrames,
+			project.totalFrames
 		),
 		reverse: project.reverse,
-		inSetColor: project.inSetColor,
+		inSetColor: project.inSetColor
 	});
 
 	// Only the non-animated fields are settable via the palette UI.
@@ -207,7 +227,7 @@
 			algorithm: c.algorithm,
 			palette: c.palette,
 			inSetColor: c.inSetColor ?? '#000000',
-			reverse: c.reverse ?? false,
+			reverse: c.reverse ?? false
 		});
 	}
 
@@ -216,24 +236,31 @@
 	const presetNames = $derived(Object.keys(presets));
 	const currentPresetName = $derived(
 		presetNames.find(
-			(name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette),
-		) ?? 'Custom',
+			(name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette)
+		) ?? 'Custom'
 	);
 
 	function setAlgorithm(v: string) {
 		const newAlgorithm = v as ColorConfig['algorithm'];
-		const swappedPalette = paletteForAlgorithmChange(project.algorithm, newAlgorithm, currentPresetName === 'Custom' ? null : currentPresetName);
-		animationState.updateProject({ algorithm: newAlgorithm, ...(swappedPalette && { palette: swappedPalette }) });
+		const swappedPalette = paletteForAlgorithmChange(
+			project.algorithm,
+			newAlgorithm,
+			currentPresetName === 'Custom' ? null : currentPresetName
+		);
+		animationState.updateProject({
+			algorithm: newAlgorithm,
+			...(swappedPalette && { palette: swappedPalette })
+		});
 	}
 
 	// Palette name + baseline for dirty tracking in the editor
 	const initialPaletteJson = JSON.stringify(animationState.project.palette);
 	const initialPreset = Object.entries(presetsFor(animationState.project.algorithm)).find(
-		([, p]) => JSON.stringify(p.palette) === initialPaletteJson,
+		([, p]) => JSON.stringify(p.palette) === initialPaletteJson
 	);
 	let activePaletteName = $state<string | null>(initialPreset?.[0] ?? null);
 	let baseline = $state<ColorStop[]>(
-		JSON.parse(JSON.stringify(initialPreset?.[1].palette ?? animationState.project.palette)),
+		JSON.parse(JSON.stringify(initialPreset?.[1].palette ?? animationState.project.palette))
 	);
 
 	function onPaletteApplied(name: string) {
@@ -252,7 +279,10 @@
 	let exportWatchInitialized = false;
 	$effect(() => {
 		animationState.revision;
-		if (!exportWatchInitialized) { exportWatchInitialized = true; return; }
+		if (!exportWatchInitialized) {
+			exportWatchInitialized = true;
+			return;
+		}
 		untrack(() => {
 			cancelExport();
 			if (exportPhase !== 'idle') resetExport();
@@ -278,12 +308,12 @@
 			const blob = await exportWebM(
 				JSON.parse(JSON.stringify(project)),
 				(p) => (exportProgress = p),
-				exportAbort.signal,
+				exportAbort.signal
 			);
 			exportUrl = URL.createObjectURL(blob);
 			exportPhase = 'done';
-		} catch (e: any) {
-			if (e.name !== 'AbortError') throw e;
+		} catch (e: unknown) {
+			if ((e as { name: string }).name !== 'AbortError') throw e;
 			exportPhase = 'idle';
 		} finally {
 			exportAbort = null;
@@ -314,9 +344,13 @@
 	});
 
 	// ---- Keyframe editing ----
-	const kfTrack = $derived(selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null);
+	const kfTrack = $derived(
+		selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null
+	);
 	const kfFrame = $derived(animationState.currentFrame);
-	const kfInterpolated = $derived(kfTrack ? interpolateTrack(kfTrack, kfFrame, animationState.project.totalFrames) : 0);
+	const kfInterpolated = $derived(
+		kfTrack ? interpolateTrack(kfTrack, kfFrame, animationState.project.totalFrames) : 0
+	);
 	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
 	const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
 	const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);
@@ -367,7 +401,9 @@
 	</div>
 
 	<!-- Settings bar -->
-	<div class="shrink-0 flex items-center gap-3 px-3 py-1.5 bg-neutral-900 border-t border-neutral-800 text-[11px] flex-wrap">
+	<div
+		class="shrink-0 flex items-center gap-3 px-3 py-1.5 bg-neutral-900 border-t border-neutral-800 text-[11px] flex-wrap"
+	>
 		<label class="flex items-center gap-1 text-neutral-400">
 			fps
 			<input
@@ -467,11 +503,11 @@
 				<button
 					class="px-1.5 py-0.5 rounded border text-[11px] transition-colors shrink-0
 						{project.reverse
-							? 'border-blue-600 bg-blue-900/40 text-blue-300'
-							: 'border-neutral-700 text-neutral-400 hover:text-white'}"
+						? 'border-blue-600 bg-blue-900/40 text-blue-300'
+						: 'border-neutral-700 text-neutral-400 hover:text-white'}"
 					onclick={() => animationState.updateProject({ reverse: !project.reverse })}
-					title="Reverse palette"
-				>⇄</button>
+					title="Reverse palette">⇄</button
+				>
 			</div>
 
 			<!-- In-set color picker -->
@@ -481,7 +517,8 @@
 					type="color"
 					class="w-6 h-5 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
 					value={project.inSetColor}
-					oninput={(e) => animationState.updateProject({ inSetColor: (e.target as HTMLInputElement).value })}
+					oninput={(e) =>
+						animationState.updateProject({ inSetColor: (e.target as HTMLInputElement).value })}
 				/>
 			</label>
 
@@ -489,17 +526,23 @@
 			<button
 				class="px-2 py-0.5 rounded border text-[11px] transition-colors
 					{showPalettePanel
-						? 'bg-blue-700 border-blue-600 text-white'
-						: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-				onclick={() => { showPalettePanel = !showPalettePanel; if (showPalettePanel) showEditor = false; }}
-			>Palettes</button>
+					? 'bg-blue-700 border-blue-600 text-white'
+					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => {
+					showPalettePanel = !showPalettePanel;
+					if (showPalettePanel) showEditor = false;
+				}}>Palettes</button
+			>
 			<button
 				class="px-2 py-0.5 rounded border text-[11px] transition-colors
 					{showEditor
-						? 'bg-blue-700 border-blue-600 text-white'
-						: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-				onclick={() => { showEditor = !showEditor; if (showEditor) showPalettePanel = false; }}
-			>Edit</button>
+					? 'bg-blue-700 border-blue-600 text-white'
+					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => {
+					showEditor = !showEditor;
+					if (showEditor) showPalettePanel = false;
+				}}>Edit</button
+			>
 		</div>
 
 		<span class="text-neutral-700">·</span>
@@ -524,7 +567,9 @@
 	</div>
 
 	<!-- Keyframe edit + export bar -->
-	<div class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-950 border-t border-neutral-800 text-[11px]">
+	<div
+		class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-950 border-t border-neutral-800 text-[11px]"
+	>
 		<!-- Keyframe section (left) -->
 		{#if kfTrack}
 			<span class="text-neutral-500 w-20 shrink-0 text-right">{kfLabel}</span>
@@ -536,7 +581,11 @@
 						value={kfPrev.easing}
 						onchange={(e) => {
 							if (selectedTrack !== null)
-								animationState.setKeyframeEasing(selectedTrack, kfPrev.frame, (e.target as HTMLSelectElement).value as EasingType);
+								animationState.setKeyframeEasing(
+									selectedTrack,
+									kfPrev.frame,
+									(e.target as HTMLSelectElement).value as EasingType
+								);
 						}}
 						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
 						title="Easing into this keyframe"
@@ -566,7 +615,11 @@
 						value={kfAtFrame.easing}
 						onchange={(e) => {
 							if (selectedTrack !== null)
-								animationState.setKeyframeEasing(selectedTrack, kfFrame, (e.target as HTMLSelectElement).value as EasingType);
+								animationState.setKeyframeEasing(
+									selectedTrack,
+									kfFrame,
+									(e.target as HTMLSelectElement).value as EasingType
+								);
 						}}
 						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
 					>
@@ -583,8 +636,8 @@
 					<button
 						onclick={kfDelete}
 						class="text-neutral-500 hover:text-red-400 transition-colors px-1"
-						title="Delete keyframe"
-					>✕</button>
+						title="Delete keyframe">✕</button
+					>
 				{/if}
 			{:else}
 				{#if kfPrev}
@@ -614,38 +667,49 @@
 		<!-- Playback + utility controls (centre) -->
 		<div class="flex items-center gap-1.5">
 			<button
-				onclick={() => { if (cacheReady) showPlayback = true; }}
+				onclick={() => {
+					if (cacheReady) showPlayback = true;
+				}}
 				disabled={!cacheReady}
 				class="px-2.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-700"
-				title="{cacheReady ? 'Play preview (Space)' : 'Building preview cache…'}"
-			><Play size={12} /></button>
+				title={cacheReady ? 'Play preview (Space)' : 'Building preview cache…'}
+				><Play size={12} /></button
+			>
 			<button
 				onclick={() => (loopPlayback = !loopPlayback)}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback ? 'text-blue-400 border-blue-700' : 'text-neutral-500 hover:text-white'}"
-				title="Loop playback (R)"
-			><Repeat size={12} /></button>
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback
+					? 'text-blue-400 border-blue-700'
+					: 'text-neutral-500 hover:text-white'}"
+				title="Loop playback (R)"><Repeat size={12} /></button
+			>
 			{#if frameCache.buildTotal > 0}
-				<div class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden" title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached">
-					<div class="h-full bg-blue-400/60 transition-all" style="width: {Math.round(frameCache.cachedCount / frameCache.buildTotal * 100)}%"></div>
+				<div
+					class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden"
+					title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached"
+				>
+					<div
+						class="h-full bg-blue-400/60 transition-all"
+						style="width: {Math.round((frameCache.cachedCount / frameCache.buildTotal) * 100)}%"
+					></div>
 				</div>
 			{/if}
 			<button
 				onclick={() => animationState.undo()}
 				disabled={!animationState.canUndo}
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Undo (Ctrl+Z)"
-			><Undo2 size={12} /></button>
+				title="Undo (Ctrl+Z)"><Undo2 size={12} /></button
+			>
 			<button
 				onclick={() => animationState.redo()}
 				disabled={!animationState.canRedo}
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Redo (Ctrl+Y)"
-			><Redo2 size={12} /></button>
+				title="Redo (Ctrl+Y)"><Redo2 size={12} /></button
+			>
 			<button
 				onclick={() => (showShortcuts = true)}
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
-				title="Keyboard shortcuts (?)"
-			><CircleHelp size={12} /></button>
+				title="Keyboard shortcuts (?)"><CircleHelp size={12} /></button
+			>
 		</div>
 
 		<div class="flex-1"></div>
@@ -662,7 +726,10 @@
 		{:else if exportPhase === 'exporting'}
 			<div class="flex items-center gap-3 w-72">
 				<div class="flex-1 h-1.5 bg-neutral-700 rounded overflow-hidden">
-					<div class="h-full bg-blue-500 transition-all" style="width: {exportProgressPct()}%"></div>
+					<div
+						class="h-full bg-blue-500 transition-all"
+						style="width: {exportProgressPct()}%"
+					></div>
 				</div>
 				<span class="text-neutral-400 whitespace-nowrap">
 					{exportProgress?.phase === 'encoding' ? 'Encoding' : 'Rendering'}
@@ -683,7 +750,9 @@
 		role="dialog"
 		aria-modal="true"
 	>
-		<div class="bg-neutral-900 border border-neutral-700 rounded-lg p-5 flex flex-col gap-4 max-w-[90vw]">
+		<div
+			class="bg-neutral-900 border border-neutral-700 rounded-lg p-5 flex flex-col gap-4 max-w-[90vw]"
+		>
 			<div class="flex items-center justify-between">
 				<h2 class="text-white font-medium">Export complete</h2>
 				<button class="text-neutral-400 hover:text-white" onclick={resetExport}>✕</button>

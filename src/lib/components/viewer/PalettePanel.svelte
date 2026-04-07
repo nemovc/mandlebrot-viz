@@ -79,7 +79,7 @@
 	<div class="overflow-y-auto {isHorizontal ? 'max-h-56' : 'max-h-[50vh]'} p-2 flex flex-col gap-0">
 		<!-- Built-in presets -->
 		<div class="{isHorizontal ? 'grid grid-cols-4 gap-1' : 'grid grid-cols-2 gap-1'}">
-			{#each Object.entries(presets) as [name, config]}
+			{#each Object.entries(presets) as [name, config] (name)}
 				<button
 					class="flex flex-col rounded overflow-hidden border transition-colors text-left {activePaletteName === name
 						? 'border-blue-500'

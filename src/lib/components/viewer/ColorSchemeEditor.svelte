@@ -133,7 +133,7 @@
 					value={viewerState.colors.algorithm}
 					onchange={onAlgorithmChange}
 				>
-					{#each ALGORITHMS as a}
+					{#each ALGORITHMS as a (a.value)}
 						<option value={a.value}>{a.label}</option>
 					{/each}
 				</select>

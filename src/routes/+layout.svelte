@@ -1,13 +1,12 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let { children } = $props();
 
 	const isAnimator = $derived(page.url.pathname.startsWith('/animator'));
-	const isViewer = $derived(
-		page.url.pathname.startsWith('/viewer') || page.url.pathname === '/',
-	);
+	const isViewer = $derived(page.url.pathname.startsWith('/viewer') || page.url.pathname === '/');
 </script>
 
 <div class="h-screen">
@@ -16,7 +15,7 @@
 		class="fixed top-3 left-1/2 -translate-x-1/2 z-[3000] flex items-center bg-neutral-900/90 border border-neutral-700 rounded select-none backdrop-blur-sm"
 	>
 		<a
-			href="/viewer"
+			href={resolve('/viewer')}
 			class="px-3 py-1 text-[11px] rounded-l transition-colors {isViewer
 				? 'text-white bg-neutral-700'
 				: 'text-neutral-500 hover:text-neutral-300'}"

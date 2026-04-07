@@ -93,7 +93,7 @@
       </div>
 
       <div class="flex flex-col gap-5">
-        {#each groups as group}
+        {#each groups as group (group.label)}
           <div>
             <div
               class="text-neutral-600 text-[10px] uppercase tracking-wider mb-2"
@@ -101,10 +101,10 @@
               {group.label}
             </div>
             <div class="flex flex-col gap-1.5">
-              {#each group.rows as row}
+              {#each group.rows as row (row.desc)}
                 <div class="flex items-center justify-between text-[11px]">
                   <div class="flex items-center gap-1">
-                    {#each row.keys as key, ki}
+                    {#each row.keys as key, ki (key)}
                       {#if ki > 0}<span class="text-neutral-700">/</span>{/if}
                       <kbd
                         class="px-1.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-300 font-mono text-[10px]"
