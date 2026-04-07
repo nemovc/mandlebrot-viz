@@ -3,6 +3,7 @@
 	import { debugState } from '$lib/stores/debugState.svelte';
 	import { encodeState } from '$lib/utils/urlSerializer';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
+	import CopyText from '$lib/components/ui/CopyText.svelte';
 
 	let {
 		onResetView,
@@ -16,13 +17,9 @@
 		inspectorActive?: boolean;
 	} = $props();
 
-	let shareCopied = $state(false);
-
-	function shareLink() {
+	function getShareLink() {
 		const encoded = encodeState(viewerState.toJSON(), debugState.toJSON());
-		navigator.clipboard.writeText(`${location.origin}${location.pathname}#${encoded}`);
-		shareCopied = true;
-		setTimeout(() => (shareCopied = false), 2000);
+		return `${location.origin}${location.pathname}#${encoded}`;
 	}
 </script>
 
@@ -32,11 +29,14 @@
 			class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
 			onclick={onResetView}>Reset View</button
 		>
-		<button
+		<CopyText
+			value={getShareLink}
 			class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
-			onclick={shareLink}
-			>{#if shareCopied}<span class="text-green-400">✓ Copied</span>{:else}Share Link{/if}</button
 		>
+			{#snippet children(copied)}
+				{#if copied}<span class="text-green-400">✓ Copied</span>{:else}Share Link{/if}
+			{/snippet}
+		</CopyText>
 		<button
 			class="w-full px-2 py-1.5 text-xs rounded transition-colors border text-white"
 			class:bg-blue-700={inspectorActive}

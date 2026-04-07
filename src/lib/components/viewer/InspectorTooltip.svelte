@@ -1,12 +1,16 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { Copy, Check } from "lucide-svelte";
-  import { buildImageData, baseAlgorithm, isBanded } from "$lib/utils/colorPalettes";
+  import {
+    buildImageData,
+    baseAlgorithm,
+    isBanded,
+  } from "$lib/utils/colorPalettes";
   import type { ColorConfig } from "$lib/utils/colorPalettes";
   import { InspectorPool } from "$lib/rendering/worker/pools/inspectorPool";
+  import CopyText from "$lib/components/ui/CopyText.svelte";
 
   const JULIA_SIZE = 192;
-  const JULIA_SCALE = 4 / JULIA_SIZE; // shows [-2,2]² centred on origin
+  const JULIA_SCALE = 2 / JULIA_SIZE; // shows [-2,2]² centred on origin
   const TOOLTIP_W = 224; // w-56 = 14rem = 224px
   const TOOLTIP_H = 360; // approximate height estimate for edge clamping
 
@@ -43,7 +47,9 @@
 
   // Synchronous iter + color lookup from cached tile data
   const iterValue = $derived(getIterAt(re, im));
-  const isDem = $derived(baseAlgorithm(colorConfig.algorithm) === "distance_estimation");
+  const isDem = $derived(
+    baseAlgorithm(colorConfig.algorithm) === "distance_estimation",
+  );
   const banded = $derived(isBanded(colorConfig.algorithm));
 
   function splitDecimal(s: string): [string, string] {
@@ -66,7 +72,11 @@
 
   // Submit Julia preview job — cancel previous and resubmit immediately on point change
   $effect(() => {
-    re; im; maxIter; power; colorConfig; // track dependencies
+    re;
+    im;
+    maxIter;
+    power;
+    colorConfig; // track dependencies
 
     if (juliaJobId) {
       InspectorPool.instance.cancel(juliaJobId);
@@ -115,46 +125,31 @@
   function toHex([r, g, b]: [number, number, number]) {
     return [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
   }
-
-  let reCopied = $state(false);
-  let colorCopied = $state(false);
-  let iterCopied = $state(false);
-
-  function copyRe() {
-    navigator.clipboard.writeText(`${re}, ${im}`);
-    reCopied = true;
-    setTimeout(() => (reCopied = false), 1500);
-  }
-  function copyColor() {
-    if (!color) return;
-    navigator.clipboard.writeText(`#${toHex(color)}`);
-    colorCopied = true;
-    setTimeout(() => (colorCopied = false), 1500);
-  }
-  function copyIter() {
-    if (iterValue === null) return;
-    const val = iterValue >= maxIter ? "∞" : iterValue.toFixed(4);
-    navigator.clipboard.writeText(val);
-    iterCopied = true;
-    setTimeout(() => (iterCopied = false), 1500);
-  }
 </script>
 
 <div
-  class="fixed z-[9999] bg-neutral-900/95 border border-neutral-700 rounded-lg shadow-xl text-[11px] font-mono p-3 w-56 {locked ? 'pointer-events-auto select-text' : 'pointer-events-none select-none'}"
-  style="left: {tipX}px; top: {tipY}px; {zooming ? 'transition: left 0.25s ease, top 0.25s ease;' : ''}"
+  class="fixed z-[9999] bg-neutral-900/95 border border-neutral-700 rounded-lg shadow-xl text-[11px] font-mono p-3 w-56 {locked
+    ? 'pointer-events-auto select-text'
+    : 'pointer-events-none select-none'}"
+  style="left: {tipX}px; top: {tipY}px; {zooming
+    ? 'transition: left 0.25s ease, top 0.25s ease;'
+    : ''}"
 >
   <div class="flex items-center justify-between">
     <div>
-      <div class="text-neutral-400">Re <span class="text-green-400">{re.toFixed(14)}</span></div>
-      <div class="text-neutral-400">Im <span class="text-green-400">{im.toFixed(14)}</span></div>
+      <div class="text-neutral-400">
+        Re <span class="text-green-400">{re.toFixed(14)}</span>
+      </div>
+      <div class="text-neutral-400">
+        Im <span class="text-green-400">{im.toFixed(14)}</span>
+      </div>
     </div>
     {#if locked}
-      <button
-        class="ml-2 inline-flex items-center text-neutral-500 hover:text-white transition-colors shrink-0 self-center"
-        onclick={copyRe}
+      <CopyText
+        value={`${re}, ${im}`}
         title="Copy coordinates"
-      >{#if reCopied}<Check size={13} />{:else}<Copy size={13} />{/if}</button>
+        class="ml-2 self-center"
+      />
     {/if}
   </div>
 
@@ -169,17 +164,20 @@
         <span class="text-yellow-400">{iterValue.toExponential(3)}</span>
       {:else if banded}
         {@const [int, dec] = splitDecimal(iterValue.toFixed(3))}
-        <span class="text-yellow-400">{int}</span><span class="text-yellow-400/30">{dec}</span>
+        <span class="text-yellow-400">{int}</span><span
+          class="text-yellow-400/30">{dec}</span
+        >
       {:else}
         <span class="text-yellow-400">{iterValue.toFixed(3)}</span>
       {/if}
     </div>
     {#if locked && iterValue !== null}
-      <button
-        class="ml-2 inline-flex items-center text-neutral-500 hover:text-white transition-colors shrink-0"
-        onclick={copyIter}
+      <CopyText
+        value={() =>
+          iterValue >= maxIter ? "∞" : iterValue.toFixed(4)}
         title="Copy value"
-      >{#if iterCopied}<Check size={13} />{:else}<Copy size={13} />{/if}</button>
+        class="ml-2"
+      />
     {/if}
   </div>
 
@@ -194,14 +192,15 @@
         <span class="text-neutral-500">#{toHex(color)}</span>
       </div>
       {#if locked}
-        <button
-          class="ml-2 inline-flex items-center text-neutral-500 hover:text-white transition-colors shrink-0"
-          onclick={copyColor}
+        <CopyText
+          value={`#${toHex(color)}`}
           title="Copy hex color"
-        >{#if colorCopied}<Check size={13} />{:else}<Copy size={13} />{/if}</button>
+          class="ml-2"
+        />
       {/if}
     </div>
   {/if}
+
 
   <!-- Julia preview -->
   <div class="mt-2 border border-neutral-700 rounded overflow-hidden">
@@ -217,7 +216,7 @@
   {#if locked}
     <button
       class="mt-2 w-full px-2 py-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 rounded transition-colors"
-      onclick={onCenterPoint}
-    >Center this point</button>
+      onclick={onCenterPoint}>Center this point</button
+    >
   {/if}
 </div>
