@@ -12,7 +12,8 @@
 	const JULIA_SIZE = 192;
 	const JULIA_SCALE = 2 / JULIA_SIZE; // shows [-2,2]² centred on origin
 	const TOOLTIP_W = 224; // w-56 = 14rem = 224px
-	const TOOLTIP_H = 360; // approximate height estimate for edge clamping
+	const TOOLTIP_H_LOCKED = 360; // with action buttons
+	const TOOLTIP_H_UNLOCKED = 310; // without action buttons
 
 	let {
 		re,
@@ -112,11 +113,17 @@
 		if (juliaJobId) InspectorPool.instance.cancel(juliaJobId);
 	});
 
-	// Tooltip position: prefer right/below cursor, flip if too close to edge
-	const tipX = $derived(
-		screenX + 16 + TOOLTIP_W > window.innerWidth ? screenX - 16 - TOOLTIP_W : screenX + 16
+	// Tooltip position: prefer right/below anchor, flip if too close to edge.
+	// For embedded (locked), offsets are relative to the marker container; for
+	// floating, they are viewport-absolute.
+	const tooltipH = $derived(locked ? TOOLTIP_H_LOCKED : TOOLTIP_H_UNLOCKED);
+	const flipX = $derived(screenX + 16 + TOOLTIP_W > window.innerWidth);
+	const flipY = $derived(screenY + tooltipH > window.innerHeight);
+	const tipX = $derived(flipX ? screenX - 16 - TOOLTIP_W : screenX + 16);
+	const tipY = $derived(flipY ? screenY - tooltipH : screenY);
+	const embeddedStyle = $derived(
+		`${flipX ? `right: 16px;` : `left: 16px;`} ${flipY ? `bottom: 0;` : `top: 0;`}`
 	);
-	const tipY = $derived(screenY + TOOLTIP_H > window.innerHeight ? screenY - TOOLTIP_H : screenY);
 
 	function toHex([r, g, b]: [number, number, number]) {
 		return [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
@@ -127,7 +134,7 @@
 	class="bg-neutral-900/95 border border-neutral-700 rounded-lg shadow-xl text-[11px] font-mono p-3 w-56 {locked
 		? 'pointer-events-auto select-text'
 		: 'pointer-events-none select-none'} {embedded ? 'absolute' : 'fixed z-[9999]'}"
-	style={embedded ? 'left: 16px; top: 0;' : `left: ${tipX}px; top: ${tipY}px;`}
+	style={embedded ? embeddedStyle : `left: ${tipX}px; top: ${tipY}px;`}
 >
 	<div class="flex items-center justify-between">
 		<div>

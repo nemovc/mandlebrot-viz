@@ -62,6 +62,7 @@
 		class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60"
 		role="dialog"
 		aria-modal="true"
+		tabindex="-1"
 		onclick={() => closeOnBackdrop && close()}
 	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->

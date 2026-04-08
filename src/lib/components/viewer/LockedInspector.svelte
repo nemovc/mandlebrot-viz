@@ -26,6 +26,8 @@
 	} = $props();
 
 	let wrapperEl: HTMLElement | undefined = $state();
+	let screenX = $state(0);
+	let screenY = $state(0);
 
 	// Portal: move our root element into the Leaflet marker container so that
 	// Leaflet's own pan/zoom transforms keep us positioned correctly.
@@ -34,7 +36,18 @@
 		const t = target;
 		if (!el || !t) return;
 		t.appendChild(el);
+
+		let rafId: number;
+		function track() {
+			const rect = t.getBoundingClientRect();
+			screenX = rect.left;
+			screenY = rect.top;
+			rafId = requestAnimationFrame(track);
+		}
+		track();
+
 		return () => {
+			cancelAnimationFrame(rafId);
 			el.remove();
 		};
 	});
@@ -73,6 +86,8 @@
 	<InspectorTooltip
 		{re}
 		{im}
+		{screenX}
+		{screenY}
 		locked={true}
 		embedded={true}
 		{maxIter}
