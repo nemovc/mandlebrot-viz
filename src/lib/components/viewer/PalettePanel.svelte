@@ -11,6 +11,7 @@
 		colors,
 		setColors,
 		layout = 'vertical',
+		hideOffsetToggle = false,
 		onClose,
 		onApply
 	}: {
@@ -19,6 +20,7 @@
 		colors: ColorConfig;
 		setColors: (c: ColorConfig) => void;
 		layout?: 'vertical' | 'horizontal';
+		hideOffsetToggle?: boolean;
 		onClose: () => void;
 		onApply: (name: string) => void;
 	} = $props();
@@ -67,17 +69,19 @@
 	</div>
 
 	<!-- Include cycle/offset toggle -->
-	<div class="px-2 py-1.5 border-b border-neutral-800">
-		<ToggleButton
-			active={includeOffsets}
-			onclick={() => (includeOffsets = !includeOffsets)}
-			class="w-full"
-			checkbox
-			title="When on, applying a palette also loads its saved algorithm, cycle period, offset, reverse, and in-set colour"
-		>
-			{includeOffsets ? 'Applying full settings' : 'Applying colours only'}
-		</ToggleButton>
-	</div>
+	{#if !hideOffsetToggle}
+		<div class="px-2 py-1.5 border-b border-neutral-800">
+			<ToggleButton
+				active={includeOffsets}
+				onclick={() => (includeOffsets = !includeOffsets)}
+				class="w-full"
+				checkbox
+				title="When on, applying a palette also loads its saved algorithm, cycle period, offset, reverse, and in-set colour"
+			>
+				{includeOffsets ? 'Applying full settings' : 'Applying colours only'}
+			</ToggleButton>
+		</div>
+	{/if}
 
 	<!-- Scrollable palette list -->
 	<div class="overflow-y-auto {isHorizontal ? 'max-h-56' : 'max-h-[50vh]'} p-2 flex flex-col gap-0">

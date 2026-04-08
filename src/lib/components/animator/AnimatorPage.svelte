@@ -479,6 +479,7 @@
 						colors={editorColors}
 						setColors={setProjectColors}
 						layout="horizontal"
+						hideOffsetToggle
 						onClose={() => (showPalettePanel = false)}
 						onApply={onPaletteApplied}
 					/>
