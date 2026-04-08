@@ -15,7 +15,6 @@
 	import { Code2, CircleUserRound } from 'lucide-svelte';
 	import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
 	import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
-
 	let showExport = $state(false);
 	let mapComponent = $state<MandelbrotMap>();
 

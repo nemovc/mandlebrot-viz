@@ -144,6 +144,10 @@ function createAnimationState() {
 			return redoStack.length > 0;
 		},
 
+		get isDirty() {
+			return undoStack.length > 0 || redoStack.length > 0;
+		},
+
 		get revision() {
 			return revision;
 		},

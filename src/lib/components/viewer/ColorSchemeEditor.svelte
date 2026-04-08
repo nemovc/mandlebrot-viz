@@ -2,7 +2,12 @@
 	import { fly } from 'svelte/transition';
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange, baseAlgorithm } from '$lib/utils/colorPalettes';
+	import {
+		presetsFor,
+		ALGORITHMS,
+		paletteForAlgorithmChange,
+		baseAlgorithm
+	} from '$lib/utils/colorPalettes';
 	import type { ColorStop } from '$lib/utils/colorPalettes';
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import CollapsiblePanel from './CollapsiblePanel.svelte';
@@ -23,9 +28,7 @@
 		(p) => JSON.stringify(p.config.palette) === initialPaletteJson
 	);
 
-	let activePaletteName = $state<string | null>(
-		initialPreset?.[0] ?? initialSaved?.name ?? null
-	);
+	let activePaletteName = $state<string | null>(initialPreset?.[0] ?? initialSaved?.name ?? null);
 	let baseline = $state<ColorStop[]>(
 		JSON.parse(
 			JSON.stringify(
@@ -35,9 +38,7 @@
 		)
 	);
 
-	const dirty = $derived(
-		JSON.stringify(viewerState.colors.palette) !== JSON.stringify(baseline)
-	);
+	const dirty = $derived(JSON.stringify(viewerState.colors.palette) !== JSON.stringify(baseline));
 
 	const displayName = $derived(
 		activePaletteName ? (dirty ? activePaletteName + '*' : activePaletteName) : 'Custom'
@@ -68,8 +69,13 @@
 	}
 
 	function onAlgorithmChange(e: Event) {
-		const newAlgorithm = (e.target as HTMLSelectElement).value as typeof viewerState.colors.algorithm;
-		const swappedPalette = paletteForAlgorithmChange(viewerState.colors.algorithm, newAlgorithm, activePaletteName);
+		const newAlgorithm = (e.target as HTMLSelectElement)
+			.value as typeof viewerState.colors.algorithm;
+		const swappedPalette = paletteForAlgorithmChange(
+			viewerState.colors.algorithm,
+			newAlgorithm,
+			activePaletteName
+		);
 		if (swappedPalette) baseline = JSON.parse(JSON.stringify(swappedPalette));
 		viewerState.colors = {
 			...viewerState.colors,
@@ -86,7 +92,9 @@
 				{activePaletteName}
 				{baseline}
 				colors={viewerState.colors}
-				setColors={(c) => (viewerState.colors = c)}
+				setColors={(c) => {
+					viewerState.colors = c;
+				}}
 				onClose={() => (showEditor = false)}
 				onSave={onEditorSave}
 			/>
@@ -106,20 +114,38 @@
 		</div>
 	{/if}
 
-	<CollapsiblePanel title="Color Scheme" position="top-right" oncollapse={() => { showPalettePanel = false; showEditor = false; }}>
+	<CollapsiblePanel
+		title="Color Scheme"
+		position="top-right"
+		oncollapse={() => {
+			showPalettePanel = false;
+			showEditor = false;
+		}}
+	>
 		<div class="flex flex-col gap-3 p-3">
 			<!-- Row 1: Palettes + Edit buttons -->
 			<div class="grid grid-cols-2 gap-2">
-				<ToggleButton active={showPalettePanel} onclick={() => { showPalettePanel = !showPalettePanel; if (showPalettePanel) showEditor = false; }} class="w-full" chevron="left">
+				<ToggleButton
+					active={showPalettePanel}
+					onclick={() => {
+						showPalettePanel = !showPalettePanel;
+						if (showPalettePanel) showEditor = false;
+					}}
+					class="w-full"
+					chevron="left"
+				>
 					Palettes
 				</ToggleButton>
 				<ToggleButton
 					active={showEditor}
-					onclick={() => { showEditor = !showEditor; if (showEditor) showPalettePanel = false; }}
+					onclick={() => {
+						showEditor = !showEditor;
+						if (showEditor) showPalettePanel = false;
+					}}
 					title="Edit palette stops"
 					class="w-full"
-					chevron="left"
-				>Edit</ToggleButton>
+					chevron="left">Edit</ToggleButton
+				>
 			</div>
 
 			<!-- Row 2: Palette name -->
@@ -141,7 +167,13 @@
 
 			<!-- Row 3: Cycle Period -->
 			<div>
-				<label class="text-neutral-400 text-xs {baseAlgorithm(viewerState.colors.algorithm) === 'histogram' ? 'opacity-30' : ''}" for="cyclePeriod">Cycle Period</label>
+				<label
+					class="text-neutral-400 text-xs {baseAlgorithm(viewerState.colors.algorithm) ===
+					'histogram'
+						? 'opacity-30'
+						: ''}"
+					for="cyclePeriod">Cycle Period</label
+				>
 				<div class="flex items-center gap-2 mt-1">
 					<input
 						id="cyclePeriod"
@@ -164,7 +196,9 @@
 							const v = parseInt((e.target as HTMLInputElement).value);
 							if (!isNaN(v) && v > 0) onCyclePeriodChange(e);
 						}}
-						onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') (e.target as HTMLElement).blur();
+						}}
 					/>
 				</div>
 				{#if baseAlgorithm(viewerState.colors.algorithm) === 'distance_estimation' && viewerState.colors.cyclePeriod > 32}
@@ -206,7 +240,9 @@
 									offset: Math.max(0, Math.min(1, v))
 								};
 						}}
-						onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLElement).blur(); }}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') (e.target as HTMLElement).blur();
+						}}
 					/>
 				</div>
 			</div>
@@ -228,9 +264,11 @@
 				/>
 				<button
 					class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
-					onclick={() => { viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' }; }}
-					title="Reset to black"
-				>Reset</button>
+					onclick={() => {
+						viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' };
+					}}
+					title="Reset to black">Reset</button
+				>
 			</div>
 
 			<!-- Row 6: Preview bar + Reverse -->
@@ -243,8 +281,8 @@
 							...viewerState.colors,
 							reverse: !viewerState.colors.reverse
 						})}
-					title="Reverse palette"
-				>⇄</ToggleButton>
+					title="Reverse palette">⇄</ToggleButton
+				>
 			</div>
 		</div>
 	</CollapsiblePanel>

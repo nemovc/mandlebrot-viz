@@ -25,17 +25,18 @@
 	});
 
 	function handleSaveAndNew() {
-		const err = savedProjects.validateName(nameInput);
+		const newName = nameInput.trim();
+		const err = savedProjects.validateName(newName);
 		if (err) {
 			errorMsg = err;
 			return;
 		}
-		if (savedProjects.exists(nameInput) && !confirmOverwrite) {
+		if (savedProjects.exists(newName) && !confirmOverwrite) {
 			confirmOverwrite = true;
 			return;
 		}
-		savedProjects.save(nameInput.trim(), currentProject);
-		onSaveAndNew(nameInput.trim());
+		savedProjects.save(newName, currentProject);
+		onSaveAndNew(newName);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {

@@ -54,8 +54,7 @@
 
 	// ---- Project management ----
 	function triggerNew() {
-		const hasWork = animationState.project.tracks.some((t) => t.keyframes.length > 0);
-		if (hasWork) {
+		if (animationState.isDirty) {
 			showNewProjectModal = true;
 		} else {
 			animationState.reset();

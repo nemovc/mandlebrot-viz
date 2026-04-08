@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { wheelSlider } from '$lib/actions/wheelSlider';
-	import { samplePalette, baseAlgorithm } from '$lib/utils/colorPalettes';
+	import { samplePalette, baseAlgorithm, PRESETS } from '$lib/utils/colorPalettes';
 	import type { ColorConfig, ColorStop } from '$lib/utils/colorPalettes';
-	import SavePaletteModal from './SavePaletteModal.svelte';
+	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
+	import SaveModal from '$lib/components/ui/SaveModal.svelte';
 
 	let {
 		activePaletteName,
@@ -115,8 +116,8 @@
 		deleteStop(idx);
 	}
 
-	function handleSaveModalSave(name: string) {
-		showSaveModal = false;
+	function handleSaveModalComplete(name: string) {
+		savedPalettes.save(name, colors);
 		onSave(name);
 	}
 </script>
@@ -366,11 +367,13 @@
 	</div>
 </div>
 
-{#if showSaveModal}
-	<SavePaletteModal
-		config={colors}
-		initialName={activePaletteName ?? ''}
-		onSave={handleSaveModalSave}
-		onCancel={() => (showSaveModal = false)}
-	/>
-{/if}
+<SaveModal
+	bind:open={showSaveModal}
+	title="Save Palette"
+	initialName={activePaletteName ?? ''}
+	allowedNames={/^[a-zA-Z0-9 ]+$/}
+	maxLength={24}
+	reservedNames={Object.keys(PRESETS)}
+	checkIfOverwrites={savedPalettes.exists}
+	onComplete={handleSaveModalComplete}
+/>

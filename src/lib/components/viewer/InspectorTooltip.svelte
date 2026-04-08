@@ -4,6 +4,10 @@
 	import type { ColorConfig } from '$lib/utils/colorPalettes';
 	import { InspectorPool } from '$lib/rendering/worker/pools/inspectorPool';
 	import CopyText from '$lib/components/ui/CopyText.svelte';
+	import SaveModal from '$lib/components/ui/SaveModal.svelte';
+	import { savedLocations } from '$lib/stores/savedLocations.svelte';
+	import { PRESET_LOCATIONS } from '$lib/utils/locations';
+	import { viewerState } from '$lib/stores/viewerState.svelte';
 
 	const JULIA_SIZE = 192;
 	const JULIA_SCALE = 2 / JULIA_SIZE; // shows [-2,2]² centred on origin
@@ -37,6 +41,8 @@
 		getIterAt: (re: number, im: number) => number | null;
 		onCenterPoint?: () => void;
 	} = $props();
+
+	let showSaveLocation = $state(false);
 
 	let juliaCanvas: HTMLCanvasElement | undefined = $state();
 	let juliaJobId: string | null = null;
@@ -190,9 +196,25 @@
 	</div>
 
 	{#if locked}
-		<button
-			class="mt-2 w-full px-2 py-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 rounded transition-colors"
-			onclick={onCenterPoint}>Center this point</button
-		>
+		<div class="mt-2 flex flex-col gap-1.5">
+			<button
+				class="flex-1 px-2 py-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 rounded transition-colors"
+				onclick={onCenterPoint}>Center this point</button
+			>
+			<button
+				class="flex-1 px-2 py-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 rounded transition-colors"
+				onclick={() => (showSaveLocation = true)}>Save location</button
+			>
+		</div>
 	{/if}
+
+	<SaveModal
+		bind:open={showSaveLocation}
+		title="Save Location"
+		allowedNames={/.+/}
+		maxLength={48}
+		reservedNames={PRESET_LOCATIONS.map((l) => l.name)}
+		checkIfOverwrites={savedLocations.exists}
+		onComplete={(name) => savedLocations.save({ name, re, im, zoom: viewerState.zoom })}
+	/>
 </div>
