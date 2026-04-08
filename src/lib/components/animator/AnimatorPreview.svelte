@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { animationState } from '$lib/stores/animationState.svelte';
-	import { viewerState } from '$lib/stores/viewerState.svelte';
 	import { interpolateAll } from '$lib/utils/animator/interpolation';
 	import { AnimatorPreviewPool } from '$lib/rendering/worker/pools/animatorPreviewPool';
 	import { AnimatorRecolorPool } from '$lib/rendering/worker/pools/animatorRecolorPool';
@@ -30,7 +29,6 @@
 
 	function renderFrame(frame: number) {
 		if (!canvas || canvasW === 0 || canvasH === 0) return;
-		// Don't render (or corrupt viewerState) until the project has been seeded
 		if (animationState.project.tracks.every((t) => t.keyframes.length === 0)) return;
 
 		cancelActive();
@@ -38,9 +36,6 @@
 
 		const project = animationState.project;
 		const state = interpolateAll(project, frame);
-
-		// Keep explorer in sync so returning to viewer shows this frame's position
-		viewerState.loadFrom(state);
 
 		const ctx = canvas.getContext('2d')!;
 		ctx.clearRect(0, 0, canvasW, canvasH);

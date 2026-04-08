@@ -1,9 +1,13 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { untrack } from 'svelte';
 	import AnimatorPreview from './AnimatorPreview.svelte';
 	import Timeline from './Timeline.svelte';
 	import ShortcutsModal from './ShortcutsModal.svelte';
 	import PlaybackModal from './PlaybackModal.svelte';
+	import AnimatorProjectsPanel from './AnimatorProjectsPanel.svelte';
+	import NewProjectModal from './NewProjectModal.svelte';
+	import ExportProjectModal from './ExportProjectModal.svelte';
+	import ImportProjectModal from './ImportProjectModal.svelte';
 	import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
 	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
 	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
@@ -22,6 +26,11 @@
 	let loopPlayback = $state(true);
 	let showPalettePanel = $state(false);
 	let showEditor = $state(false);
+	let showProjectsPanel = $state(false);
+	let showNewProjectModal = $state(false);
+	let showExportModal = $state(false);
+	let showImportModal = $state(false);
+	let activeProjectName = $state<string | null>(null);
 
 	// ---- Frame cache ----
 	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,11 +52,49 @@
 		else cacheTimer = setTimeout(run, delay);
 	}
 
-	// Seed from explorer on first load if project is empty
-	onMount(() => {
+	// ---- Project management ----
+	function triggerNew() {
 		const hasWork = animationState.project.tracks.some((t) => t.keyframes.length > 0);
-		if (!hasWork) animationState.seedFromExplorer();
-	});
+		if (hasWork) {
+			showNewProjectModal = true;
+		} else {
+			animationState.reset();
+			activeProjectName = null;
+		}
+	}
+
+	function handleSaveAndNew(name: string) {
+		showNewProjectModal = false;
+		animationState.reset();
+		activeProjectName = null;
+		// The save already happened inside NewProjectModal before calling this
+		void name;
+	}
+
+	function handleDiscardAndNew() {
+		showNewProjectModal = false;
+		animationState.reset();
+		activeProjectName = null;
+	}
+
+	function handleLoadProject(
+		p: import('$lib/stores/animationState.svelte').AnimationProject,
+		name: string
+	) {
+		animationState.load(p);
+		activeProjectName = name;
+		showProjectsPanel = false;
+	}
+
+	function handleProjectSaved(name: string) {
+		activeProjectName = name;
+	}
+
+	function handleImportProject(p: import('$lib/stores/animationState.svelte').AnimationProject) {
+		animationState.load(p);
+		activeProjectName = null;
+		showImportModal = false;
+	}
 
 	// Invalidate + rebuild on any project edit (commit bumps revision)
 	let revisionInit = false;
@@ -147,10 +194,9 @@
 		} else if (e.key === ' ') {
 			e.preventDefault();
 			if (cacheReady) showPlayback = true;
-		} else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
 		} else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
 			e.preventDefault();
+			triggerNew();
 		} else if (e.key === 'r' || e.key === 'R') {
 			loopPlayback = !loopPlayback;
 		} else if (e.key === 'Delete') {
@@ -405,6 +451,38 @@
 	<div
 		class="shrink-0 flex items-center gap-3 px-3 py-1.5 bg-neutral-900 border-t border-neutral-800 text-[11px] flex-wrap"
 	>
+		<div class="relative">
+			<button
+				class="px-2 py-0.5 rounded border text-[11px] transition-colors
+					{showProjectsPanel
+					? 'bg-blue-700 border-blue-600 text-white'
+					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+				onclick={() => (showProjectsPanel = !showProjectsPanel)}
+				>Projects{activeProjectName ? ` — ${activeProjectName}` : ''}</button
+			>
+			{#if showProjectsPanel}
+				<div class="absolute bottom-full left-0 z-50 mb-2">
+					<AnimatorProjectsPanel
+						{activeProjectName}
+						currentProject={animationState.project}
+						onLoad={handleLoadProject}
+						onSave={handleProjectSaved}
+						onExport={() => {
+							showProjectsPanel = false;
+							showExportModal = true;
+						}}
+						onImport={() => {
+							showProjectsPanel = false;
+							showImportModal = true;
+						}}
+						onClose={() => (showProjectsPanel = false)}
+					/>
+				</div>
+			{/if}
+		</div>
+
+		<span class="text-neutral-700">·</span>
+
 		<label class="flex items-center gap-1 text-neutral-400">
 			fps
 			<input
@@ -708,6 +786,11 @@
 				title="Redo (Ctrl+Y)"><Redo2 size={12} /></button
 			>
 			<button
+				onclick={triggerNew}
+				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
+				title="New project (Ctrl+N)">New</button
+			>
+			<button
 				onclick={() => (showShortcuts = true)}
 				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
 				title="Keyboard shortcuts (?)"><CircleHelp size={12} /></button
@@ -787,3 +870,24 @@
 
 <ShortcutsModal bind:open={showShortcuts} />
 <PlaybackModal bind:open={showPlayback} bind:loopPlayback />
+
+{#if showNewProjectModal}
+	<NewProjectModal
+		currentProject={animationState.project}
+		onSaveAndNew={handleSaveAndNew}
+		onDiscardAndNew={handleDiscardAndNew}
+		onCancel={() => (showNewProjectModal = false)}
+	/>
+{/if}
+
+{#if showExportModal}
+	<ExportProjectModal
+		project={animationState.project}
+		projectName={activeProjectName}
+		onClose={() => (showExportModal = false)}
+	/>
+{/if}
+
+{#if showImportModal}
+	<ImportProjectModal onImport={handleImportProject} onCancel={() => (showImportModal = false)} />
+{/if}
