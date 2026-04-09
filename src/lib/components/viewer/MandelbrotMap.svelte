@@ -13,12 +13,20 @@
 	let {
 		inspectorActive = false,
 		onInspectorMove,
-		onInspectorClick
+		onInspectorClick,
+		bindLeafletContainer
 	}: {
 		inspectorActive?: boolean;
 		onInspectorMove?: (re: number, im: number, sx: number, sy: number) => void;
 		onInspectorClick?: () => void;
+		bindLeafletContainer?: (el: HTMLDivElement) => void;
 	} = $props();
+
+	$effect(() => {
+		if (bindLeafletContainer && mapContainer) {
+			bindLeafletContainer(mapContainer);
+		}
+	});
 
 	let mapContainer: HTMLDivElement;
 	let leafletMap: Leaflet.Map | null = null;

@@ -26,8 +26,24 @@
 	let inspectorScreenX = $state(0);
 	let inspectorScreenY = $state(0);
 	let tooltipContainer = $state<HTMLElement | null>(null);
-	let mouseX = 0;
-	let mouseY = 0;
+	let mouseX = $state(0);
+	let mouseY = $state(0);
+	let leafletContainerEl = $state<HTMLElement | null>(null);
+
+	// Check if mouse is over the Leaflet map layer (not over UI overlays).
+	// Uses elementFromPoint to check if cursor is over a descendant of the
+	// Leaflet container (which excludes all UI overlays that are siblings).
+	const mouseOverMap = $derived.by(() => {
+		if (!leafletContainerEl) return false;
+		const el = document.elementFromPoint(mouseX, mouseY);
+		if (!el) return false;
+		// Walk up to see if we're inside the Leaflet container
+		let current: Element | null = el;
+		while (current && current !== leafletContainerEl) {
+			current = current.parentElement;
+		}
+		return current === leafletContainerEl;
+	});
 
 	function onInspectorMove(re: number, im: number, sx: number, sy: number) {
 		if (inspectorLocked) return;
@@ -157,7 +173,13 @@
 />
 
 <div use:keyboardLayer={handleKeydown} class="relative w-full h-full">
-	<MandelbrotMap bind:this={mapComponent} {inspectorActive} {onInspectorMove} {onInspectorClick} />
+	<MandelbrotMap
+		bind:this={mapComponent}
+		{inspectorActive}
+		{onInspectorMove}
+		{onInspectorClick}
+		bindLeafletContainer={(el) => (leafletContainerEl = el)}
+	/>
 
 	<!-- Render progress bars (hidden during export, which has its own progress UI) -->
 	{#if !showExport && s2Total > 0 && s2Completed < s2Total}
@@ -244,7 +266,7 @@
 </div>
 
 <!-- Hover tooltip (unlocked only — locked tooltip lives inside the Leaflet marker) -->
-{#if inspectorActive && !inspectorLocked}
+{#if inspectorActive && !inspectorLocked && mouseOverMap}
 	<InspectorTooltip
 		re={inspectorRe}
 		im={inspectorIm}
