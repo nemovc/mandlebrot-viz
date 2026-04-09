@@ -8,6 +8,7 @@
 	import NewProjectModal from './NewProjectModal.svelte';
 	import ExportProjectModal from './ExportProjectModal.svelte';
 	import ImportProjectModal from './ImportProjectModal.svelte';
+	import ExportVideoModal from './ExportVideoModal.svelte';
 	import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
 	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
 	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
@@ -828,44 +829,12 @@
 	</div>
 </div>
 
-{#if exportPhase === 'done' && exportUrl}
-	<div
-		class="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999]"
-		role="dialog"
-		aria-modal="true"
-	>
-		<div
-			class="bg-neutral-900 border border-neutral-700 rounded-lg p-5 flex flex-col gap-4 max-w-[90vw]"
-		>
-			<div class="flex items-center justify-between">
-				<h2 class="text-white font-medium">Export complete</h2>
-				<button class="text-neutral-400 hover:text-white" onclick={resetExport}>✕</button>
-			</div>
-			<!-- svelte-ignore a11y_media_has_caption -->
-			<video
-				src={exportUrl}
-				controls
-				autoplay
-				loop
-				class="rounded border border-neutral-700 max-h-[70vh] object-contain"
-			></video>
-			<div class="flex gap-2">
-				<button
-					onclick={saveVideo}
-					class="flex-1 bg-blue-700 hover:bg-blue-600 text-white text-sm py-1.5 rounded transition-colors"
-				>
-					Save WebM
-				</button>
-				<button
-					onclick={resetExport}
-					class="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white text-sm py-1.5 rounded border border-neutral-700 transition-colors"
-				>
-					Export Another
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
+<ExportVideoModal
+	open={exportPhase === 'done' && !!exportUrl}
+	{exportUrl}
+	onSave={saveVideo}
+	onReset={resetExport}
+/>
 
 <ShortcutsModal bind:open={showShortcuts} />
 <PlaybackModal bind:open={showPlayback} bind:loopPlayback />

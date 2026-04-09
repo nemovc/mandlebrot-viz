@@ -1,14 +1,18 @@
-<script lang="ts">
-	import type { Snippet } from 'svelte';
-	import { portal } from '$lib/actions/portal';
-
+<script lang="ts" module>
 	export type ModalAction = {
 		label: string;
 		title?: string;
 		color?: 'blue' | 'red' | 'neutral';
 		callback: () => void;
 		disabled?: boolean;
+		/** If true, this action is triggered when Enter is pressed (unless focus is in a textarea or button). */
+		isDefault?: boolean;
 	};
+</script>
+
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { portal } from '$lib/actions/portal';
 
 	let {
 		open = $bindable(false),
@@ -31,6 +35,15 @@
 		children: Snippet;
 	} = $props();
 
+	let cardEl = $state<HTMLDivElement>();
+
+	$effect(() => {
+		if (open && cardEl) {
+			const first = cardEl.querySelector<HTMLElement>('input, textarea');
+			first?.focus();
+		}
+	});
+
 	function close() {
 		open = false;
 		onClose?.();
@@ -40,6 +53,14 @@
 		if (closeOnEscape && e.key === 'Escape') {
 			e.preventDefault();
 			close();
+		} else if (e.key === 'Enter') {
+			const target = e.target as HTMLElement;
+			if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
+			const defaultAction = actions.find((a) => a.isDefault && !a.disabled);
+			if (defaultAction) {
+				e.preventDefault();
+				defaultAction.callback();
+			}
 		}
 	}
 
@@ -68,7 +89,8 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
-			class="w-80 rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col max-h-[90vh]"
+			bind:this={cardEl}
+			class="min-w-80 max-w-[95vw] rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl flex flex-col max-h-[90vh]"
 			onclick={(e) => e.stopPropagation()}
 		>
 			{#if title !== undefined || showX}
