@@ -87,10 +87,7 @@
 		renderer.render({
 			cRe: re,
 			cIm: im,
-			viewCx: 0,
-			viewCy: 0,
 			scale: JULIA_SCALE,
-			size: JULIA_SIZE,
 			maxIter: Math.min(maxIter, 256),
 			power,
 			colorConfig
