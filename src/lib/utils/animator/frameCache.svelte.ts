@@ -142,7 +142,7 @@ async function renderFrameLowRes(
 ): Promise<ImageBitmap | null> {
 	const state = interpolateAll(project, frame);
 	const zoom = state.zoom;
-	const scale = scaleForZoom(zoom, 256);
+	const scale = (scaleForZoom(zoom, 256) * project.width) / lw;
 	const precisionMode = getPrecisionMode(zoom);
 	const colorConfig: ColorConfig = JSON.parse(JSON.stringify(state.colors));
 	const maxIter = state.maxIter;

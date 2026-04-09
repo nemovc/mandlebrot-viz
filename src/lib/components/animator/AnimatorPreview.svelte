@@ -43,7 +43,7 @@
 		const zoom = state.zoom;
 		const cxCenter = parseFloat(state.cx);
 		const cyCenter = parseFloat(state.cy);
-		const scale = scaleForZoom(zoom, TILE);
+		const scale = (scaleForZoom(zoom, TILE) * project.width) / canvasW;
 		const precisionMode = getPrecisionMode(zoom);
 		const colorConfig: ColorConfig = JSON.parse(JSON.stringify(state.colors));
 		const maxIter = state.maxIter;
