@@ -44,7 +44,7 @@ export class JuliaRenderer {
       }
     `;
 
-    // Simple escape-time fragment shader
+    // Fragment shader with escape-time and DEM support
     const fragmentSource = `#version 300 es
       precision highp float;
 
@@ -56,6 +56,7 @@ export class JuliaRenderer {
       uniform float u_offset;
       uniform int u_reverse;
       uniform int u_banded;
+      uniform int u_dem;
       uniform vec4 u_palette[${MAX_STOPS}];
       uniform int u_paletteSize;
       uniform vec3 u_inSetColor;
@@ -83,33 +84,61 @@ export class JuliaRenderer {
 
         int escapedIter = u_maxIter;
         float smoothVal = float(u_maxIter);
+        float distEst = -1.0;
 
-        // Standard escape radius check (|z| > 2 => |z|^2 > 4)
+        // Derivative for DEM: dz/dz starts at 1
+        float dzr = 1.0;
+        float dzi = 0.0;
+
         const float escapeRadius2 = 4.0;
+        const float demEscapeRadius2 = 1e12;  // Larger radius for DEM accuracy
 
         for (int i = 0; i < 256; i++) {
           if (i >= u_maxIter) break;
 
           // Compute z^power by repeated multiplication (start from z, multiply power-1 times)
           float pzr = zx, pzi = zy;
+          float zn1r = 1.0, zn1i = 0.0;
           for (int p = 0; p < 9; p++) {
             if (p + 1 >= u_power) break;
+            // pzi * zx for next iteration
             float nr = pzr * zx - pzi * zy;
             float ni = pzr * zy + pzi * zx;
+            // z^(power-1) for derivative
+            float nnr = zn1r * zx - zn1i * zy;
+            float nni = zn1r * zy + zn1i * zx;
             pzr = nr;
             pzi = ni;
+            zn1r = nnr;
+            zn1i = nni;
           }
+
+          // Update derivative: dz = n * z^(n-1) * dz
+          float new_dzr = float(u_power) * (zn1r * dzr - zn1i * dzi);
+          float new_dzi = float(u_power) * (zn1r * dzi + zn1i * dzr);
+          dzr = new_dzr;
+          dzi = new_dzi;
 
           zx = pzr + cr;
           zy = pzi + ci;
 
           float mag2 = zx * zx + zy * zy;
-          if (mag2 > escapeRadius2) {
+          float escapeThreshold = u_dem == 1 ? demEscapeRadius2 : escapeRadius2;
+          if (mag2 > escapeThreshold) {
             escapedIter = i;
-            // Smooth coloring: i + 1 - log(log(|z|)/log(power)) / log(power)
-            float log_zn = log(mag2) / 2.0;  // ln|z|
-            float ln_p = log(float(u_power));
-            smoothVal = float(i) + 1.0 - log(log_zn / ln_p) / ln_p;
+            if (u_dem == 1) {
+              // DEM: dist = 2 * |z| * ln(|z|) / |dz|
+              float norm_z = sqrt(mag2);
+              float norm_dz = sqrt(dzr * dzr + dzi * dzi);
+              if (norm_dz > 1e-30 && norm_z > 1e-30) {
+                distEst = 2.0 * norm_z * log(norm_z) / norm_dz;
+              }
+            } else {
+              // Smooth escape time
+              float log_zn = log(mag2) / 2.0;
+              float ln_p = log(float(u_power));
+              smoothVal = float(i) + 1.0 - log(log_zn / ln_p) / ln_p;
+            }
             break;
           }
         }
@@ -119,8 +148,18 @@ export class JuliaRenderer {
           return;
         }
 
-        float n = u_banded == 1 ? floor(smoothVal) : smoothVal;
-        float t = fract(n / u_cyclePeriod + u_offset);
+        float t;
+        if (u_dem == 1 && distEst > 0.0) {
+          // Log-scale the distance: -log₂(dist) gives dense bands at edge
+          // Match the main viewer's formula: -log₂(max(dist, 1e-30))
+          float logDist = -log2(max(distEst, 1e-30));
+          float scaledLog = u_banded == 1 ? floor(logDist) : logDist;
+          // Normalize to [0,1) matching JS ((x % 1) + 1) % 1 pattern
+          t = fract(fract(scaledLog / u_cyclePeriod) + u_offset);
+        } else {
+          float n = u_banded == 1 ? floor(smoothVal) : smoothVal;
+          t = fract(n / u_cyclePeriod + u_offset);
+        }
         if (u_reverse == 1) t = 1.0 - t;
         fragColor = vec4(samplePalette(t), 1.0);
       }
@@ -187,6 +226,7 @@ export class JuliaRenderer {
     const gl = this.gl;
     const { cyclePeriod, offset, palette, reverse, inSetColor, algorithm } = params.colorConfig;
     const banded = algorithm.endsWith('_banded');
+    const dem = algorithm.startsWith('distance_estimation');
 
     this.paletteBuffer.fill(0);
     for (let i = 0; i < Math.min(palette.length, MAX_STOPS); i++) {
@@ -211,6 +251,7 @@ export class JuliaRenderer {
     gl.uniform1f(gl.getUniformLocation(this.program!, 'u_offset'), offset);
     gl.uniform1i(gl.getUniformLocation(this.program!, 'u_reverse'), reverse ? 1 : 0);
     gl.uniform1i(gl.getUniformLocation(this.program!, 'u_banded'), banded ? 1 : 0);
+    gl.uniform1i(gl.getUniformLocation(this.program!, 'u_dem'), dem ? 1 : 0);
     gl.uniform3f(gl.getUniformLocation(this.program!, 'u_inSetColor'), inSetRgb[0] / 255, inSetRgb[1] / 255, inSetRgb[2] / 255);
 
     const paletteLoc = gl.getUniformLocation(this.program!, 'u_palette');
