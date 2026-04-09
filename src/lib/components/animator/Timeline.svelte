@@ -1,13 +1,18 @@
 <script lang="ts">
-	import { animationState, TRACK_LABELS } from '$lib/stores/animationState.svelte';
+	import { animationState, TRACK_LABELS, TRACK_PARAMS } from '$lib/stores/animationState.svelte';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 	import { baseAlgorithm } from '$lib/utils/colorPalettes';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
+	import type { ViewerState } from '$lib/stores/viewerState.svelte';
 
 	const CELL_W = 10; // px per frame
 	const GRID_BG = `repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent ${CELL_W * 10}px)`;
 
-	let { selectedTrack = $bindable<number | null>(null) } = $props();
+	let {
+		selectedTrack = $bindable<number | null>(null),
+		explorerOpen = false,
+		explorerState = null
+	} = $props();
 
 	let scrollEl: HTMLDivElement;
 	let contentEl: HTMLDivElement;
@@ -29,6 +34,9 @@
 				: []
 		)
 	);
+
+	// Tracks that can be set from explorer (zoom=0, cx=1, cy=2)
+	const explorableViewTracks = $derived(new Set([0, 1, 2]));
 
 	// Deselect track if it becomes disabled (e.g. switching to histogram while cyclePeriod selected)
 	$effect(() => {
@@ -57,7 +65,7 @@
 	);
 	const rulerMarkers = $derived(() => {
 		const out: { x: number; label: string }[] = [];
-		for (let f = 0; f <= totalFrames; f += rulerInterval) {
+		for (let f = 0; f < totalFrames; f += rulerInterval) {
 			out.push({ x: f * CELL_W, label: (f + 1).toString() });
 		}
 		return out;
@@ -95,6 +103,49 @@
 		if (trackIdx !== undefined) selectedTrack = trackIdx;
 		const frame = frameFromClientX(e.clientX);
 		if (frame !== null) animationState.currentFrame = frame;
+	}
+
+	// Handle mouseup on track row - insert keyframe if explorer is open and no scrub occurred
+	// Also handles click on ruler scrub bar to add for all 3 tracks
+	function handleTrackMouseUp(e: MouseEvent, trackIdx: number[]) {
+		if (explorerOpen && explorerState) {
+			trackIdx.forEach((idx) => {
+				const param = TRACK_PARAMS[idx];
+				const value =
+					param === 'zoom'
+						? explorerState.zoom
+						: param === 'cx'
+							? parseFloat(explorerState.cx)
+							: param === 'cy'
+								? parseFloat(explorerState.cy)
+								: 0;
+				animationState.addKeyframe(idx, animationState.currentFrame, value);
+				if (trackIdx.length === 1) {
+					selectedTrack = trackIdx;
+				}
+			});
+		}
+		scrubbing = false;
+	}
+
+	// Handle click on end keyframe
+	function syncEndFrames() {
+		console.log('fuck me dead');
+		const trackIdx = [0, 1, 2];
+		if (explorerOpen && explorerState) {
+			trackIdx.forEach((idx) => {
+				const param = TRACK_PARAMS[idx];
+				const value =
+					param === 'zoom'
+						? explorerState.zoom
+						: param === 'cx'
+							? parseFloat(explorerState.cx)
+							: param === 'cy'
+								? parseFloat(explorerState.cy)
+								: 0;
+				animationState.updateEndKeyframe(idx, value);
+			});
+		}
 	}
 
 	// ---- Double-click: create or delete keyframe ----
@@ -154,6 +205,50 @@
 		scrubbing = false;
 	}
 
+	// Get track label class based on explorer state
+	function getTrackClass(i: number): string {
+		const base =
+			'h-10 flex items-center justify-end pr-2 shrink-0 w-full border-b border-neutral-800/40 transition-colors text-right';
+		if (explorerOpen && explorableViewTracks.has(i)) {
+			return `${base} bg-blue-900/30 cursor-pointer hover:bg-blue-900/50 text-neutral-200`;
+		}
+		if (explorerOpen && !explorableViewTracks.has(i)) {
+			return `${base} text-neutral-600 cursor-not-allowed bg-neutral-700 opacity-40`;
+		}
+		const disabled = disabledTracks.has(i);
+		if (disabled) {
+			return `${base} text-neutral-600 cursor-not-allowed bg-neutral-700 opacity-60`;
+		}
+		if (selectedTrack === i) {
+			return `${base} text-neutral-200 bg-neutral-800/40`;
+		}
+		if (hoveredTrackIdx === i) {
+			return `${base} text-neutral-300 bg-white/10`;
+		}
+		return `${base} text-neutral-500`;
+	}
+
+	// Get tooltip text for track
+	function getTrackTitle(i: number): string | undefined {
+		if (explorerOpen && explorableViewTracks.has(i) && explorerState) {
+			const param = TRACK_PARAMS[i];
+			const value =
+				param === 'zoom'
+					? explorerState.zoom
+					: param === 'cx'
+						? explorerState.cx
+						: param === 'cy'
+							? explorerState.cy
+							: '';
+			return `Click to insert keyframe: ${TRACK_LABELS[param]} = ${value}`;
+		}
+		const disabled = disabledTracks.has(i);
+		if (disabled) {
+			return 'Not available for histogram coloring';
+		}
+		return undefined;
+	}
+
 	const contentWidth = $derived(totalFrames * CELL_W);
 	const playheadX = $derived(currentFrame * CELL_W + CELL_W / 2);
 	const hoverX = $derived(hoveredFrame !== null ? hoveredFrame * CELL_W : null);
@@ -168,22 +263,17 @@
 	<div class="w-20 shrink-0 flex flex-col border-r border-neutral-800 bg-neutral-900">
 		<div class="h-6 border-b border-neutral-800 shrink-0"></div>
 		{#each project.tracks as track, i (track.parameter)}
-			{@const disabled = disabledTracks.has(i)}
 			<button
-				class="h-10 flex items-center justify-end pr-2 shrink-0 w-full border-b border-neutral-800/40 transition-colors text-right
-					{disabled
-					? 'text-neutral-600 cursor-not-allowed bg-neutral-700 opacity-60'
-					: selectedTrack === i
-						? 'text-neutral-200 bg-neutral-800/40'
-						: hoveredTrackIdx === i
-							? 'text-neutral-300 bg-white/10'
-							: 'text-neutral-500'}"
-				onclick={() => {
-					if (!disabled) selectedTrack = selectedTrack === i ? null : i;
+				class={getTrackClass(i)}
+				onclick={(e) => {
+					e.stopPropagation();
+					if (!disabledTracks.has(i)) {
+						selectedTrack = selectedTrack === i ? null : i;
+					}
 				}}
 				onmouseenter={() => (hoveredTrackIdx = i)}
 				onmouseleave={() => (hoveredTrackIdx = null)}
-				title={disabled ? 'Not available for histogram coloring' : undefined}
+				title={getTrackTitle(i)}
 			>
 				{TRACK_LABELS[track.parameter]}
 			</button>
@@ -205,6 +295,7 @@
 			<div
 				class="h-6 relative border-b border-neutral-800 bg-neutral-900/80 shrink-0 overflow-hidden"
 				onmousedown={(e) => startScrub(e)}
+				onmouseup={(e) => handleTrackMouseUp(e, [0, 1, 2])}
 			>
 				{#each rulerMarkers() as m (m.x)}
 					<div
@@ -234,6 +325,14 @@
 					style="left: {playheadX}px"
 				></div>
 			</div>
+			{#if explorerOpen}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="absolute w-44 bg-neutral-900/80 top-0 h-6 flex items-end pb-0.5 pl-0.5 text-neutral-600 border-l border-b border-neutral-700/60"
+					style="left: {contentWidth}px"
+					onmousedown={() => syncEndFrames()}
+				></div>
+			{/if}
 
 			<!-- Track rows -->
 			{#each project.tracks as track, i (track.parameter)}
@@ -250,6 +349,7 @@
 					onmousedown={(e) => {
 						if (!disabled) startScrub(e, i);
 					}}
+					onmouseup={(e) => handleTrackMouseUp(e, [i])}
 					onmouseenter={() => (hoveredTrackIdx = i)}
 					ondblclick={(e) => {
 						if (!disabled) handleDblClick(e, i);

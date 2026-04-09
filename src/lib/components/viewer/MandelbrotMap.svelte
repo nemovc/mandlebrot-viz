@@ -4,18 +4,24 @@
 	import type { PointExpression } from 'leaflet';
 
 	import { onMount, onDestroy, untrack } from 'svelte';
-	import { viewerState } from '$lib/stores/viewerState.svelte';
+	import { viewerState, type ViewerState } from '$lib/stores/viewerState.svelte';
 	import { debugState } from '$lib/stores/debugState.svelte';
 	import { scaleForZoom } from '$lib/utils/precision';
 
 	const TILE_SIZE = 256;
 
 	let {
+		state = $bindable(viewerState),
+		zoomOffset = 0,
+		zoomSnap = 1,
 		inspectorActive = false,
 		onInspectorMove,
 		onInspectorClick,
 		bindLeafletContainer
 	}: {
+		state?: ViewerState;
+		zoomOffset?: number;
+		zoomSnap?: number;
 		inspectorActive?: boolean;
 		onInspectorMove?: (re: number, im: number, sx: number, sy: number) => void;
 		onInspectorClick?: () => void;
@@ -52,10 +58,10 @@
 
 		leafletMap = L.map(mapContainer, {
 			crs: L.CRS.Simple,
-			center: [imToLat(parseFloat(viewerState.cy)), reToLng(parseFloat(viewerState.cx))],
-			zoom: viewerState.zoom,
+			center: [imToLat(parseFloat(state.cy)), reToLng(parseFloat(state.cx))],
+			zoom: state.zoom - zoomOffset,
 			minZoom: 0,
-			zoomSnap: 1,
+			zoomSnap: zoomSnap,
 			zoomDelta: 1,
 			attributionControl: false,
 			zoomControl: false,
@@ -67,18 +73,18 @@
 
 		const LayerClass = createMandelbrotLayer(L);
 		mandelbrotLayer = new LayerClass();
-		mandelbrotLayer.maxIter = viewerState.maxIter;
-		mandelbrotLayer.power = viewerState.power;
-		mandelbrotLayer.colorConfig = viewerState.colors;
+		mandelbrotLayer.maxIter = state.maxIter;
+		mandelbrotLayer.power = state.power;
+		mandelbrotLayer.colorConfig = state.colors;
 		mandelbrotLayer.addTo(leafletMap);
 		_L = L;
 
 		leafletMap.on('moveend zoomend', () => {
 			if (!leafletMap) return;
 			const center = leafletMap.getCenter();
-			viewerState.cx = lngToRe(center.lng).toString();
-			viewerState.cy = latToIm(center.lat).toString();
-			viewerState.zoom = leafletMap.getZoom();
+			state.cx = lngToRe(center.lng).toString();
+			state.cy = latToIm(center.lat).toString();
+			state.zoom = leafletMap.getZoom() + zoomOffset;
 		});
 
 		mapContainer.addEventListener('mousemove', (e) => {
@@ -107,10 +113,10 @@
 	// WASM function runs and the cached iters are incompatible.
 	let _lastAlgorithm = '';
 	$effect(() => {
-		viewerState.colors;
+		state.colors;
 		if (mandelbrotLayer) {
-			mandelbrotLayer.colorConfig = viewerState.colors;
-			const alg = viewerState.colors.algorithm;
+			mandelbrotLayer.colorConfig = state.colors;
+			const alg = state.colors.algorithm;
 			const isDem = (a: string) =>
 				a === 'distance_estimation' || a === 'distance_estimation_banded';
 			const needsRecompute = isDem(alg) !== isDem(_lastAlgorithm);
@@ -125,18 +131,18 @@
 
 	// Recompute via workers when maxIter changes
 	$effect(() => {
-		viewerState.maxIter;
+		state.maxIter;
 		if (mandelbrotLayer) {
-			mandelbrotLayer.maxIter = viewerState.maxIter;
+			mandelbrotLayer.maxIter = state.maxIter;
 			untrack(() => mandelbrotLayer?.recompute());
 		}
 	});
 
 	// Recompute via workers when power changes
 	$effect(() => {
-		viewerState.power;
+		state.power;
 		if (mandelbrotLayer) {
-			mandelbrotLayer.power = viewerState.power;
+			mandelbrotLayer.power = state.power;
 			untrack(() => mandelbrotLayer?.recompute());
 		}
 	});
@@ -223,10 +229,10 @@
 	}
 
 	export function panTo(re: number, im: number, zoom?: number) {
-		viewerState.cx = re.toString();
-		viewerState.cy = im.toString();
-		if (zoom !== undefined) viewerState.zoom = zoom;
-		leafletMap?.setView([imToLat(im), reToLng(re)], viewerState.zoom, {
+		state.cx = re.toString();
+		state.cy = im.toString();
+		if (zoom !== undefined) state.zoom = zoom;
+		leafletMap?.setView([imToLat(im), reToLng(re)], state.zoom - zoomOffset, {
 			animate: true
 		});
 	}
@@ -240,12 +246,12 @@
 	}
 
 	export function resetView() {
-		viewerState.cx = '-0.5';
-		viewerState.cy = '0.0';
-		viewerState.zoom = 3;
-		viewerState.maxIter = 256;
-		viewerState.power = 2;
-		leafletMap?.setView([imToLat(0.0), reToLng(-0.5)], 3, { animate: true });
+		state.cx = '-0.5';
+		state.cy = '0.0';
+		state.zoom = 3;
+		state.maxIter = 256;
+		state.power = 2;
+		leafletMap?.setView([imToLat(0.0), reToLng(-0.5)], 3 - zoomOffset, { animate: true });
 	}
 </script>
 

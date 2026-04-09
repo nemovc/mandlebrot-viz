@@ -14,7 +14,7 @@
 	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
 	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
 	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
-	import { Play, ChevronRight, Repeat, Undo2, Redo2, CircleHelp } from 'lucide-svelte';
+	import { Play, ChevronLeft, ChevronRight, Repeat, Undo2, Redo2, CircleHelp } from 'lucide-svelte';
 	import type { ColorConfig } from '$lib/utils/colorPalettes';
 	import type { ColorStop } from '$lib/utils/colorPalettes';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
@@ -24,8 +24,10 @@
 		paletteForAlgorithmChange,
 		baseAlgorithm
 	} from '$lib/utils/colorPalettes';
-	import { interpolateTrack } from '$lib/utils/animator/interpolation';
+	import { interpolateTrack, interpolateAll } from '$lib/utils/animator/interpolation';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
+	import type { ViewerState } from '$lib/stores/viewerState.svelte';
+	import AnimatorExplorer from './AnimatorExplorer.svelte';
 
 	let selectedTrack = $state<number | null>(null);
 	let showShortcuts = $state(false);
@@ -38,6 +40,12 @@
 	let showExportModal = $state(false);
 	let showImportModal = $state(false);
 	let activeProjectName = $state<string | null>(null);
+	let explorerOpen = $state(false);
+	let explorerState = $state<ViewerState | null>(null);
+	let syncSignal = $state(0);
+	let panelsEl = $state<HTMLDivElement | null>(null);
+	let panelW = $state(0);
+	let panelH = $state(0);
 
 	// ---- Frame cache ----
 	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
@@ -121,6 +129,37 @@
 
 	const cacheReady = $derived(frameCache.isReady);
 
+	// ---- Panel sizing (maintain project AR for both preview and explorer) ----
+	$effect(() => {
+		const el = panelsEl;
+		const open = explorerOpen;
+		const projW = animationState.project.width;
+		const projH = animationState.project.height;
+		if (!el) return;
+
+		function compute() {
+			const availW = el.clientWidth;
+			const availH = el.clientHeight;
+			const count = open ? 2 : 1;
+			const combinedAR = (projW * count) / projH;
+			let w: number, h: number;
+			if (availW / availH >= combinedAR) {
+				h = availH;
+				w = availH * combinedAR;
+			} else {
+				w = availW;
+				h = availW / combinedAR;
+			}
+			panelW = Math.floor(w / count);
+			panelH = Math.floor(h);
+		}
+
+		const ro = new ResizeObserver(compute);
+		ro.observe(el);
+		compute();
+		return () => ro.disconnect();
+	});
+
 	// ---- Keyboard shortcuts ----
 	function handleKey(e: KeyboardEvent) {
 		const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
@@ -131,6 +170,11 @@
 		}
 
 		if (inInput) return;
+
+		if (e.key === 'Escape' && explorerOpen) {
+			explorerOpen = false;
+			return;
+		}
 
 		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
 			e.preventDefault();
@@ -468,8 +512,55 @@
 
 <div use:keyboardLayer={handleKey} class="flex flex-col h-full bg-neutral-950 text-white relative">
 	<!-- Preview (takes remaining vertical space) -->
-	<div class="flex-1 min-h-0 overflow-hidden">
-		<AnimatorPreview active={!showPlayback} />
+	<div class="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-950">
+		<!-- Panels row -->
+		<div bind:this={panelsEl} class="flex-1 flex min-h-0">
+			{#if explorerOpen && explorerState}
+				<div class="flex-1 flex items-center justify-center h-full border-r border-neutral-800">
+					<div style="width: {panelW}px; height: {panelH}px;">
+						<AnimatorExplorer
+							initialState={explorerState}
+							onUpdate={(s) => (explorerState = s)}
+							projectWidth={project.width}
+							panelWidth={panelW}
+							{syncSignal}
+						/>
+					</div>
+				</div>
+			{/if}
+			<div class="{explorerOpen ? 'flex-1' : 'w-full'} flex items-center justify-center h-full">
+				<div style="width: {panelW}px; height: {panelH}px;">
+					<AnimatorPreview active={!showPlayback} />
+				</div>
+			</div>
+		</div>
+
+		<!-- Explorer info + sync bar -->
+		{#if explorerOpen && explorerState}
+			<div class="shrink-0 flex items-center h-7 bg-neutral-900 border-t border-neutral-800 text-[11px]">
+				<div class="flex-1 flex items-center justify-center gap-2 text-neutral-400">
+					<span class="text-neutral-500">Re:</span>
+					<span class="font-mono text-white">{parseFloat(explorerState.cx).toFixed(6)}</span>
+					<span class="text-neutral-700">|</span>
+					<span class="text-neutral-500">Im:</span>
+					<span class="font-mono text-white">{parseFloat(explorerState.cy).toFixed(6)}</span>
+					<span class="text-neutral-700">|</span>
+					<span class="text-neutral-500">Z:</span>
+					<span class="font-mono text-white">{explorerState.zoom.toFixed(3)}</span>
+				</div>
+				<button
+					class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
+					title="Sync explorer to current frame"
+					onclick={() => {
+						explorerState = interpolateAll(animationState.project, animationState.currentFrame);
+						syncSignal++;
+					}}
+				>
+					<ChevronLeft size={11} /> Sync
+				</button>
+				<div class="flex-1"></div>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Settings bar -->
@@ -505,6 +596,22 @@
 				</div>
 			{/if}
 		</div>
+
+		<span class="text-neutral-700">·</span>
+
+		<button
+			class="px-2 py-0.5 rounded border text-[11px] transition-colors
+				{explorerOpen
+				? 'bg-blue-700 border-blue-600 text-white'
+				: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+			onclick={() => {
+				explorerOpen = !explorerOpen;
+				if (explorerOpen) {
+					const project = animationState.project;
+					explorerState = interpolateAll(project, animationState.currentFrame);
+				}
+			}}>Explorer</button
+		>
 
 		<span class="text-neutral-700">·</span>
 
@@ -668,7 +775,7 @@
 
 	<!-- Timeline -->
 	<div class="shrink-0 border-t border-neutral-800">
-		<Timeline bind:selectedTrack />
+		<Timeline bind:selectedTrack {explorerOpen} {explorerState} />
 	</div>
 
 	<!-- Keyframe edit + export bar -->
