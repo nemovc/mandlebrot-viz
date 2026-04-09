@@ -90,10 +90,10 @@ export class JuliaRenderer {
         for (int i = 0; i < 256; i++) {
           if (i >= u_maxIter) break;
 
-          // Compute z^power by repeated multiplication
-          float pzr = 1.0, pzi = 0.0;
-          for (int p = 0; p < 10; p++) {
-            if (p >= u_power) break;
+          // Compute z^power by repeated multiplication (start from z, multiply power-1 times)
+          float pzr = zx, pzi = zy;
+          for (int p = 0; p < 9; p++) {
+            if (p + 1 >= u_power) break;
             float nr = pzr * zx - pzi * zy;
             float ni = pzr * zy + pzi * zx;
             pzr = nr;
@@ -106,8 +106,10 @@ export class JuliaRenderer {
           float mag2 = zx * zx + zy * zy;
           if (mag2 > escapeRadius2) {
             escapedIter = i;
-            // Smooth coloring: i + 1 - log(log(|z|)) / log(power)
-            smoothVal = float(i) + 1.0 - log(log(sqrt(mag2))) / log(float(u_power));
+            // Smooth coloring: i + 1 - log(log(|z|)/log(power)) / log(power)
+            float log_zn = log(mag2) / 2.0;  // ln|z|
+            float ln_p = log(float(u_power));
+            smoothVal = float(i) + 1.0 - log(log_zn / ln_p) / ln_p;
             break;
           }
         }
