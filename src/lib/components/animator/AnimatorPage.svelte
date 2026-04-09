@@ -9,6 +9,7 @@
 	import ExportProjectModal from './ExportProjectModal.svelte';
 	import ImportProjectModal from './ImportProjectModal.svelte';
 	import ExportVideoModal from './ExportVideoModal.svelte';
+	import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 	import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
 	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
 	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
@@ -124,7 +125,7 @@
 			return;
 		}
 
-		if (inInput || showPlayback) return;
+		if (inInput) return;
 
 		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
 			e.preventDefault();
@@ -439,9 +440,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKey} />
-
-<div class="flex flex-col h-full bg-neutral-950 text-white relative">
+<div use:keyboardLayer={handleKey} class="flex flex-col h-full bg-neutral-950 text-white relative">
 	<!-- Preview (takes remaining vertical space) -->
 	<div class="flex-1 min-h-0 overflow-hidden">
 		<AnimatorPreview active={!showPlayback} />

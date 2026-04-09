@@ -3,6 +3,7 @@
 	import { animationState } from '$lib/stores/animationState.svelte';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
 	import { Play, Pause, Repeat } from 'lucide-svelte';
+	import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 
 	let { open = $bindable(false), loopPlayback = $bindable(true) } = $props();
 
@@ -122,7 +123,6 @@
 
 	// ---- Keyboard ----
 	function onKeydown(e: KeyboardEvent) {
-		if (!open) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			close();
@@ -166,13 +166,14 @@
 	}
 </script>
 
-<svelte:window onkeydown={onKeydown} onmousemove={onWindowMouseMove} onmouseup={onWindowMouseUp} />
+<svelte:window onmousemove={onWindowMouseMove} onmouseup={onWindowMouseUp} />
 
 {#if open}
 	<!-- Backdrop -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
+		use:keyboardLayer={onKeydown}
 		class="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center"
 		onclick={close}
 		role="dialog"

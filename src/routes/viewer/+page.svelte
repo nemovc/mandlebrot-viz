@@ -15,6 +15,7 @@
 	import { Code2, CircleUserRound } from 'lucide-svelte';
 	import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
 	import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
+	import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 	let showExport = $state(false);
 	let mapComponent = $state<MandelbrotMap>();
 
@@ -135,6 +136,13 @@
 	function bar(completed: number, total: number) {
 		return total > 0 ? Math.round((completed / total) * 100) : 0;
 	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'i' || e.key === 'I') {
+			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+			toggleInspector();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -142,19 +150,13 @@
 </svelte:head>
 
 <svelte:window
-	onkeydown={(e) => {
-		if (e.key === 'i' || e.key === 'I') {
-			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-			toggleInspector();
-		}
-	}}
 	onmousemove={(e) => {
 		mouseX = e.clientX;
 		mouseY = e.clientY;
 	}}
 />
 
-<div class="relative w-full h-full">
+<div use:keyboardLayer={handleKeydown} class="relative w-full h-full">
 	<MandelbrotMap bind:this={mapComponent} {inspectorActive} {onInspectorMove} {onInspectorClick} />
 
 	<!-- Render progress bars (hidden during export, which has its own progress UI) -->

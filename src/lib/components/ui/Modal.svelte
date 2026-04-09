@@ -13,6 +13,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { portal } from '$lib/actions/portal';
+	import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 
 	let {
 		open = $bindable(false),
@@ -73,13 +74,12 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 {#if open}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		use:portal
+		use:keyboardLayer={handleKeydown}
 		class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60"
 		role="dialog"
 		aria-modal="true"
