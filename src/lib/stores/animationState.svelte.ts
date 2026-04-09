@@ -115,10 +115,11 @@ function createAnimationState() {
 		}
 	}
 
-	function commit() {
+	function commit(fn: () => void) {
 		undoStack.push(snap(project));
 		if (undoStack.length > 100) undoStack.shift();
 		redoStack.length = 0;
+		fn();
 		revision++;
 		persistProject();
 	}
@@ -194,83 +195,92 @@ function createAnimationState() {
 		},
 
 		addKeyframe(trackIdx: number, frame: number, value: number) {
-			commit();
-			const track = project.tracks[trackIdx];
-			track.keyframes = [
-				...track.keyframes.filter((k) => k.frame !== frame),
-				{ frame, value, easing: 'linear' as const }
-			].sort((a, b) => a.frame - b.frame);
+			commit(() => {
+				const track = project.tracks[trackIdx];
+				track.keyframes = [
+					...track.keyframes.filter((k) => k.frame !== frame),
+					{ frame, value, easing: 'linear' as const }
+				].sort((a, b) => a.frame - b.frame);
+			});
 		},
 
 		removeKeyframe(trackIdx: number, frame: number) {
-			commit();
-			project.tracks[trackIdx].keyframes = project.tracks[trackIdx].keyframes.filter(
-				(k) => k.frame !== frame
-			);
+			commit(() => {
+				project.tracks[trackIdx].keyframes = project.tracks[trackIdx].keyframes.filter(
+					(k) => k.frame !== frame
+				);
+			});
 		},
 
 		updateKeyframeValue(trackIdx: number, frame: number, value: number) {
-			commit();
-			const kf = project.tracks[trackIdx].keyframes.find((k) => k.frame === frame);
-			if (kf) kf.value = value;
+			commit(() => {
+				const kf = project.tracks[trackIdx].keyframes.find((k) => k.frame === frame);
+				if (kf) kf.value = value;
+			});
 		},
 
 		addEndKeyframe(trackIdx: number) {
-			commit();
-			const track = project.tracks[trackIdx];
-			track.endFrame = track.keyframes.at(-1)!.value;
-			console.log(track.endFrame);
+			commit(() => {
+				const track = project.tracks[trackIdx];
+				track.endFrame = track.keyframes.at(-1)!.value;
+				console.log(track.endFrame);
+			});
 		},
 
 		updateEndKeyframe(trackIdx: number, value: number) {
-			commit();
-			const track = project.tracks[trackIdx];
-			track.endFrame = value;
+			commit(() => {
+				const track = project.tracks[trackIdx];
+				track.endFrame = value;
+			});
 		},
 
 		removeEndKeyframe(trackIdx: number) {
-			commit();
-			const track = project.tracks[trackIdx];
-			track.endFrame = null;
+			commit(() => {
+				const track = project.tracks[trackIdx];
+				track.endFrame = null;
+			});
 		},
 
 		moveKeyframe(trackIdx: number, fromFrame: number, toFrame: number) {
-			commit();
-			const track = project.tracks[trackIdx];
-			const kf = track.keyframes.find((k) => k.frame === fromFrame);
-			if (!kf) return;
-			track.keyframes = [
-				...track.keyframes.filter((k) => k.frame !== fromFrame && k.frame !== toFrame),
-				{ ...kf, frame: toFrame }
-			].sort((a, b) => a.frame - b.frame);
+			commit(() => {
+				const track = project.tracks[trackIdx];
+				const kf = track.keyframes.find((k) => k.frame === fromFrame);
+				if (!kf) return;
+				track.keyframes = [
+					...track.keyframes.filter((k) => k.frame !== fromFrame && k.frame !== toFrame),
+					{ ...kf, frame: toFrame }
+				].sort((a, b) => a.frame - b.frame);
+			});
 		},
 
 		setKeyframeEasing(trackIdx: number, frame: number, easing: EasingType) {
-			commit();
-			const kf = project.tracks[trackIdx].keyframes.find((k) => k.frame === frame);
-			if (kf) kf.easing = easing;
+			commit(() => {
+				const kf = project.tracks[trackIdx].keyframes.find((k) => k.frame === frame);
+				if (kf) kf.easing = easing;
+			});
 		},
 
 		updateProject(patch: Partial<Omit<AnimationProject, 'tracks'>>) {
-			commit();
-			if (patch.totalFrames !== undefined && patch.totalFrames !== project.totalFrames) {
-				const oldEnd = project.totalFrames;
-				const newEnd = patch.totalFrames;
-				for (const track of project.tracks) {
-					const endKf = track.keyframes.find((k) => k.frame === oldEnd);
-					// Remove the old end anchor and any now-out-of-bounds keyframes
-					track.keyframes = track.keyframes.filter((k) => k.frame !== oldEnd && k.frame < newEnd);
-					// Re-place the end anchor at the new end (unless something already sits there)
-					if (endKf && !track.keyframes.find((k) => k.frame === newEnd)) {
-						track.keyframes.push({ ...endKf, frame: newEnd });
-						track.keyframes.sort((a, b) => a.frame - b.frame);
+			commit(() => {
+				if (patch.totalFrames !== undefined && patch.totalFrames !== project.totalFrames) {
+					const oldEnd = project.totalFrames;
+					const newEnd = patch.totalFrames;
+					for (const track of project.tracks) {
+						const endKf = track.keyframes.find((k) => k.frame === oldEnd);
+						// Remove the old end anchor and any now-out-of-bounds keyframes
+						track.keyframes = track.keyframes.filter((k) => k.frame !== oldEnd && k.frame < newEnd);
+						// Re-place the end anchor at the new end (unless something already sits there)
+						if (endKf && !track.keyframes.find((k) => k.frame === newEnd)) {
+							track.keyframes.push({ ...endKf, frame: newEnd });
+							track.keyframes.sort((a, b) => a.frame - b.frame);
+						}
 					}
 				}
-			}
-			Object.assign(project, patch);
-			if (patch.totalFrames !== undefined) {
-				currentFrame = clampFrame(currentFrame);
-			}
+				Object.assign(project, patch);
+				if (patch.totalFrames !== undefined) {
+					currentFrame = clampFrame(currentFrame);
+				}
+			});
 		}
 	};
 }
