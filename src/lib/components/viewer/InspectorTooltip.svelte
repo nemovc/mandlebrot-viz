@@ -9,7 +9,7 @@
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 
 	const JULIA_SIZE = 192;
-	const JULIA_SCALE = 4 / JULIA_SIZE; // shows [-2,2]² centred on origin
+	const JULIA_SCALE = 3 / JULIA_SIZE; // shows [-1.5,1.5]² centred on origin
 	const TOOLTIP_W = 224; // w-56 = 14rem = 224px
 	const TOOLTIP_H_LOCKED = 360; // with action buttons
 	const TOOLTIP_H_UNLOCKED = 310; // without action buttons
