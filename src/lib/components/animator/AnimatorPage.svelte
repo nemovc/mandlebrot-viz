@@ -18,7 +18,12 @@
 	import type { ColorConfig } from '$lib/utils/colorPalettes';
 	import type { ColorStop } from '$lib/utils/colorPalettes';
 	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
-	import { presetsFor, ALGORITHMS, paletteForAlgorithmChange } from '$lib/utils/colorPalettes';
+	import {
+		presetsFor,
+		ALGORITHMS,
+		paletteForAlgorithmChange,
+		baseAlgorithm
+	} from '$lib/utils/colorPalettes';
 	import { interpolateTrack } from '$lib/utils/animator/interpolation';
 	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
 
@@ -166,12 +171,24 @@
 			e.preventDefault();
 			const count = project.tracks.length;
 			if (count === 0) return;
-			selectedTrack = selectedTrack === null ? count - 1 : Math.max(0, selectedTrack - 1);
+			const start = selectedTrack === null ? count - 1 : selectedTrack - 1;
+			for (let i = start; i >= 0; i--) {
+				if (!disabledTracks.has(i)) {
+					selectedTrack = i;
+					break;
+				}
+			}
 		} else if (e.key === 'ArrowDown') {
 			e.preventDefault();
 			const count = project.tracks.length;
 			if (count === 0) return;
-			selectedTrack = selectedTrack === null ? 0 : Math.min(count - 1, selectedTrack + 1);
+			const start = selectedTrack === null ? 0 : selectedTrack + 1;
+			for (let i = start; i < count; i++) {
+				if (!disabledTracks.has(i)) {
+					selectedTrack = i;
+					break;
+				}
+			}
 		} else if (e.key === 'Home') {
 			e.preventDefault();
 			animationState.currentFrame = 0;
@@ -209,6 +226,15 @@
 
 	// ---- Settings helpers ----
 	const project = $derived(animationState.project);
+	const disabledTracks = $derived(
+		new Set(
+			baseAlgorithm(project.algorithm) === 'histogram'
+				? project.tracks
+						.map((t, i) => (t.parameter === 'cyclePeriod' ? i : -1))
+						.filter((i) => i >= 0)
+				: []
+		)
+	);
 
 	function setFps(v: string) {
 		const n = parseInt(v);
