@@ -6,6 +6,8 @@
 	import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
 	import SaveModal from '$lib/components/ui/SaveModal.svelte';
 
+	const MAX_STOPS = 16;
+
 	let {
 		activePaletteName,
 		baseline,
@@ -56,6 +58,7 @@
 	}
 
 	function addStop(t: number) {
+		if (colors.palette.length >= MAX_STOPS) return;
 		const clamped = Math.max(0, Math.min(1, t));
 		const [r, g, b] = samplePalette(colors.palette, clamped);
 		const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
@@ -105,7 +108,7 @@
 	}
 
 	function onBarDblClick(e: MouseEvent) {
-		if (!barEl) return;
+		if (!barEl || colors.palette.length >= MAX_STOPS) return;
 		const rect = barEl.getBoundingClientRect();
 		const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 		addStop(t);
@@ -161,11 +164,11 @@
 		<!-- Gradient bar -->
 		<div
 			bind:this={barEl}
-			class="h-10 rounded cursor-crosshair relative overflow-visible select-none"
+			class="h-10 rounded relative overflow-visible select-none {colors.palette.length >= MAX_STOPS ? 'cursor-not-allowed' : 'cursor-crosshair'}"
 			style="background: {gradient}"
 			ondblclick={onBarDblClick}
 			role="img"
-			aria-label="Palette gradient — double-click to add a stop"
+			aria-label="Palette gradient — double-click to add a stop (max {MAX_STOPS})"
 		>
 			{#each sortedPalette as stop (stop.stop)}
 				<div
@@ -253,7 +256,7 @@
 			</div>
 		{:else}
 			<p class="text-xs text-neutral-600 pt-1">
-				Click a handle to edit. Double-click bar to add. Double-click handle to delete.
+				Click a handle to edit. Double-click bar to add{colors.palette.length >= MAX_STOPS ? ' (max reached)' : ''}. Double-click handle to delete.
 			</p>
 		{/if}
 

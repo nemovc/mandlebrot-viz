@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
 	import { buildImageData, baseAlgorithm, isBanded } from '$lib/utils/colorPalettes';
 	import type { ColorConfig } from '$lib/utils/colorPalettes';
-	import { InspectorPool } from '$lib/rendering/worker/pools/inspectorPool';
+	import { JuliaRenderer } from '$lib/rendering/webgl/juliaRenderer';
 	import CopyText from '$lib/components/ui/CopyText.svelte';
 	import SaveModal from '$lib/components/ui/SaveModal.svelte';
 	import { savedLocations } from '$lib/stores/savedLocations.svelte';
@@ -10,7 +9,7 @@
 	import { viewerState } from '$lib/stores/viewerState.svelte';
 
 	const JULIA_SIZE = 192;
-	const JULIA_SCALE = 2 / JULIA_SIZE; // shows [-2,2]² centred on origin
+	const JULIA_SCALE = 4 / JULIA_SIZE; // shows [-2,2]² centred on origin
 	const TOOLTIP_W = 224; // w-56 = 14rem = 224px
 	const TOOLTIP_H_LOCKED = 360; // with action buttons
 	const TOOLTIP_H_UNLOCKED = 310; // without action buttons
@@ -46,7 +45,7 @@
 	let showSaveLocation = $state(false);
 
 	let juliaCanvas: HTMLCanvasElement | undefined = $state();
-	let juliaJobId: string | null = null;
+	let renderer: JuliaRenderer | undefined = $state();
 
 	// Synchronous iter + color lookup from cached tile data
 	const iterValue = $derived(getIterAt(re, im));
@@ -71,46 +70,31 @@
 		return [img.data[0], img.data[1], img.data[2]] as [number, number, number];
 	});
 
-	// Submit Julia preview job — cancel previous and resubmit immediately on point change
+	// Create renderer when canvas is available
 	$effect(() => {
-		re;
-		im;
-		maxIter;
-		power;
-		colorConfig; // track dependencies
-
-		if (juliaJobId) {
-			InspectorPool.instance.cancel(juliaJobId);
-			juliaJobId = null;
-		}
-
-		const id = `julia-${Date.now()}-${Math.random()}`;
-		juliaJobId = id;
-		InspectorPool.instance.submit(
-			{
-				id,
-				priority: 2,
-				cRe: re,
-				cIm: im,
-				viewCx: 0,
-				viewCy: 0,
-				scale: JULIA_SCALE,
-				size: JULIA_SIZE,
-				maxIter: Math.min(maxIter, 256),
-				power,
-				colorConfig: JSON.parse(JSON.stringify(colorConfig))
-			},
-			(result) => {
-				if (juliaCanvas) {
-					juliaCanvas.getContext('2d')!.putImageData(result.imageData, 0, 0);
-				}
-				juliaJobId = null;
-			}
-		);
+		if (!juliaCanvas) return;
+		const r = new JuliaRenderer(juliaCanvas);
+		renderer = r;
+		return () => {
+			r.destroy();
+			renderer = undefined;
+		};
 	});
 
-	onDestroy(() => {
-		if (juliaJobId) InspectorPool.instance.cancel(juliaJobId);
+	// Render Julia set — synchronous, fires in current frame
+	$effect(() => {
+		if (!renderer) return;
+		renderer.render({
+			cRe: re,
+			cIm: im,
+			viewCx: 0,
+			viewCy: 0,
+			scale: JULIA_SCALE,
+			size: JULIA_SIZE,
+			maxIter: Math.min(maxIter, 256),
+			power,
+			colorConfig
+		});
 	});
 
 	// Tooltip position: prefer right/below anchor, flip if too close to edge.
