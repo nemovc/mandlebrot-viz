@@ -105,50 +105,29 @@
 		if (frame !== null) animationState.currentFrame = frame;
 	}
 
-	// Handle mouseup on track row - insert keyframe if explorer is open and no scrub occurred
-	// Also handles click on ruler scrub bar to add for all 3 tracks
-	function handleTrackMouseUp(e: MouseEvent, trackIdx: number[]) {
-		if (explorerOpen && explorerState) {
-			trackIdx.forEach((idx) => {
-				const param = TRACK_PARAMS[idx];
-				const value =
-					param === 'zoom'
-						? explorerState.zoom
-						: param === 'cx'
-							? parseFloat(explorerState.cx)
-							: param === 'cy'
-								? parseFloat(explorerState.cy)
-								: 0;
-				animationState.addKeyframe(idx, animationState.currentFrame, value);
-				if (trackIdx.length === 1) {
-					selectedTrack = trackIdx;
-				}
-			});
-		}
-		scrubbing = false;
+	function addKeyframesForAllTracks(frame: number) {
+		if (!explorerOpen || !explorerState) return;
+		[0, 1, 2].forEach((idx) => {
+			animationState.addKeyframe(idx, frame, getExplorerValue(TRACK_PARAMS[idx]));
+		});
 	}
 
-	// Handle click on end keyframe
 	function syncEndFrames() {
-		console.log('fuck me dead');
-		const trackIdx = [0, 1, 2];
-		if (explorerOpen && explorerState) {
-			trackIdx.forEach((idx) => {
-				const param = TRACK_PARAMS[idx];
-				const value =
-					param === 'zoom'
-						? explorerState.zoom
-						: param === 'cx'
-							? parseFloat(explorerState.cx)
-							: param === 'cy'
-								? parseFloat(explorerState.cy)
-								: 0;
-				animationState.updateEndKeyframe(idx, value);
-			});
-		}
+		if (!explorerOpen || !explorerState) return;
+		[0, 1, 2].forEach((idx) => {
+			animationState.updateEndKeyframe(idx, getExplorerValue(TRACK_PARAMS[idx]));
+		});
 	}
 
 	// ---- Double-click: create or delete keyframe ----
+	function getExplorerValue(trackParam: string): number {
+		if (!explorerState) return 0;
+		if (trackParam === 'zoom') return explorerState.zoom;
+		if (trackParam === 'cx') return parseFloat(explorerState.cx);
+		if (trackParam === 'cy') return parseFloat(explorerState.cy);
+		return 0;
+	}
+
 	function handleDblClick(e: MouseEvent, trackIdx: number) {
 		const frame = frameFromClientX(e.clientX);
 		if (frame === null) return;
@@ -159,7 +138,11 @@
 		if (existing) {
 			if (frame !== 0 && frame !== totalFrames) animationState.removeKeyframe(trackIdx, frame);
 		} else {
-			animationState.addKeyframe(trackIdx, frame, interpolateTrack(track, frame, totalFrames));
+			const value =
+				explorerOpen && explorerState && explorableViewTracks.has(trackIdx)
+					? getExplorerValue(track.parameter)
+					: interpolateTrack(track, frame, totalFrames);
+			animationState.addKeyframe(trackIdx, frame, value);
 		}
 	}
 
@@ -240,7 +223,7 @@
 						: param === 'cy'
 							? explorerState.cy
 							: '';
-			return `Click to insert keyframe: ${TRACK_LABELS[param]} = ${value}`;
+			return `Double-click to insert keyframe: ${TRACK_LABELS[param]} = ${value}`;
 		}
 		const disabled = disabledTracks.has(i);
 		if (disabled) {
@@ -295,7 +278,10 @@
 			<div
 				class="h-6 relative border-b border-neutral-800 bg-neutral-900/80 shrink-0 overflow-hidden"
 				onmousedown={(e) => startScrub(e)}
-				onmouseup={(e) => handleTrackMouseUp(e, [0, 1, 2])}
+					ondblclick={(e) => {
+						const frame = frameFromClientX(e.clientX);
+						if (frame !== null) addKeyframesForAllTracks(frame);
+					}}
 			>
 				{#each rulerMarkers() as m (m.x)}
 					<div
@@ -328,9 +314,9 @@
 			{#if explorerOpen}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="absolute w-44 bg-neutral-900/80 top-0 h-6 flex items-end pb-0.5 pl-0.5 text-neutral-600 border-l border-b border-neutral-700/60"
+					class="absolute min-w-44 bg-neutral-900/80 top-0 h-6 flex items-end pb-0.5 pl-0.5 text-neutral-600 border-l border-b border-neutral-700/60"
 					style="left: {contentWidth}px"
-					onmousedown={() => syncEndFrames()}
+					ondblclick={() => syncEndFrames()}
 				></div>
 			{/if}
 
@@ -349,7 +335,6 @@
 					onmousedown={(e) => {
 						if (!disabled) startScrub(e, i);
 					}}
-					onmouseup={(e) => handleTrackMouseUp(e, [i])}
 					onmouseenter={() => (hoveredTrackIdx = i)}
 					ondblclick={(e) => {
 						if (!disabled) handleDblClick(e, i);
