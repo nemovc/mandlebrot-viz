@@ -1,993 +1,993 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
-	import AnimatorPreview from './AnimatorPreview.svelte';
-	import Timeline from './Timeline.svelte';
-	import ShortcutsModal from './ShortcutsModal.svelte';
-	import PlaybackModal from './PlaybackModal.svelte';
-	import AnimatorProjectsPanel from './AnimatorProjectsPanel.svelte';
-	import NewProjectModal from './NewProjectModal.svelte';
-	import ExportProjectModal from './ExportProjectModal.svelte';
-	import ImportProjectModal from './ImportProjectModal.svelte';
-	import ExportVideoModal from './ExportVideoModal.svelte';
-	import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
-	import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
-	import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
-	import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
-	import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
-	import { Play, ChevronLeft, ChevronRight, Repeat, Undo2, Redo2, CircleHelp } from 'lucide-svelte';
-	import type { ColorConfig } from '$lib/utils/colorPalettes';
-	import type { ColorStop } from '$lib/utils/colorPalettes';
-	import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
-	import {
-		presetsFor,
-		ALGORITHMS,
-		paletteForAlgorithmChange,
-		baseAlgorithm
-	} from '$lib/utils/colorPalettes';
-	import { interpolateTrack, interpolateAll } from '$lib/utils/animator/interpolation';
-	import { frameCache } from '$lib/utils/animator/frameCache.svelte';
-	import type { ViewerState } from '$lib/stores/viewerState.svelte';
-	import AnimatorExplorer from './AnimatorExplorer.svelte';
+  import { untrack } from 'svelte';
+  import AnimatorPreview from './AnimatorPreview.svelte';
+  import Timeline from './Timeline.svelte';
+  import ShortcutsModal from './ShortcutsModal.svelte';
+  import PlaybackModal from './PlaybackModal.svelte';
+  import AnimatorProjectsPanel from './AnimatorProjectsPanel.svelte';
+  import NewProjectModal from './NewProjectModal.svelte';
+  import ExportProjectModal from './ExportProjectModal.svelte';
+  import ImportProjectModal from './ImportProjectModal.svelte';
+  import ExportVideoModal from './ExportVideoModal.svelte';
+  import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
+  import PalettePanel from '$lib/components/viewer/PalettePanel.svelte';
+  import PaletteEditor from '$lib/components/viewer/PaletteEditor.svelte';
+  import PalettePreview from '$lib/components/viewer/PalettePreview.svelte';
+  import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
+  import { Play, ChevronLeft, ChevronRight, Repeat, Undo2, Redo2, CircleHelp } from 'lucide-svelte';
+  import type { ColorConfig } from '$lib/utils/colorPalettes';
+  import type { ColorStop } from '$lib/utils/colorPalettes';
+  import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
+  import {
+    presetsFor,
+    ALGORITHMS,
+    paletteForAlgorithmChange,
+    baseAlgorithm
+  } from '$lib/utils/colorPalettes';
+  import { interpolateTrack, interpolateAll } from '$lib/utils/animator/interpolation';
+  import { frameCache } from '$lib/utils/animator/frameCache.svelte';
+  import type { ViewerState } from '$lib/stores/viewerState.svelte';
+  import AnimatorExplorer from './AnimatorExplorer.svelte';
 
-	let selectedTrack = $state<number | null>(null);
-	let showShortcuts = $state(false);
-	let showPlayback = $state(false);
-	let loopPlayback = $state(true);
-	let showPalettePanel = $state(false);
-	let showEditor = $state(false);
-	let showProjectsPanel = $state(false);
-	let showNewProjectModal = $state(false);
-	let showExportModal = $state(false);
-	let showImportModal = $state(false);
-	let activeProjectName = $state<string | null>(null);
-	let explorerOpen = $state(false);
-	let explorerState = $state<ViewerState | null>(null);
-	let syncSignal = $state(0);
-	let panelsEl = $state<HTMLDivElement | null>(null);
-	let panelW = $state(0);
-	let panelH = $state(0);
+  let selectedTrack = $state<number | null>(null);
+  let showShortcuts = $state(false);
+  let showPlayback = $state(false);
+  let loopPlayback = $state(true);
+  let showPalettePanel = $state(false);
+  let showEditor = $state(false);
+  let showProjectsPanel = $state(false);
+  let showNewProjectModal = $state(false);
+  let showExportModal = $state(false);
+  let showImportModal = $state(false);
+  let activeProjectName = $state<string | null>(null);
+  let explorerOpen = $state(false);
+  let explorerState = $state<ViewerState | null>(null);
+  let syncSignal = $state(0);
+  let panelsEl = $state<HTMLDivElement | null>(null);
+  let panelW = $state(0);
+  let panelH = $state(0);
 
-	// ---- Frame cache ----
-	let cacheTimer: ReturnType<typeof setTimeout> | null = null;
+  // ---- Frame cache ----
+  let cacheTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function scheduleCache(invalidateFirst: boolean, delay = 300) {
-		if (cacheTimer) {
-			clearTimeout(cacheTimer);
-			cacheTimer = null;
-		}
-		const run = () => {
-			if (invalidateFirst) frameCache.invalidate();
-			frameCache.startFrom(
-				animationState.currentFrame,
-				animationState.project,
-				showPlayback ? 1 : 2
-			);
-		};
-		if (delay === 0) run();
-		else cacheTimer = setTimeout(run, delay);
-	}
+  function scheduleCache(invalidateFirst: boolean, delay = 300) {
+    if (cacheTimer) {
+      clearTimeout(cacheTimer);
+      cacheTimer = null;
+    }
+    const run = () => {
+      if (invalidateFirst) frameCache.invalidate();
+      frameCache.startFrom(
+        animationState.currentFrame,
+        animationState.project,
+        showPlayback ? 1 : 2
+      );
+    };
+    if (delay === 0) run();
+    else cacheTimer = setTimeout(run, delay);
+  }
 
-	// ---- Project management ----
-	function triggerNew() {
-		if (animationState.isDirty) {
-			showNewProjectModal = true;
-		} else {
-			animationState.reset();
-			activeProjectName = null;
-		}
-	}
+  // ---- Project management ----
+  function triggerNew() {
+    if (animationState.isDirty) {
+      showNewProjectModal = true;
+    } else {
+      animationState.reset();
+      activeProjectName = null;
+    }
+  }
 
-	function handleSaveAndNew(name: string) {
-		showNewProjectModal = false;
-		animationState.reset();
-		activeProjectName = null;
-		// The save already happened inside NewProjectModal before calling this
-		void name;
-	}
+  function handleSaveAndNew(name: string) {
+    showNewProjectModal = false;
+    animationState.reset();
+    activeProjectName = null;
+    // The save already happened inside NewProjectModal before calling this
+    void name;
+  }
 
-	function handleDiscardAndNew() {
-		showNewProjectModal = false;
-		animationState.reset();
-		activeProjectName = null;
-	}
+  function handleDiscardAndNew() {
+    showNewProjectModal = false;
+    animationState.reset();
+    activeProjectName = null;
+  }
 
-	function handleLoadProject(
-		p: import('$lib/stores/animationState.svelte').AnimationProject,
-		name: string
-	) {
-		animationState.load(p);
-		activeProjectName = name;
-		showProjectsPanel = false;
-	}
+  function handleLoadProject(
+    p: import('$lib/stores/animationState.svelte').AnimationProject,
+    name: string
+  ) {
+    animationState.load(p);
+    activeProjectName = name;
+    showProjectsPanel = false;
+  }
 
-	function handleProjectSaved(name: string) {
-		activeProjectName = name;
-	}
+  function handleProjectSaved(name: string) {
+    activeProjectName = name;
+  }
 
-	function handleImportProject(p: import('$lib/stores/animationState.svelte').AnimationProject) {
-		animationState.load(p);
-		activeProjectName = null;
-		showImportModal = false;
-	}
+  function handleImportProject(p: import('$lib/stores/animationState.svelte').AnimationProject) {
+    animationState.load(p);
+    activeProjectName = null;
+    showImportModal = false;
+  }
 
-	// Invalidate + rebuild on any project edit (commit bumps revision)
-	let revisionInit = false;
-	$effect(() => {
-		animationState.revision;
-		if (!revisionInit) {
-			revisionInit = true;
-			return;
-		}
-		untrack(() => scheduleCache(true, 0));
-	});
+  // Invalidate + rebuild on any project edit (commit bumps revision)
+  let revisionInit = false;
+  $effect(() => {
+    animationState.revision;
+    if (!revisionInit) {
+      revisionInit = true;
+      return;
+    }
+    untrack(() => scheduleCache(true, 0));
+  });
 
-	// Restart cache from new position on seek (debounced)
-	$effect(() => {
-		animationState.currentFrame;
-		scheduleCache(false, 100);
-	});
+  // Restart cache from new position on seek (debounced)
+  $effect(() => {
+    animationState.currentFrame;
+    scheduleCache(false, 100);
+  });
 
-	const cacheReady = $derived(frameCache.isReady);
+  const cacheReady = $derived(frameCache.isReady);
 
-	// ---- Panel sizing (maintain project AR for both preview and explorer) ----
-	$effect(() => {
-		const el = panelsEl;
-		const open = explorerOpen;
-		const projW = animationState.project.width;
-		const projH = animationState.project.height;
-		if (!el) return;
+  // ---- Panel sizing (maintain project AR for both preview and explorer) ----
+  $effect(() => {
+    const el = panelsEl;
+    const open = explorerOpen;
+    const projW = animationState.project.width;
+    const projH = animationState.project.height;
+    if (!el) return;
 
-		function compute() {
-			const availW = el.clientWidth;
-			const availH = el.clientHeight;
-			const count = open ? 2 : 1;
-			const combinedAR = (projW * count) / projH;
-			let w: number, h: number;
-			if (availW / availH >= combinedAR) {
-				h = availH;
-				w = availH * combinedAR;
-			} else {
-				w = availW;
-				h = availW / combinedAR;
-			}
-			panelW = Math.floor(w / count);
-			panelH = Math.floor(h);
-		}
+    function compute() {
+      const availW = el.clientWidth;
+      const availH = el.clientHeight;
+      const count = open ? 2 : 1;
+      const combinedAR = (projW * count) / projH;
+      let w: number, h: number;
+      if (availW / availH >= combinedAR) {
+        h = availH;
+        w = availH * combinedAR;
+      } else {
+        w = availW;
+        h = availW / combinedAR;
+      }
+      panelW = Math.floor(w / count);
+      panelH = Math.floor(h);
+    }
 
-		const ro = new ResizeObserver(compute);
-		ro.observe(el);
-		compute();
-		return () => ro.disconnect();
-	});
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    compute();
+    return () => ro.disconnect();
+  });
 
-	// ---- Keyboard shortcuts ----
-	function handleKey(e: KeyboardEvent) {
-		const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
+  // ---- Keyboard shortcuts ----
+  function handleKey(e: KeyboardEvent) {
+    const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
 
-		if (e.key === 'Escape' && inInput) {
-			(e.target as HTMLElement).blur();
-			return;
-		}
+    if (e.key === 'Escape' && inInput) {
+      (e.target as HTMLElement).blur();
+      return;
+    }
 
-		if (inInput) return;
+    if (inInput) return;
 
-		if (e.key === 'Escape' && explorerOpen) {
-			explorerOpen = false;
-			return;
-		}
+    if (e.key === 'Escape' && explorerOpen) {
+      explorerOpen = false;
+      return;
+    }
 
-		if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-			e.preventDefault();
-			animationState.undo();
-		} else if (
-			(e.key === 'y' && (e.ctrlKey || e.metaKey)) ||
-			(e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)
-		) {
-			e.preventDefault();
-			animationState.redo();
-		} else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			if (kfTrack) {
-				const prev = [...kfTrack.keyframes]
-					.reverse()
-					.find((k) => k.frame < animationState.currentFrame);
-				if (prev) animationState.currentFrame = prev.frame;
-			}
-		} else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			if (kfTrack) {
-				const next = kfTrack.keyframes.find((k) => k.frame > animationState.currentFrame);
-				if (next) animationState.currentFrame = next.frame;
-			}
-		} else if (e.key === 'ArrowLeft' && e.shiftKey) {
-			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame - project.fps;
-		} else if (e.key === 'ArrowRight' && e.shiftKey) {
-			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame + project.fps;
-		} else if (e.key === 'ArrowLeft') {
-			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame - 1;
-		} else if (e.key === 'ArrowRight') {
-			e.preventDefault();
-			animationState.currentFrame = animationState.currentFrame + 1;
-		} else if (e.key === 'ArrowUp') {
-			e.preventDefault();
-			const count = project.tracks.length;
-			if (count === 0) return;
-			const start = selectedTrack === null ? count - 1 : selectedTrack - 1;
-			for (let i = start; i >= 0; i--) {
-				if (!disabledTracks.has(i)) {
-					selectedTrack = i;
-					break;
-				}
-			}
-		} else if (e.key === 'ArrowDown') {
-			e.preventDefault();
-			const count = project.tracks.length;
-			if (count === 0) return;
-			const start = selectedTrack === null ? 0 : selectedTrack + 1;
-			for (let i = start; i < count; i++) {
-				if (!disabledTracks.has(i)) {
-					selectedTrack = i;
-					break;
-				}
-			}
-		} else if (e.key === 'Home') {
-			e.preventDefault();
-			animationState.currentFrame = 0;
-		} else if (e.key === 'End') {
-			e.preventDefault();
-			animationState.currentFrame = project.totalFrames;
-		} else if (e.key === 'Enter') {
-			e.preventDefault();
-			if (!kfTrack) return;
-			if (kfAtFrame) {
-				kfValueInput?.focus();
-			} else {
-				animationState.addKeyframe(selectedTrack!, kfFrame, kfInterpolated);
-			}
-		} else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			if (exportPhase === 'exporting') {
-				cancelExport();
-			}
-			startExport();
-		} else if (e.key === ' ') {
-			e.preventDefault();
-			if (cacheReady) showPlayback = true;
-		} else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			triggerNew();
-		} else if (e.key === 'r' || e.key === 'R') {
-			loopPlayback = !loopPlayback;
-		} else if (e.key === 'Delete') {
-			if (kfAtFrame && !kfIsAnchor) kfDelete();
-		} else if (e.key === '?') {
-			showShortcuts = !showShortcuts;
-		}
-	}
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      animationState.undo();
+    } else if (
+      (e.key === 'y' && (e.ctrlKey || e.metaKey)) ||
+      (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)
+    ) {
+      e.preventDefault();
+      animationState.redo();
+    } else if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (kfTrack) {
+        const prev = [...kfTrack.keyframes]
+          .reverse()
+          .find((k) => k.frame < animationState.currentFrame);
+        if (prev) animationState.currentFrame = prev.frame;
+      }
+    } else if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (kfTrack) {
+        const next = kfTrack.keyframes.find((k) => k.frame > animationState.currentFrame);
+        if (next) animationState.currentFrame = next.frame;
+      }
+    } else if (e.key === 'ArrowLeft' && e.shiftKey) {
+      e.preventDefault();
+      animationState.currentFrame = animationState.currentFrame - project.fps;
+    } else if (e.key === 'ArrowRight' && e.shiftKey) {
+      e.preventDefault();
+      animationState.currentFrame = animationState.currentFrame + project.fps;
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      animationState.currentFrame = animationState.currentFrame - 1;
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      animationState.currentFrame = animationState.currentFrame + 1;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const count = project.tracks.length;
+      if (count === 0) return;
+      const start = selectedTrack === null ? count - 1 : selectedTrack - 1;
+      for (let i = start; i >= 0; i--) {
+        if (!disabledTracks.has(i)) {
+          selectedTrack = i;
+          break;
+        }
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const count = project.tracks.length;
+      if (count === 0) return;
+      const start = selectedTrack === null ? 0 : selectedTrack + 1;
+      for (let i = start; i < count; i++) {
+        if (!disabledTracks.has(i)) {
+          selectedTrack = i;
+          break;
+        }
+      }
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      animationState.currentFrame = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      animationState.currentFrame = project.totalFrames;
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!kfTrack) return;
+      if (kfAtFrame) {
+        kfValueInput?.focus();
+      } else {
+        animationState.addKeyframe(selectedTrack!, kfFrame, kfInterpolated);
+      }
+    } else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (exportPhase === 'exporting') {
+        cancelExport();
+      }
+      startExport();
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      if (cacheReady) showPlayback = true;
+    } else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      triggerNew();
+    } else if (e.key === 'r' || e.key === 'R') {
+      loopPlayback = !loopPlayback;
+    } else if (e.key === 'Delete') {
+      if (kfAtFrame && !kfIsAnchor) kfDelete();
+    } else if (e.key === '?') {
+      showShortcuts = !showShortcuts;
+    }
+  }
 
-	// ---- Settings helpers ----
-	const project = $derived(animationState.project);
-	const disabledTracks = $derived(
-		new Set(
-			baseAlgorithm(project.algorithm) === 'histogram'
-				? project.tracks
-						.map((t, i) => (t.parameter === 'cyclePeriod' ? i : -1))
-						.filter((i) => i >= 0)
-				: []
-		)
-	);
+  // ---- Settings helpers ----
+  const project = $derived(animationState.project);
+  const disabledTracks = $derived(
+    new Set(
+      baseAlgorithm(project.algorithm) === 'histogram'
+        ? project.tracks
+            .map((t, i) => (t.parameter === 'cyclePeriod' ? i : -1))
+            .filter((i) => i >= 0)
+        : []
+    )
+  );
 
-	function setFps(v: string) {
-		const n = parseInt(v);
-		if (n > 0 && n <= 120) animationState.updateProject({ fps: n });
-	}
-	function setTotalFrames(v: string) {
-		const n = parseInt(v);
-		if (n <= 0 || n > 100_000) return;
-		if (n < project.totalFrames) {
-			const dropping = project.tracks.reduce(
-				(sum, t) =>
-					sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
-				0
-			);
-			if (
-				dropping > 0 &&
-				!confirm(
-					`Shortening will delete ${dropping} keyframe${dropping === 1 ? '' : 's'} outside the new length. Continue?`
-				)
-			)
-				return;
-		}
-		animationState.updateProject({ totalFrames: n });
-	}
-	function setWidth(v: string) {
-		const n = parseInt(v);
-		if (n > 0) animationState.updateProject({ width: n });
-	}
-	function setHeight(v: string) {
-		const n = parseInt(v);
-		if (n > 0) animationState.updateProject({ height: n });
-	}
-	function setPower(v: string) {
-		const n = parseInt(v);
-		if (n >= 2 && n <= 10) animationState.updateProject({ power: n });
-	}
+  function setFps(v: string) {
+    const n = parseInt(v);
+    if (n > 0 && n <= 120) animationState.updateProject({ fps: n });
+  }
+  function setTotalFrames(v: string) {
+    const n = parseInt(v);
+    if (n <= 0 || n > 100_000) return;
+    if (n < project.totalFrames) {
+      const dropping = project.tracks.reduce(
+        (sum, t) =>
+          sum + t.keyframes.filter((k) => k.frame >= n && k.frame < project.totalFrames).length,
+        0
+      );
+      if (
+        dropping > 0 &&
+        !confirm(
+          `Shortening will delete ${dropping} keyframe${dropping === 1 ? '' : 's'} outside the new length. Continue?`
+        )
+      )
+        return;
+    }
+    animationState.updateProject({ totalFrames: n });
+  }
+  function setWidth(v: string) {
+    const n = parseInt(v);
+    if (n > 0) animationState.updateProject({ width: n });
+  }
+  function setHeight(v: string) {
+    const n = parseInt(v);
+    if (n > 0) animationState.updateProject({ height: n });
+  }
+  function setPower(v: string) {
+    const n = parseInt(v);
+    if (n >= 2 && n <= 10) animationState.updateProject({ power: n });
+  }
 
-	// ---- Palette / color helpers ----
+  // ---- Palette / color helpers ----
 
-	// Synthesize a ColorConfig from the project + current frame's interpolated track values.
-	// cyclePeriod and offset come from tracks (they're animated); everything else is a static project field.
-	const editorColors = $derived<ColorConfig>({
-		algorithm: project.algorithm,
-		palette: project.palette,
-		cyclePeriod: interpolateTrack(
-			project.tracks.find((t) => t.parameter === 'cyclePeriod')!,
-			animationState.currentFrame,
-			project.totalFrames
-		),
-		offset: interpolateTrack(
-			project.tracks.find((t) => t.parameter === 'offset')!,
-			animationState.currentFrame,
-			project.totalFrames
-		),
-		reverse: project.reverse,
-		inSetColor: project.inSetColor
-	});
+  // Synthesize a ColorConfig from the project + current frame's interpolated track values.
+  // cyclePeriod and offset come from tracks (they're animated); everything else is a static project field.
+  const editorColors = $derived<ColorConfig>({
+    algorithm: project.algorithm,
+    palette: project.palette,
+    cyclePeriod: interpolateTrack(
+      project.tracks.find((t) => t.parameter === 'cyclePeriod')!,
+      animationState.currentFrame,
+      project.totalFrames
+    ),
+    offset: interpolateTrack(
+      project.tracks.find((t) => t.parameter === 'offset')!,
+      animationState.currentFrame,
+      project.totalFrames
+    ),
+    reverse: project.reverse,
+    inSetColor: project.inSetColor
+  });
 
-	// Only the non-animated fields are settable via the palette UI.
-	// cyclePeriod and offset are managed via keyframe tracks.
-	function setProjectColors(c: ColorConfig) {
-		animationState.updateProject({
-			algorithm: c.algorithm,
-			palette: c.palette,
-			inSetColor: c.inSetColor ?? '#000000',
-			reverse: c.reverse ?? false
-		});
-	}
+  // Only the non-animated fields are settable via the palette UI.
+  // cyclePeriod and offset are managed via keyframe tracks.
+  function setProjectColors(c: ColorConfig) {
+    animationState.updateProject({
+      algorithm: c.algorithm,
+      palette: c.palette,
+      inSetColor: c.inSetColor ?? '#000000',
+      reverse: c.reverse ?? false
+    });
+  }
 
-	// Algorithm selector — also swaps preset palette variant when crossing histogram boundary
-	const presets = $derived(presetsFor(project.algorithm));
-	const presetNames = $derived(Object.keys(presets));
-	const currentPresetName = $derived(
-		presetNames.find(
-			(name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette)
-		) ?? 'Custom'
-	);
+  // Algorithm selector — also swaps preset palette variant when crossing histogram boundary
+  const presets = $derived(presetsFor(project.algorithm));
+  const presetNames = $derived(Object.keys(presets));
+  const currentPresetName = $derived(
+    presetNames.find(
+      (name) => JSON.stringify(presets[name].palette) === JSON.stringify(project.palette)
+    ) ?? 'Custom'
+  );
 
-	function setAlgorithm(v: string) {
-		const newAlgorithm = v as ColorConfig['algorithm'];
-		const swappedPalette = paletteForAlgorithmChange(
-			project.algorithm,
-			newAlgorithm,
-			currentPresetName === 'Custom' ? null : currentPresetName
-		);
-		animationState.updateProject({
-			algorithm: newAlgorithm,
-			...(swappedPalette && { palette: swappedPalette })
-		});
-	}
+  function setAlgorithm(v: string) {
+    const newAlgorithm = v as ColorConfig['algorithm'];
+    const swappedPalette = paletteForAlgorithmChange(
+      project.algorithm,
+      newAlgorithm,
+      currentPresetName === 'Custom' ? null : currentPresetName
+    );
+    animationState.updateProject({
+      algorithm: newAlgorithm,
+      ...(swappedPalette && { palette: swappedPalette })
+    });
+  }
 
-	// Palette name + baseline for dirty tracking in the editor
-	const initialPaletteJson = JSON.stringify(animationState.project.palette);
-	const initialPreset = Object.entries(presetsFor(animationState.project.algorithm)).find(
-		([, p]) => JSON.stringify(p.palette) === initialPaletteJson
-	);
-	let activePaletteName = $state<string | null>(initialPreset?.[0] ?? null);
-	let baseline = $state<ColorStop[]>(
-		JSON.parse(JSON.stringify(initialPreset?.[1].palette ?? animationState.project.palette))
-	);
+  // Palette name + baseline for dirty tracking in the editor
+  const initialPaletteJson = JSON.stringify(animationState.project.palette);
+  const initialPreset = Object.entries(presetsFor(animationState.project.algorithm)).find(
+    ([, p]) => JSON.stringify(p.palette) === initialPaletteJson
+  );
+  let activePaletteName = $state<string | null>(initialPreset?.[0] ?? null);
+  let baseline = $state<ColorStop[]>(
+    JSON.parse(JSON.stringify(initialPreset?.[1].palette ?? animationState.project.palette))
+  );
 
-	function onPaletteApplied(name: string) {
-		activePaletteName = name;
-		baseline = JSON.parse(JSON.stringify(project.palette));
-	}
-	function onEditorSave(name: string) {
-		activePaletteName = name;
-		baseline = JSON.parse(JSON.stringify(project.palette));
-	}
+  function onPaletteApplied(name: string) {
+    activePaletteName = name;
+    baseline = JSON.parse(JSON.stringify(project.palette));
+  }
+  function onEditorSave(name: string) {
+    activePaletteName = name;
+    baseline = JSON.parse(JSON.stringify(project.palette));
+  }
 
-	// Duration display helper
-	const durationSecs = $derived((project.totalFrames / project.fps).toFixed(1));
+  // Duration display helper
+  const durationSecs = $derived((project.totalFrames / project.fps).toFixed(1));
 
-	// Cancel/clear export whenever the project is mutated
-	let exportWatchInitialized = false;
-	$effect(() => {
-		animationState.revision;
-		if (!exportWatchInitialized) {
-			exportWatchInitialized = true;
-			return;
-		}
-		untrack(() => {
-			cancelExport();
-			if (exportPhase !== 'idle') resetExport();
-		});
-	});
+  // Cancel/clear export whenever the project is mutated
+  let exportWatchInitialized = false;
+  $effect(() => {
+    animationState.revision;
+    if (!exportWatchInitialized) {
+      exportWatchInitialized = true;
+      return;
+    }
+    untrack(() => {
+      cancelExport();
+      if (exportPhase !== 'idle') resetExport();
+    });
+  });
 
-	// ---- Video export ----
-	type ExportPhase = 'idle' | 'exporting' | 'done';
-	let exportPhase = $state<ExportPhase>('idle');
-	let exportProgress = $state<ExportProgress | null>(null);
-	let exportUrl = $state('');
-	let exportAbort: AbortController | null = null;
+  // ---- Video export ----
+  type ExportPhase = 'idle' | 'exporting' | 'done';
+  let exportPhase = $state<ExportPhase>('idle');
+  let exportProgress = $state<ExportProgress | null>(null);
+  let exportUrl = $state('');
+  let exportAbort: AbortController | null = null;
 
-	async function startExport() {
-		if (exportPhase === 'exporting') return;
-		exportPhase = 'exporting';
-		exportProgress = null;
-		if (exportUrl) URL.revokeObjectURL(exportUrl);
-		exportUrl = '';
+  async function startExport() {
+    if (exportPhase === 'exporting') return;
+    exportPhase = 'exporting';
+    exportProgress = null;
+    if (exportUrl) URL.revokeObjectURL(exportUrl);
+    exportUrl = '';
 
-		exportAbort = new AbortController();
-		try {
-			const blob = await exportWebM(
-				JSON.parse(JSON.stringify(project)),
-				(p) => (exportProgress = p),
-				exportAbort.signal
-			);
-			exportUrl = URL.createObjectURL(blob);
-			exportPhase = 'done';
-		} catch (e: unknown) {
-			if ((e as { name: string }).name !== 'AbortError') throw e;
-			exportPhase = 'idle';
-		} finally {
-			exportAbort = null;
-		}
-	}
+    exportAbort = new AbortController();
+    try {
+      const blob = await exportWebM(
+        JSON.parse(JSON.stringify(project)),
+        (p) => (exportProgress = p),
+        exportAbort.signal
+      );
+      exportUrl = URL.createObjectURL(blob);
+      exportPhase = 'done';
+    } catch (e: unknown) {
+      if ((e as { name: string }).name !== 'AbortError') throw e;
+      exportPhase = 'idle';
+    } finally {
+      exportAbort = null;
+    }
+  }
 
-	function cancelExport() {
-		exportAbort?.abort();
-	}
+  function cancelExport() {
+    exportAbort?.abort();
+  }
 
-	function saveVideo() {
-		const a = document.createElement('a');
-		a.href = exportUrl;
-		a.download = `mandelbrot-${project.width}x${project.height}-${project.fps}fps.webm`;
-		a.click();
-	}
+  function saveVideo() {
+    const a = document.createElement('a');
+    a.href = exportUrl;
+    a.download = `mandelbrot-${project.width}x${project.height}-${project.fps}fps.webm`;
+    a.click();
+  }
 
-	function resetExport() {
-		URL.revokeObjectURL(exportUrl);
-		exportUrl = '';
-		exportPhase = 'idle';
-		exportProgress = null;
-	}
+  function resetExport() {
+    URL.revokeObjectURL(exportUrl);
+    exportUrl = '';
+    exportPhase = 'idle';
+    exportProgress = null;
+  }
 
-	const exportProgressPct = $derived(() => {
-		if (!exportProgress) return 0;
-		return Math.round((exportProgress.frame / exportProgress.totalFrames) * 100);
-	});
+  const exportProgressPct = $derived(() => {
+    if (!exportProgress) return 0;
+    return Math.round((exportProgress.frame / exportProgress.totalFrames) * 100);
+  });
 
-	// ---- Keyframe editing ----
-	const kfTrack = $derived(
-		selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null
-	);
-	const kfFrame = $derived(animationState.currentFrame);
-	const kfInterpolated = $derived(
-		kfTrack ? interpolateTrack(kfTrack, kfFrame, animationState.project.totalFrames) : 0
-	);
-	const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
-	const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
-	const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);
-	const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
+  // ---- Keyframe editing ----
+  const kfTrack = $derived(
+    selectedTrack !== null ? animationState.project.tracks[selectedTrack] : null
+  );
+  const kfFrame = $derived(animationState.currentFrame);
+  const kfInterpolated = $derived(
+    kfTrack ? interpolateTrack(kfTrack, kfFrame, animationState.project.totalFrames) : 0
+  );
+  const kfAtFrame = $derived(kfTrack?.keyframes.find((k) => k.frame === kfFrame) ?? null);
+  const kfPrev = $derived(kfTrack?.keyframes.findLast((k) => k.frame < kfFrame) ?? null);
+  const kfNext = $derived(kfTrack?.keyframes.find((k) => k.frame > kfFrame) ?? null);
+  const kfLabel = $derived(kfTrack ? TRACK_LABELS[kfTrack.parameter] : '');
 
-	// eslint-disable-next-line svelte/prefer-writable-derived -- bind:value requires a writable $state
-	let kfEditValue = $state('');
-	let kfValueInput = $state<HTMLInputElement | null>(null);
-	$effect(() => {
-		kfEditValue = kfAtFrame ? kfAtFrame.value.toString() : kfInterpolated.toFixed(6);
-	});
+  // eslint-disable-next-line svelte/prefer-writable-derived -- bind:value requires a writable $state
+  let kfEditValue = $state('');
+  let kfValueInput = $state<HTMLInputElement | null>(null);
+  $effect(() => {
+    kfEditValue = kfAtFrame ? kfAtFrame.value.toString() : kfInterpolated.toFixed(6);
+  });
 
-	function kfAdd() {
-		if (selectedTrack === null) return;
-		animationState.addKeyframe(selectedTrack, kfFrame, kfInterpolated);
-		setTimeout(() => kfValueInput?.focus(), 0);
-	}
-	const kfIsAnchor = $derived(kfFrame === 0 || kfFrame === project.totalFrames);
+  function kfAdd() {
+    if (selectedTrack === null) return;
+    animationState.addKeyframe(selectedTrack, kfFrame, kfInterpolated);
+    setTimeout(() => kfValueInput?.focus(), 0);
+  }
+  const kfIsAnchor = $derived(kfFrame === 0 || kfFrame === project.totalFrames);
 
-	function kfDelete() {
-		if (selectedTrack === null || kfIsAnchor) return;
-		animationState.removeKeyframe(selectedTrack, kfFrame);
-	}
-	function kfCommit() {
-		if (selectedTrack === null) return;
-		const v = parseFloat(kfEditValue);
-		if (isNaN(v)) return;
-		if (kfAtFrame) {
-			animationState.updateKeyframeValue(selectedTrack, kfFrame, v);
-		} else {
-			animationState.addKeyframe(selectedTrack, kfFrame, v);
-		}
-	}
-	function kfKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-		if (e.key === 'Escape') {
-			kfEditValue = kfAtFrame?.value.toString() ?? kfInterpolated.toFixed(6);
-			(e.target as HTMLInputElement).blur();
-		}
-	}
+  function kfDelete() {
+    if (selectedTrack === null || kfIsAnchor) return;
+    animationState.removeKeyframe(selectedTrack, kfFrame);
+  }
+  function kfCommit() {
+    if (selectedTrack === null) return;
+    const v = parseFloat(kfEditValue);
+    if (isNaN(v)) return;
+    if (kfAtFrame) {
+      animationState.updateKeyframeValue(selectedTrack, kfFrame, v);
+    } else {
+      animationState.addKeyframe(selectedTrack, kfFrame, v);
+    }
+  }
+  function kfKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+    if (e.key === 'Escape') {
+      kfEditValue = kfAtFrame?.value.toString() ?? kfInterpolated.toFixed(6);
+      (e.target as HTMLInputElement).blur();
+    }
+  }
 </script>
 
 <div use:keyboardLayer={handleKey} class="flex flex-col h-full bg-neutral-950 text-white relative">
-	<!-- Preview (takes remaining vertical space) -->
-	<div class="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-950">
-		<!-- Panels row -->
-		<div bind:this={panelsEl} class="flex-1 flex min-h-0">
-			{#if explorerOpen && explorerState}
-				<div class="flex-1 flex items-center justify-center h-full border-r border-neutral-800">
-					<div style="width: {panelW}px; height: {panelH}px;">
-						<AnimatorExplorer
-							initialState={explorerState}
-							onUpdate={(s) => (explorerState = s)}
-							projectWidth={project.width}
-							panelWidth={panelW}
-							{syncSignal}
-						/>
-					</div>
-				</div>
-			{/if}
-			<div class="{explorerOpen ? 'flex-1' : 'w-full'} flex items-center justify-center h-full">
-				<div style="width: {panelW}px; height: {panelH}px;">
-					<AnimatorPreview active={!showPlayback} />
-				</div>
-			</div>
-		</div>
+  <!-- Preview (takes remaining vertical space) -->
+  <div class="flex-1 min-h-0 overflow-hidden flex flex-col bg-neutral-950">
+    <!-- Panels row -->
+    <div bind:this={panelsEl} class="flex-1 flex min-h-0">
+      {#if explorerOpen && explorerState}
+        <div class="flex-1 flex items-center justify-center h-full border-r border-neutral-800">
+          <div style="width: {panelW}px; height: {panelH}px;">
+            <AnimatorExplorer
+              initialState={explorerState}
+              onUpdate={(s) => (explorerState = s)}
+              projectWidth={project.width}
+              panelWidth={panelW}
+              {syncSignal}
+            />
+          </div>
+        </div>
+      {/if}
+      <div class="{explorerOpen ? 'flex-1' : 'w-full'} flex items-center justify-center h-full">
+        <div style="width: {panelW}px; height: {panelH}px;">
+          <AnimatorPreview active={!showPlayback} />
+        </div>
+      </div>
+    </div>
 
-		<!-- Explorer info + sync bar -->
-		{#if explorerOpen && explorerState}
-			<div class="shrink-0 flex items-center h-7 bg-neutral-900 border-t border-neutral-800 text-[11px]">
-				<div class="flex-1 flex items-center justify-center gap-2 text-neutral-400">
-					<span class="text-neutral-500">Re:</span>
-					<span class="font-mono text-white">{parseFloat(explorerState.cx).toFixed(6)}</span>
-					<span class="text-neutral-700">|</span>
-					<span class="text-neutral-500">Im:</span>
-					<span class="font-mono text-white">{parseFloat(explorerState.cy).toFixed(6)}</span>
-					<span class="text-neutral-700">|</span>
-					<span class="text-neutral-500">Z:</span>
-					<span class="font-mono text-white">{explorerState.zoom.toFixed(3)}</span>
-				</div>
-				<button
-					class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
-					title="Sync explorer to current frame"
-					onclick={() => {
-						explorerState = interpolateAll(animationState.project, animationState.currentFrame);
-						syncSignal++;
-					}}
-				>
-					<ChevronLeft size={11} /> Sync
-				</button>
-				<div class="flex-1"></div>
-			</div>
-		{/if}
-	</div>
+    <!-- Explorer info + sync bar -->
+    {#if explorerOpen && explorerState}
+      <div class="shrink-0 flex items-center h-7 bg-neutral-900 border-t border-neutral-800 text-[11px]">
+        <div class="flex-1 flex items-center justify-center gap-2 text-neutral-400">
+          <span class="text-neutral-500">Re:</span>
+          <span class="font-mono text-white">{parseFloat(explorerState.cx).toFixed(6)}</span>
+          <span class="text-neutral-700">|</span>
+          <span class="text-neutral-500">Im:</span>
+          <span class="font-mono text-white">{parseFloat(explorerState.cy).toFixed(6)}</span>
+          <span class="text-neutral-700">|</span>
+          <span class="text-neutral-500">Z:</span>
+          <span class="font-mono text-white">{explorerState.zoom.toFixed(3)}</span>
+        </div>
+        <button
+          class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
+          title="Sync explorer to current frame"
+          onclick={() => {
+            explorerState = interpolateAll(animationState.project, animationState.currentFrame);
+            syncSignal++;
+          }}
+        >
+          <ChevronLeft size={11} /> Sync
+        </button>
+        <div class="flex-1"></div>
+      </div>
+    {/if}
+  </div>
 
-	<!-- Settings bar -->
-	<div
-		class="shrink-0 flex items-center gap-3 px-3 py-1.5 bg-neutral-900 border-t border-neutral-800 text-[11px] flex-wrap"
-	>
-		<div class="relative">
-			<button
-				class="px-2 py-0.5 rounded border text-[11px] transition-colors
-					{showProjectsPanel
-					? 'bg-blue-700 border-blue-600 text-white'
-					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-				onclick={() => (showProjectsPanel = !showProjectsPanel)}
-				>Projects{activeProjectName ? ` — ${activeProjectName}` : ''}</button
-			>
-			{#if showProjectsPanel}
-				<div class="absolute bottom-full left-0 z-50 mb-2">
-					<AnimatorProjectsPanel
-						{activeProjectName}
-						currentProject={animationState.project}
-						onLoad={handleLoadProject}
-						onSave={handleProjectSaved}
-						onExport={() => {
-							showProjectsPanel = false;
-							showExportModal = true;
-						}}
-						onImport={() => {
-							showProjectsPanel = false;
-							showImportModal = true;
-						}}
-						onClose={() => (showProjectsPanel = false)}
-					/>
-				</div>
-			{/if}
-		</div>
+  <!-- Settings bar -->
+  <div
+    class="shrink-0 flex items-center gap-3 px-3 py-1.5 bg-neutral-900 border-t border-neutral-800 text-[11px] flex-wrap"
+  >
+    <div class="relative">
+      <button
+        class="px-2 py-0.5 rounded border text-[11px] transition-colors
+          {showProjectsPanel
+          ? 'bg-blue-700 border-blue-600 text-white'
+          : 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+        onclick={() => (showProjectsPanel = !showProjectsPanel)}
+        >Projects{activeProjectName ? ` — ${activeProjectName}` : ''}</button
+      >
+      {#if showProjectsPanel}
+        <div class="absolute bottom-full left-0 z-50 mb-2">
+          <AnimatorProjectsPanel
+            {activeProjectName}
+            currentProject={animationState.project}
+            onLoad={handleLoadProject}
+            onSave={handleProjectSaved}
+            onExport={() => {
+              showProjectsPanel = false;
+              showExportModal = true;
+            }}
+            onImport={() => {
+              showProjectsPanel = false;
+              showImportModal = true;
+            }}
+            onClose={() => (showProjectsPanel = false)}
+          />
+        </div>
+      {/if}
+    </div>
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<button
-			class="px-2 py-0.5 rounded border text-[11px] transition-colors
-				{explorerOpen
-				? 'bg-blue-700 border-blue-600 text-white'
-				: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-			onclick={() => {
-				explorerOpen = !explorerOpen;
-				if (explorerOpen) {
-					const project = animationState.project;
-					explorerState = interpolateAll(project, animationState.currentFrame);
-				}
-			}}>Explorer</button
-		>
+    <button
+      class="px-2 py-0.5 rounded border text-[11px] transition-colors
+        {explorerOpen
+        ? 'bg-blue-700 border-blue-600 text-white'
+        : 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+      onclick={() => {
+        explorerOpen = !explorerOpen;
+        if (explorerOpen) {
+          const project = animationState.project;
+          explorerState = interpolateAll(project, animationState.currentFrame);
+        }
+      }}>Explorer</button
+    >
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			fps
-			<input
-				type="number"
-				min="1"
-				max="120"
-				value={project.fps}
-				onchange={(e) => setFps((e.target as HTMLInputElement).value)}
-				class="w-12 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			/>
-		</label>
+    <label class="flex items-center gap-1 text-neutral-400">
+      fps
+      <input
+        type="number"
+        min="1"
+        max="120"
+        value={project.fps}
+        onchange={(e) => setFps((e.target as HTMLInputElement).value)}
+        class="w-12 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      />
+    </label>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			frames
-			<input
-				type="number"
-				min="1"
-				value={project.totalFrames}
-				onchange={(e) => setTotalFrames((e.target as HTMLInputElement).value)}
-				class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			/>
-			<span class="text-neutral-600">({durationSecs}s)</span>
-		</label>
+    <label class="flex items-center gap-1 text-neutral-400">
+      frames
+      <input
+        type="number"
+        min="1"
+        value={project.totalFrames}
+        onchange={(e) => setTotalFrames((e.target as HTMLInputElement).value)}
+        class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      />
+      <span class="text-neutral-600">({durationSecs}s)</span>
+    </label>
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			W
-			<input
-				type="number"
-				min="1"
-				value={project.width}
-				onchange={(e) => setWidth((e.target as HTMLInputElement).value)}
-				class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			/>
-		</label>
-		<label class="flex items-center gap-1 text-neutral-400">
-			H
-			<input
-				type="number"
-				min="1"
-				value={project.height}
-				onchange={(e) => setHeight((e.target as HTMLInputElement).value)}
-				class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			/>
-		</label>
+    <label class="flex items-center gap-1 text-neutral-400">
+      W
+      <input
+        type="number"
+        min="1"
+        value={project.width}
+        onchange={(e) => setWidth((e.target as HTMLInputElement).value)}
+        class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      />
+    </label>
+    <label class="flex items-center gap-1 text-neutral-400">
+      H
+      <input
+        type="number"
+        min="1"
+        value={project.height}
+        onchange={(e) => setHeight((e.target as HTMLInputElement).value)}
+        class="w-16 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      />
+    </label>
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			exponent
-			<input
-				type="number"
-				min="2"
-				max="10"
-				value={project.power}
-				onchange={(e) => setPower((e.target as HTMLInputElement).value)}
-				class="w-12 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			/>
-		</label>
+    <label class="flex items-center gap-1 text-neutral-400">
+      exponent
+      <input
+        type="number"
+        min="2"
+        max="10"
+        value={project.power}
+        onchange={(e) => setPower((e.target as HTMLInputElement).value)}
+        class="w-12 bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      />
+    </label>
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<!-- Palette controls: preview + reverse + in-set + Palettes/Edit buttons -->
-		<div class="relative flex items-center gap-1.5">
-			<!-- Floating panels (open upward over the preview) -->
-			{#if showPalettePanel}
-				<div class="absolute bottom-full left-0 z-50 mb-6">
-					<PalettePanel
-						{activePaletteName}
-						algorithm={project.algorithm}
-						colors={editorColors}
-						setColors={setProjectColors}
-						layout="horizontal"
-						hideOffsetToggle
-						onClose={() => (showPalettePanel = false)}
-						onApply={onPaletteApplied}
-					/>
-				</div>
-			{/if}
-			{#if showEditor}
-				<div class="absolute bottom-full left-0 z-50 mb-6">
-					<PaletteEditor
-						{activePaletteName}
-						{baseline}
-						colors={editorColors}
-						setColors={setProjectColors}
-						disableAnimatedTracks
-						onClose={() => (showEditor = false)}
-						onSave={onEditorSave}
-					/>
-				</div>
-			{/if}
+    <!-- Palette controls: preview + reverse + in-set + Palettes/Edit buttons -->
+    <div class="relative flex items-center gap-1.5">
+      <!-- Floating panels (open upward over the preview) -->
+      {#if showPalettePanel}
+        <div class="absolute bottom-full left-0 z-50 mb-6">
+          <PalettePanel
+            {activePaletteName}
+            algorithm={project.algorithm}
+            colors={editorColors}
+            setColors={setProjectColors}
+            layout="horizontal"
+            hideOffsetToggle
+            onClose={() => (showPalettePanel = false)}
+            onApply={onPaletteApplied}
+          />
+        </div>
+      {/if}
+      {#if showEditor}
+        <div class="absolute bottom-full left-0 z-50 mb-6">
+          <PaletteEditor
+            {activePaletteName}
+            {baseline}
+            colors={editorColors}
+            setColors={setProjectColors}
+            disableAnimatedTracks
+            onClose={() => (showEditor = false)}
+            onSave={onEditorSave}
+          />
+        </div>
+      {/if}
 
-			<!-- Palette preview + reverse -->
-			<div class="flex items-center gap-1 w-28">
-				<PalettePreview colors={editorColors} />
-				<button
-					class="px-1.5 py-0.5 rounded border text-[11px] transition-colors shrink-0
-						{project.reverse
-						? 'border-blue-600 bg-blue-900/40 text-blue-300'
-						: 'border-neutral-700 text-neutral-400 hover:text-white'}"
-					onclick={() => animationState.updateProject({ reverse: !project.reverse })}
-					title="Reverse palette">⇄</button
-				>
-			</div>
+      <!-- Palette preview + reverse -->
+      <div class="flex items-center gap-1 w-28">
+        <PalettePreview colors={editorColors} />
+        <button
+          class="px-1.5 py-0.5 rounded border text-[11px] transition-colors shrink-0
+            {project.reverse
+            ? 'border-blue-600 bg-blue-900/40 text-blue-300'
+            : 'border-neutral-700 text-neutral-400 hover:text-white'}"
+          onclick={() => animationState.updateProject({ reverse: !project.reverse })}
+          title="Reverse palette">⇄</button
+        >
+      </div>
 
-			<!-- In-set color picker -->
-			<label class="flex items-center gap-1 text-neutral-400 shrink-0">
-				<span>in-set</span>
-				<input
-					type="color"
-					class="w-6 h-5 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
-					value={project.inSetColor}
-					oninput={(e) =>
-						animationState.updateProject({ inSetColor: (e.target as HTMLInputElement).value })}
-				/>
-			</label>
+      <!-- In-set color picker -->
+      <label class="flex items-center gap-1 text-neutral-400 shrink-0">
+        <span>in-set</span>
+        <input
+          type="color"
+          class="w-6 h-5 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
+          value={project.inSetColor}
+          oninput={(e) =>
+            animationState.updateProject({ inSetColor: (e.target as HTMLInputElement).value })}
+        />
+      </label>
 
-			<!-- Palettes / Edit toggle buttons -->
-			<button
-				class="px-2 py-0.5 rounded border text-[11px] transition-colors
-					{showPalettePanel
-					? 'bg-blue-700 border-blue-600 text-white'
-					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-				onclick={() => {
-					showPalettePanel = !showPalettePanel;
-					if (showPalettePanel) showEditor = false;
-				}}>Palettes</button
-			>
-			<button
-				class="px-2 py-0.5 rounded border text-[11px] transition-colors
-					{showEditor
-					? 'bg-blue-700 border-blue-600 text-white'
-					: 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
-				onclick={() => {
-					showEditor = !showEditor;
-					if (showEditor) showPalettePanel = false;
-				}}>Edit</button
-			>
-		</div>
+      <!-- Palettes / Edit toggle buttons -->
+      <button
+        class="px-2 py-0.5 rounded border text-[11px] transition-colors
+          {showPalettePanel
+          ? 'bg-blue-700 border-blue-600 text-white'
+          : 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+        onclick={() => {
+          showPalettePanel = !showPalettePanel;
+          if (showPalettePanel) showEditor = false;
+        }}>Palettes</button
+      >
+      <button
+        class="px-2 py-0.5 rounded border text-[11px] transition-colors
+          {showEditor
+          ? 'bg-blue-700 border-blue-600 text-white'
+          : 'border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}"
+        onclick={() => {
+          showEditor = !showEditor;
+          if (showEditor) showPalettePanel = false;
+        }}>Edit</button
+      >
+    </div>
 
-		<span class="text-neutral-700">·</span>
+    <span class="text-neutral-700">·</span>
 
-		<label class="flex items-center gap-1 text-neutral-400">
-			algorithm
-			<select
-				value={project.algorithm}
-				onchange={(e) => setAlgorithm((e.target as HTMLSelectElement).value)}
-				class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-			>
-				{#each ALGORITHMS as a (a.value)}
-					<option value={a.value}>{a.label}</option>
-				{/each}
-			</select>
-		</label>
-	</div>
+    <label class="flex items-center gap-1 text-neutral-400">
+      algorithm
+      <select
+        value={project.algorithm}
+        onchange={(e) => setAlgorithm((e.target as HTMLSelectElement).value)}
+        class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+      >
+        {#each ALGORITHMS as a (a.value)}
+          <option value={a.value}>{a.label}</option>
+        {/each}
+      </select>
+    </label>
+  </div>
 
-	<!-- Timeline -->
-	<div class="shrink-0 border-t border-neutral-800">
-		<Timeline bind:selectedTrack {explorerOpen} {explorerState} />
-	</div>
+  <!-- Timeline -->
+  <div class="shrink-0 border-t border-neutral-800">
+    <Timeline bind:selectedTrack {explorerOpen} {explorerState} />
+  </div>
 
-	<!-- Keyframe edit + export bar -->
-	<div
-		class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-950 border-t border-neutral-800 text-[11px]"
-	>
-		<!-- Keyframe section (left) -->
-		{#if kfTrack}
-			<span class="text-neutral-500 w-20 shrink-0 text-right">{kfLabel}</span>
-			<span class="text-neutral-600">frame {kfFrame + 1}</span>
-			{#if kfAtFrame}
-				<span class="text-blue-400">◆</span>
-				{#if kfPrev}
-					<select
-						value={kfPrev.easing}
-						onchange={(e) => {
-							if (selectedTrack !== null)
-								animationState.setKeyframeEasing(
-									selectedTrack,
-									kfPrev.frame,
-									(e.target as HTMLSelectElement).value as EasingType
-								);
-						}}
-						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-						title="Easing into this keyframe"
-					>
-						<option value="linear">Linear</option>
-						<option value="ease-in">Ease In</option>
-						<option value="ease-out">Ease Out</option>
-						<option value="ease-in-out">Ease In-Out</option>
-					</select>
-					<ChevronRight size={14} class="text-neutral-500 shrink-0" />
-				{:else}
-					<span class="text-neutral-700 font-mono">start</span>
-					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
-				{/if}
-				<input
-					type="number"
-					step="any"
-					bind:value={kfEditValue}
-					bind:this={kfValueInput}
-					onblur={kfCommit}
-					onkeydown={kfKeydown}
-					class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
-				/>
-				{#if kfFrame !== project.totalFrames}
-					<ChevronRight size={14} class="text-neutral-500 shrink-0" />
-					<select
-						value={kfAtFrame.easing}
-						onchange={(e) => {
-							if (selectedTrack !== null)
-								animationState.setKeyframeEasing(
-									selectedTrack,
-									kfFrame,
-									(e.target as HTMLSelectElement).value as EasingType
-								);
-						}}
-						class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
-					>
-						<option value="linear">Linear</option>
-						<option value="ease-in">Ease In</option>
-						<option value="ease-out">Ease Out</option>
-						<option value="ease-in-out">Ease In-Out</option>
-					</select>
-				{:else}
-					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
-					<span class="text-neutral-700 font-mono">end</span>
-				{/if}
-				{#if !kfIsAnchor}
-					<button
-						onclick={kfDelete}
-						class="text-neutral-500 hover:text-red-400 transition-colors px-1"
-						title="Delete keyframe">✕</button
-					>
-				{/if}
-			{:else}
-				{#if kfPrev}
-					<span class="text-neutral-700 font-mono">{kfPrev.value.toFixed(4)}</span>
-					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
-					<span class="text-neutral-600">{kfPrev.easing}</span>
-					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
-				{/if}
-				<span class="text-neutral-400 font-mono">{kfInterpolated.toFixed(6)}</span>
-				{#if kfNext}
-					<ChevronRight size={14} class="text-neutral-700 shrink-0" />
-					<span class="text-neutral-700 font-mono">{kfNext.value.toFixed(4)}</span>
-				{/if}
-				<button
-					onclick={kfAdd}
-					class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors"
-				>
-					<span class="text-blue-400">+</span> Add keyframe
-				</button>
-			{/if}
-		{:else}
-			<span class="text-neutral-700">Select a track to edit keyframes</span>
-		{/if}
+  <!-- Keyframe edit + export bar -->
+  <div
+    class="shrink-0 flex items-center gap-3 px-3 py-2 bg-neutral-950 border-t border-neutral-800 text-[11px]"
+  >
+    <!-- Keyframe section (left) -->
+    {#if kfTrack}
+      <span class="text-neutral-500 w-20 shrink-0 text-right">{kfLabel}</span>
+      <span class="text-neutral-600">frame {kfFrame + 1}</span>
+      {#if kfAtFrame}
+        <span class="text-blue-400">◆</span>
+        {#if kfPrev}
+          <select
+            value={kfPrev.easing}
+            onchange={(e) => {
+              if (selectedTrack !== null)
+                animationState.setKeyframeEasing(
+                  selectedTrack,
+                  kfPrev.frame,
+                  (e.target as HTMLSelectElement).value as EasingType
+                );
+            }}
+            class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+            title="Easing into this keyframe"
+          >
+            <option value="linear">Linear</option>
+            <option value="ease-in">Ease In</option>
+            <option value="ease-out">Ease Out</option>
+            <option value="ease-in-out">Ease In-Out</option>
+          </select>
+          <ChevronRight size={14} class="text-neutral-500 shrink-0" />
+        {:else}
+          <span class="text-neutral-700 font-mono">start</span>
+          <ChevronRight size={14} class="text-neutral-700 shrink-0" />
+        {/if}
+        <input
+          type="number"
+          step="any"
+          bind:value={kfEditValue}
+          bind:this={kfValueInput}
+          onblur={kfCommit}
+          onkeydown={kfKeydown}
+          class="w-36 bg-neutral-800 text-white border border-neutral-600 rounded px-2 py-0.5 font-mono text-[11px] focus:outline-none focus:border-blue-500"
+        />
+        {#if kfFrame !== project.totalFrames}
+          <ChevronRight size={14} class="text-neutral-500 shrink-0" />
+          <select
+            value={kfAtFrame.easing}
+            onchange={(e) => {
+              if (selectedTrack !== null)
+                animationState.setKeyframeEasing(
+                  selectedTrack,
+                  kfFrame,
+                  (e.target as HTMLSelectElement).value as EasingType
+                );
+            }}
+            class="bg-neutral-800 text-white border border-neutral-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-blue-500"
+          >
+            <option value="linear">Linear</option>
+            <option value="ease-in">Ease In</option>
+            <option value="ease-out">Ease Out</option>
+            <option value="ease-in-out">Ease In-Out</option>
+          </select>
+        {:else}
+          <ChevronRight size={14} class="text-neutral-700 shrink-0" />
+          <span class="text-neutral-700 font-mono">end</span>
+        {/if}
+        {#if !kfIsAnchor}
+          <button
+            onclick={kfDelete}
+            class="text-neutral-500 hover:text-red-400 transition-colors px-1"
+            title="Delete keyframe">✕</button
+          >
+        {/if}
+      {:else}
+        {#if kfPrev}
+          <span class="text-neutral-700 font-mono">{kfPrev.value.toFixed(4)}</span>
+          <ChevronRight size={14} class="text-neutral-700 shrink-0" />
+          <span class="text-neutral-600">{kfPrev.easing}</span>
+          <ChevronRight size={14} class="text-neutral-700 shrink-0" />
+        {/if}
+        <span class="text-neutral-400 font-mono">{kfInterpolated.toFixed(6)}</span>
+        {#if kfNext}
+          <ChevronRight size={14} class="text-neutral-700 shrink-0" />
+          <span class="text-neutral-700 font-mono">{kfNext.value.toFixed(4)}</span>
+        {/if}
+        <button
+          onclick={kfAdd}
+          class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors"
+        >
+          <span class="text-blue-400">+</span> Add keyframe
+        </button>
+      {/if}
+    {:else}
+      <span class="text-neutral-700">Select a track to edit keyframes</span>
+    {/if}
 
-		<div class="flex-1"></div>
+    <div class="flex-1"></div>
 
-		<!-- Playback + utility controls (centre) -->
-		<div class="flex items-center gap-1.5">
-			<button
-				onclick={() => {
-					if (cacheReady) showPlayback = true;
-				}}
-				disabled={!cacheReady}
-				class="px-2.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-700"
-				title={cacheReady ? 'Play preview (Space)' : 'Building preview cache…'}
-				><Play size={12} /></button
-			>
-			<button
-				onclick={() => (loopPlayback = !loopPlayback)}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback
-					? 'text-blue-400 border-blue-700'
-					: 'text-neutral-500 hover:text-white'}"
-				title="Loop playback (R)"><Repeat size={12} /></button
-			>
-			{#if frameCache.buildTotal > 0}
-				<div
-					class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden"
-					title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached"
-				>
-					<div
-						class="h-full bg-blue-400/60 transition-all"
-						style="width: {Math.round((frameCache.cachedCount / frameCache.buildTotal) * 100)}%"
-					></div>
-				</div>
-			{/if}
-			<button
-				onclick={() => animationState.undo()}
-				disabled={!animationState.canUndo}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Undo (Ctrl+Z)"><Undo2 size={12} /></button
-			>
-			<button
-				onclick={() => animationState.redo()}
-				disabled={!animationState.canRedo}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				title="Redo (Ctrl+Y)"><Redo2 size={12} /></button
-			>
-			<button
-				onclick={triggerNew}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
-				title="New project (Ctrl+N)">New</button
-			>
-			<button
-				onclick={() => (showShortcuts = true)}
-				class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
-				title="Keyboard shortcuts (?)"><CircleHelp size={12} /></button
-			>
-		</div>
+    <!-- Playback + utility controls (centre) -->
+    <div class="flex items-center gap-1.5">
+      <button
+        onclick={() => {
+          if (cacheReady) showPlayback = true;
+        }}
+        disabled={!cacheReady}
+        class="px-2.5 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-700"
+        title={cacheReady ? 'Play preview (Space)' : 'Building preview cache…'}
+        ><Play size={12} /></button
+      >
+      <button
+        onclick={() => (loopPlayback = !loopPlayback)}
+        class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded transition-colors {loopPlayback
+          ? 'text-blue-400 border-blue-700'
+          : 'text-neutral-500 hover:text-white'}"
+        title="Loop playback (R)"><Repeat size={12} /></button
+      >
+      {#if frameCache.buildTotal > 0}
+        <div
+          class="w-16 h-1 bg-neutral-700 rounded-full overflow-hidden"
+          title="{frameCache.cachedCount}/{frameCache.buildTotal} frames cached"
+        >
+          <div
+            class="h-full bg-blue-400/60 transition-all"
+            style="width: {Math.round((frameCache.cachedCount / frameCache.buildTotal) * 100)}%"
+          ></div>
+        </div>
+      {/if}
+      <button
+        onclick={() => animationState.undo()}
+        disabled={!animationState.canUndo}
+        class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        title="Undo (Ctrl+Z)"><Undo2 size={12} /></button
+      >
+      <button
+        onclick={() => animationState.redo()}
+        disabled={!animationState.canRedo}
+        class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        title="Redo (Ctrl+Y)"><Redo2 size={12} /></button
+      >
+      <button
+        onclick={triggerNew}
+        class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
+        title="New project (Ctrl+N)">New</button
+      >
+      <button
+        onclick={() => (showShortcuts = true)}
+        class="px-2 py-0.5 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-white transition-colors"
+        title="Keyboard shortcuts (?)"><CircleHelp size={12} /></button
+      >
+    </div>
 
-		<div class="flex-1"></div>
+    <div class="flex-1"></div>
 
-		<!-- Export section (right) -->
-		{#if exportPhase === 'idle'}
-			<span class="text-neutral-600">{project.totalFrames} frames · {durationSecs}s</span>
-			<button
-				onclick={startExport}
-				class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors text-[11px]"
-			>
-				Generate WebM — {project.width}×{project.height} @ {project.fps}fps
-			</button>
-		{:else if exportPhase === 'exporting'}
-			<div class="flex items-center gap-3 w-72">
-				<div class="flex-1 h-1.5 bg-neutral-700 rounded overflow-hidden">
-					<div
-						class="h-full bg-blue-500 transition-all"
-						style="width: {exportProgressPct()}%"
-					></div>
-				</div>
-				<span class="text-neutral-400 whitespace-nowrap">
-					{exportProgress?.phase === 'encoding' ? 'Encoding' : 'Rendering'}
-					{(exportProgress?.frame ?? 0) + 1}/{project.totalFrames}
-					({exportProgressPct()}%)
-				</span>
-				<button onclick={cancelExport} class="text-red-400 hover:text-red-300 transition-colors">
-					Cancel
-				</button>
-			</div>
-		{/if}
-	</div>
+    <!-- Export section (right) -->
+    {#if exportPhase === 'idle'}
+      <span class="text-neutral-600">{project.totalFrames} frames · {durationSecs}s</span>
+      <button
+        onclick={startExport}
+        class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors text-[11px]"
+      >
+        Generate WebM — {project.width}×{project.height} @ {project.fps}fps
+      </button>
+    {:else if exportPhase === 'exporting'}
+      <div class="flex items-center gap-3 w-72">
+        <div class="flex-1 h-1.5 bg-neutral-700 rounded overflow-hidden">
+          <div
+            class="h-full bg-blue-500 transition-all"
+            style="width: {exportProgressPct()}%"
+          ></div>
+        </div>
+        <span class="text-neutral-400 whitespace-nowrap">
+          {exportProgress?.phase === 'encoding' ? 'Encoding' : 'Rendering'}
+          {(exportProgress?.frame ?? 0) + 1}/{project.totalFrames}
+          ({exportProgressPct()}%)
+        </span>
+        <button onclick={cancelExport} class="text-red-400 hover:text-red-300 transition-colors">
+          Cancel
+        </button>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <ExportVideoModal
-	open={exportPhase === 'done' && !!exportUrl}
-	{exportUrl}
-	onSave={saveVideo}
-	onReset={resetExport}
+  open={exportPhase === 'done' && !!exportUrl}
+  {exportUrl}
+  onSave={saveVideo}
+  onReset={resetExport}
 />
 
 <ShortcutsModal bind:open={showShortcuts} />
 <PlaybackModal bind:open={showPlayback} bind:loopPlayback />
 
 {#if showNewProjectModal}
-	<NewProjectModal
-		currentProject={animationState.project}
-		onSaveAndNew={handleSaveAndNew}
-		onDiscardAndNew={handleDiscardAndNew}
-		onCancel={() => (showNewProjectModal = false)}
-	/>
+  <NewProjectModal
+    currentProject={animationState.project}
+    onSaveAndNew={handleSaveAndNew}
+    onDiscardAndNew={handleDiscardAndNew}
+    onCancel={() => (showNewProjectModal = false)}
+  />
 {/if}
 
 {#if showExportModal}
-	<ExportProjectModal
-		project={animationState.project}
-		projectName={activeProjectName}
-		onClose={() => (showExportModal = false)}
-	/>
+  <ExportProjectModal
+    project={animationState.project}
+    projectName={activeProjectName}
+    onClose={() => (showExportModal = false)}
+  />
 {/if}
 
 {#if showImportModal}
-	<ImportProjectModal onImport={handleImportProject} onCancel={() => (showImportModal = false)} />
+  <ImportProjectModal onImport={handleImportProject} onCancel={() => (showImportModal = false)} />
 {/if}

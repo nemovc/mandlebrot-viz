@@ -1,25 +1,25 @@
 type KeyHandler = (e: KeyboardEvent) => void;
 
 class KeyboardManager {
-	private layers: { handler: KeyHandler }[] = [];
-	private listening = false;
+  private layers: { handler: KeyHandler }[] = [];
+  private listening = false;
 
-	private dispatch = (e: KeyboardEvent) => {
-		this.layers.at(-1)?.handler(e);
-	};
+  private dispatch = (e: KeyboardEvent) => {
+    this.layers.at(-1)?.handler(e);
+  };
 
-	push(handler: KeyHandler): () => void {
-		if (!this.listening && typeof window !== 'undefined') {
-			window.addEventListener('keydown', this.dispatch);
-			this.listening = true;
-		}
-		const layer = { handler };
-		this.layers.push(layer);
-		return () => {
-			const i = this.layers.lastIndexOf(layer);
-			if (i >= 0) this.layers.splice(i, 1);
-		};
-	}
+  push(handler: KeyHandler): () => void {
+    if (!this.listening && typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.dispatch);
+      this.listening = true;
+    }
+    const layer = { handler };
+    this.layers.push(layer);
+    return () => {
+      const i = this.layers.lastIndexOf(layer);
+      if (i >= 0) this.layers.splice(i, 1);
+    };
+  }
 }
 
 export const keyboard = new KeyboardManager();
@@ -33,6 +33,6 @@ export const keyboard = new KeyboardManager();
  * Usage: <div use:keyboardLayer={handleKeydown}>
  */
 export function keyboardLayer(_node: Element, handler: KeyHandler) {
-	const remove = keyboard.push(handler);
-	return { destroy: remove };
+  const remove = keyboard.push(handler);
+  return { destroy: remove };
 }
