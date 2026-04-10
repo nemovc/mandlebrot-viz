@@ -6,14 +6,26 @@
   import CollapsiblePanel from './CollapsiblePanel.svelte';
   import ToggleButton from './ToggleButton.svelte';
   import PoolDebug from './PoolDebug.svelte';
-  import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
-  import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
-  import { ViewerRecolorPool } from '$lib/rendering/worker/pools/viewerRecolorPool';
-  import { ViewerExportPool } from '$lib/rendering/worker/pools/viewerExportPool';
-  import { AnimatorPreviewPool } from '$lib/rendering/worker/pools/animatorPreviewPool';
-  import { AnimatorCachePool } from '$lib/rendering/worker/pools/animatorCachePool';
-  import { AnimatorExportPool } from '$lib/rendering/worker/pools/animatorExportPool';
-  import { AnimatorRecolorPool } from '$lib/rendering/worker/pools/animatorRecolorPool';
+  import type { WorkerPool } from '$lib/rendering/worker/workerPool';
+
+  export interface PoolConfig {
+    name: string;
+    pool: WorkerPool<any, any>;
+    textColor: string;
+    barColor: string;
+  }
+
+  let {
+    pools,
+    title = 'Debug',
+    defaultOpen = false,
+    position = 'bottom-left'
+  }: {
+    pools: PoolConfig[];
+    title?: string;
+    defaultOpen?: boolean;
+    position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  } = $props();
 
   // Animator pools only appear once they've been instantiated (e.g. after visiting the animator)
   let memUsed = $state<number | null>(null);
@@ -35,7 +47,7 @@
   }
 </script>
 
-<CollapsiblePanel title="Debug" defaultOpen={false} position="bottom-left">
+<CollapsiblePanel {title} {defaultOpen} {position}>
   <div class="flex flex-col gap-4 px-3 pb-3">
     <!-- Toggles -->
     <div class="flex flex-col gap-1.5 pt-3">
@@ -66,64 +78,16 @@
       >
     </div>
 
-    <!-- Viewer pools -->
+    <!-- Pools -->
     <div class="flex flex-col gap-2">
-      <div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">Viewer Pools</div>
-      <PoolDebug
-        name="S2"
-        pool={ViewerS2Pool.instance}
-        textColor="text-blue-400"
-        barColor="bg-blue-400"
-      />
-      <PoolDebug
-        name="S3"
-        pool={ViewerS3Pool.instance}
-        textColor="text-green-500"
-        barColor="bg-green-500"
-      />
-      <PoolDebug
-        name="RC"
-        pool={ViewerRecolorPool.instance}
-        textColor="text-purple-400"
-        barColor="bg-purple-400"
-      />
-      <PoolDebug
-        name="EX"
-        pool={ViewerExportPool.instance}
-        textColor="text-yellow-400"
-        barColor="bg-yellow-400"
-      />
-    </div>
-
-    <!-- Animator pools (appear once instantiated) -->
-    <div class="flex flex-col gap-2">
-      <div class="text-neutral-500 text-xs font-medium uppercase tracking-wider">
-        Animator Pools
-      </div>
-      <PoolDebug
-        name="SP"
-        pool={AnimatorPreviewPool.instance}
-        textColor="text-blue-400"
-        barColor="bg-blue-400"
-      />
-      <PoolDebug
-        name="PB"
-        pool={AnimatorCachePool.instance}
-        textColor="text-green-500"
-        barColor="bg-green-500"
-      />
-      <PoolDebug
-        name="RC"
-        pool={AnimatorRecolorPool.instance}
-        textColor="text-purple-400"
-        barColor="bg-purple-400"
-      />
-      <PoolDebug
-        name="EX"
-        pool={AnimatorExportPool.instance}
-        textColor="text-yellow-400"
-        barColor="bg-yellow-400"
-      />
+      {#each pools as poolConfig (poolConfig.name)}
+        <PoolDebug
+          name={poolConfig.name}
+          pool={poolConfig.pool}
+          textColor={poolConfig.textColor}
+          barColor={poolConfig.barColor}
+        />
+      {/each}
     </div>
 
     <!-- System info -->

@@ -195,11 +195,5 @@
 >
   <div bind:this={wrapper} class="relative bg-black shrink-0">
     <canvas bind:this={canvas} class="absolute inset-0 w-full h-full block"></canvas>
-
-    <div
-      class="absolute bottom-2 right-2 text-[10px] font-mono text-neutral-500 bg-black/60 px-1.5 py-0.5 rounded pointer-events-none select-none"
-    >
-      {animationState.currentFrame + 1} / {animationState.project.totalFrames}
-    </div>
   </div>
 </div>

@@ -6,9 +6,11 @@
     presetsFor,
     ALGORITHMS,
     paletteForAlgorithmChange,
-    baseAlgorithm
+    baseAlgorithm,
+    type ColorConfig,
+    type ColorStop,
+    type Algorithm
   } from '$lib/utils/colorPalettes';
-  import type { ColorStop } from '$lib/utils/colorPalettes';
   import { savedPalettes } from '$lib/stores/savedPalettes.svelte';
   import CollapsiblePanel from './CollapsiblePanel.svelte';
   import ToggleButton from './ToggleButton.svelte';
@@ -16,12 +18,32 @@
   import PalettePanel from './PalettePanel.svelte';
   import PaletteEditor from './PaletteEditor.svelte';
 
+  let {
+    colors = viewerState.colors,
+    setColors = (c) => { viewerState.colors = c; },
+    onCyclePeriodChange,
+    onOffsetChange,
+    cyclePeriodValue,
+    offsetValue,
+    hasCyclePeriodKeyframe = true,
+    hasOffsetKeyframe = true
+  }: {
+    colors?: ColorConfig;
+    setColors?: (c: ColorConfig) => void;
+    onCyclePeriodChange?: (v: number) => void;
+    onOffsetChange?: (v: number) => void;
+    cyclePeriodValue?: number;
+    offsetValue?: number;
+    hasCyclePeriodKeyframe?: boolean;
+    hasOffsetKeyframe?: boolean;
+  } = $props();
+
   let showPalettePanel = $state(false);
   let showEditor = $state(false);
 
   // Initialize active name by matching current palette against known palettes
-  const initialPaletteJson = JSON.stringify(viewerState.colors.palette);
-  const initialPreset = Object.entries(presetsFor(viewerState.colors.algorithm)).find(
+  const initialPaletteJson = JSON.stringify(colors.palette);
+  const initialPreset = Object.entries(presetsFor(colors.algorithm)).find(
     ([, p]) => JSON.stringify(p.palette) === initialPaletteJson
   );
   const initialSaved = savedPalettes.all.find(
@@ -33,12 +55,12 @@
     JSON.parse(
       JSON.stringify(
         (initialPreset ? initialPreset[1].palette : initialSaved?.config.palette) ??
-          viewerState.colors.palette
+          colors.palette
       )
     )
   );
 
-  const dirty = $derived(JSON.stringify(viewerState.colors.palette) !== JSON.stringify(baseline));
+  const dirty = $derived(JSON.stringify(colors.palette) !== JSON.stringify(baseline));
 
   const displayName = $derived(
     activePaletteName ? (dirty ? activePaletteName + '*' : activePaletteName) : 'Custom'
@@ -46,42 +68,55 @@
 
   function onPaletteApplied(name: string) {
     activePaletteName = name;
-    baseline = JSON.parse(JSON.stringify(viewerState.colors.palette));
+    baseline = JSON.parse(JSON.stringify(colors.palette));
   }
 
   function onEditorSave(name: string) {
     activePaletteName = name;
-    baseline = JSON.parse(JSON.stringify(viewerState.colors.palette));
+    baseline = JSON.parse(JSON.stringify(colors.palette));
   }
 
-  function onCyclePeriodChange(e: Event) {
-    viewerState.colors = {
-      ...viewerState.colors,
-      cyclePeriod: parseInt((e.target as HTMLInputElement).value)
-    };
+  // Use provided values if given (for animator keyframe display), otherwise use colors prop
+  const displayCyclePeriod = $derived(cyclePeriodValue ?? colors.cyclePeriod);
+  const displayOffset = $derived(offsetValue ?? colors.offset);
+
+  function handleCyclePeriodChange(e: Event) {
+    const v = parseInt((e.target as HTMLInputElement).value);
+    if (onCyclePeriodChange) {
+      onCyclePeriodChange(v);
+    } else {
+      setColors({
+        ...colors,
+        cyclePeriod: v
+      });
+    }
   }
 
-  function onOffsetChange(e: Event) {
-    viewerState.colors = {
-      ...viewerState.colors,
-      offset: parseFloat((e.target as HTMLInputElement).value)
-    };
+  function handleOffsetChange(e: Event) {
+    const v = parseFloat((e.target as HTMLInputElement).value);
+    if (onOffsetChange) {
+      onOffsetChange(v);
+    } else {
+      setColors({
+        ...colors,
+        offset: v
+      });
+    }
   }
 
   function onAlgorithmChange(e: Event) {
-    const newAlgorithm = (e.target as HTMLSelectElement)
-      .value as typeof viewerState.colors.algorithm;
+    const newAlgorithm = (e.target as HTMLSelectElement).value as Algorithm;
     const swappedPalette = paletteForAlgorithmChange(
-      viewerState.colors.algorithm,
+      colors.algorithm,
       newAlgorithm,
       activePaletteName
     );
     if (swappedPalette) baseline = JSON.parse(JSON.stringify(swappedPalette));
-    viewerState.colors = {
-      ...viewerState.colors,
+    setColors({
+      ...colors,
       algorithm: newAlgorithm,
       ...(swappedPalette && { palette: swappedPalette })
-    };
+    });
   }
 </script>
 
@@ -91,10 +126,8 @@
       <PaletteEditor
         {activePaletteName}
         {baseline}
-        colors={viewerState.colors}
-        setColors={(c) => {
-          viewerState.colors = c;
-        }}
+        colors={colors}
+        setColors={setColors}
         onClose={() => (showEditor = false)}
         onSave={onEditorSave}
       />
@@ -105,9 +138,9 @@
     <div transition:fly={{ x: 16, duration: 150, opacity: 0 }}>
       <PalettePanel
         {activePaletteName}
-        algorithm={viewerState.colors.algorithm}
-        colors={viewerState.colors}
-        setColors={(c) => (viewerState.colors = c)}
+        algorithm={colors.algorithm}
+        colors={colors}
+        setColors={setColors}
         onClose={() => (showPalettePanel = false)}
         onApply={onPaletteApplied}
       />
@@ -156,7 +189,7 @@
         <div class="text-neutral-400 text-xs mb-1">Algorithm</div>
         <select
           class="w-full bg-neutral-800 text-white rounded px-2 py-1 text-xs border border-neutral-700"
-          value={viewerState.colors.algorithm}
+          value={colors.algorithm}
           onchange={onAlgorithmChange}
         >
           {#each ALGORITHMS as a (a.value)}
@@ -168,7 +201,7 @@
       <!-- Row 3: Cycle Period -->
       <div>
         <label
-          class="text-neutral-400 text-xs {baseAlgorithm(viewerState.colors.algorithm) ===
+          class="text-neutral-400 text-xs {baseAlgorithm(colors.algorithm) ===
           'histogram'
             ? 'opacity-30'
             : ''}"
@@ -181,32 +214,32 @@
             min="4"
             max="256"
             step="1"
-            value={viewerState.colors.cyclePeriod}
-            oninput={onCyclePeriodChange}
+            value={displayCyclePeriod}
+            oninput={handleCyclePeriodChange}
             use:wheelSlider
-            disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
-            class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
+            disabled={baseAlgorithm(colors.algorithm) === 'histogram'}
+            class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30 {!hasCyclePeriodKeyframe && baseAlgorithm(colors.algorithm) !== 'histogram' ? 'opacity-30' : ''}"
           />
           <input
             type="text"
-            disabled={baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
-            class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
-            value={viewerState.colors.cyclePeriod}
+            disabled={baseAlgorithm(colors.algorithm) === 'histogram'}
+            class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30 {!hasCyclePeriodKeyframe && baseAlgorithm(colors.algorithm) !== 'histogram' ? 'opacity-30' : ''}"
+            value={displayCyclePeriod}
             onblur={(e) => {
               const v = parseInt((e.target as HTMLInputElement).value);
-              if (!isNaN(v) && v > 0) onCyclePeriodChange(e);
+              if (!isNaN(v) && v > 0) handleCyclePeriodChange(e);
             }}
             onkeydown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLElement).blur();
             }}
           />
         </div>
-        {#if baseAlgorithm(viewerState.colors.algorithm) === 'distance_estimation' && viewerState.colors.cyclePeriod > 32}
+        {#if baseAlgorithm(colors.algorithm) === 'distance_estimation' && displayCyclePeriod > 32}
           <p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">
             High cycle period loses detail in distance estimation mode.
           </p>
         {/if}
-        {#if baseAlgorithm(viewerState.colors.algorithm) === 'histogram'}
+        {#if baseAlgorithm(colors.algorithm) === 'histogram'}
           <p class="text-yellow-500 text-xs mt-1 whitespace-normal break-words">
             Cycle period is unused in histogram equalized mode.
           </p>
@@ -223,22 +256,19 @@
             min="0"
             max="1"
             step="0.01"
-            value={viewerState.colors.offset}
-            oninput={onOffsetChange}
+            value={displayOffset}
+            oninput={handleOffsetChange}
             use:wheelSlider
-            class="flex-1 min-w-0 accent-blue-500"
+            class="flex-1 min-w-0 accent-blue-500 {!hasOffsetKeyframe ? 'opacity-30' : ''}"
           />
           <input
             type="text"
-            class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
-            value={viewerState.colors.offset.toFixed(2)}
+            class="w-12 bg-neutral-800 text-white font-mono rounded px-1 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right {!hasOffsetKeyframe ? 'opacity-30' : ''}"
+            value={displayOffset.toFixed(2)}
             onblur={(e) => {
               const v = parseFloat((e.target as HTMLInputElement).value);
               if (!isNaN(v))
-                viewerState.colors = {
-                  ...viewerState.colors,
-                  offset: Math.max(0, Math.min(1, v))
-                };
+                handleOffsetChange({ target: { value: Math.max(0, Math.min(1, v)).toString() } } as unknown as Event);
             }}
             onkeydown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLElement).blur();
@@ -254,18 +284,18 @@
           id="inSetColor"
           type="color"
           class="w-8 h-6 rounded border border-neutral-700 cursor-pointer p-0 bg-transparent"
-          value={viewerState.colors.inSetColor ?? '#000000'}
+          value={colors.inSetColor ?? '#000000'}
           oninput={(e) => {
-            viewerState.colors = {
-              ...viewerState.colors,
+            setColors({
+              ...colors,
               inSetColor: (e.target as HTMLInputElement).value
-            };
+            });
           }}
         />
         <button
           class="px-2 py-0.5 rounded text-xs border border-neutral-700 text-neutral-400 hover:text-white transition-colors"
           onclick={() => {
-            viewerState.colors = { ...viewerState.colors, inSetColor: '#000000' };
+            setColors({ ...colors, inSetColor: '#000000' });
           }}
           title="Reset to black">Reset</button
         >
@@ -273,13 +303,13 @@
 
       <!-- Row 6: Preview bar + Reverse -->
       <div class="flex items-center gap-2">
-        <PalettePreview colors={viewerState.colors} />
+        <PalettePreview colors={colors} />
         <ToggleButton
-          active={viewerState.colors.reverse ?? false}
+          active={colors.reverse ?? false}
           onclick={() =>
-            (viewerState.colors = {
-              ...viewerState.colors,
-              reverse: !viewerState.colors.reverse
+            setColors({
+              ...colors,
+              reverse: !colors.reverse
             })}
           title="Reverse palette">⇄</ToggleButton
         >

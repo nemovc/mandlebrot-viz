@@ -8,41 +8,53 @@
 
   let showLocations = $state(false);
 
-
-  let { onNavigate }: { onNavigate: (re: number, im: number, zoom?: number) => void } = $props();
+  let {
+    onNavigate,
+    disableMaxIter = false,
+    disablePower = false,
+    ctrlState = viewerState,
+    onIterChange = (v) => { viewerState.maxIter = v; },
+    onPowerChange = (v) => { viewerState.power = v; }
+  }: {
+    onNavigate: (re: number, im: number, zoom?: number) => void;
+    disableMaxIter?: boolean;
+    disablePower?: boolean;
+    ctrlState?: { cx: string; cy: string; zoom: number; maxIter: number; power: number };
+    onIterChange?: (v: number) => void;
+    onPowerChange?: (v: number) => void;
+  } = $props();
 
   // Local editable copies — only sync from store when not focused
-  let reInput = $state(viewerState.cx);
-  let imInput = $state(viewerState.cy);
-  let zoomInput = $state(viewerState.zoom.toString());
-  let iterInput = $state(viewerState.maxIter.toString());
-  let powerInput = $state(viewerState.power.toString());
+  let reInput = $state(ctrlState.cx);
+  let imInput = $state(ctrlState.cy);
+  let zoomInput = $state(ctrlState.zoom.toString());
+  let iterInput = $state(ctrlState.maxIter.toString());
+  let powerInput = $state(ctrlState.power.toString());
   let reFocused = false;
   let imFocused = false;
   let zoomFocused = false;
   let iterFocused = false;
   let powerFocused = false;
 
-  // Always read the store value to maintain reactivity dependency,
-  // then conditionally apply it so we don't clobber an in-progress edit.
+  // Sync inputs when state changes (only when not focused)
   $effect(() => {
-    const val = (+viewerState.cx).toPrecision(8).replace(/\.?0+$/, '');
+    const val = (+ctrlState.cx).toPrecision(8).replace(/\.?0+$/, '');
     if (!reFocused) reInput = val;
   });
   $effect(() => {
-    const val = (+viewerState.cy).toPrecision(8).replace(/\.?0+$/, '');
+    const val = (+ctrlState.cy).toPrecision(8).replace(/\.?0+$/, '');
     if (!imFocused) imInput = val;
   });
   $effect(() => {
-    const val = viewerState.zoom.toString();
+    const val = ctrlState.zoom.toString();
     if (!zoomFocused) zoomInput = val;
   });
   $effect(() => {
-    const val = viewerState.maxIter.toString();
+    const val = ctrlState.maxIter.toString();
     if (!iterFocused) iterInput = val;
   });
   $effect(() => {
-    const val = viewerState.power.toString();
+    const val = ctrlState.power.toString();
     if (!powerFocused) powerInput = val;
   });
 
@@ -59,12 +71,12 @@
 
   function commitIter() {
     const v = parseInt(iterInput);
-    if (!isNaN(v) && v > 0) viewerState.maxIter = v;
+    if (!isNaN(v) && v > 0) onIterChange?.(v);
   }
 
   function commitPower() {
     const v = parseInt(powerInput);
-    if (!isNaN(v) && v >= 2 && v <= 10) viewerState.power = v;
+    if (!isNaN(v) && v >= 2 && v <= 10) onPowerChange?.(v);
   }
 
   function onKeydown(e: KeyboardEvent, commit: () => void) {
@@ -85,7 +97,7 @@
         type="text"
         value={zoomInput}
         onfocus={() => (zoomFocused = true)}
-        onblur={() => { zoomFocused = false; commitZoom(); zoomInput = viewerState.zoom.toString(); }}
+        onblur={() => { zoomFocused = false; commitZoom(); zoomInput = ctrlState.zoom.toString(); }}
         oninput={(e) => (zoomInput = (e.target as HTMLInputElement).value)}
         onkeydown={(e) => onKeydown(e, commitZoom)}
       />
@@ -98,7 +110,7 @@
         type="text"
         value={reInput}
         onfocus={() => (reFocused = true)}
-        onblur={() => { reFocused = false; commitCoords(); reInput = (+viewerState.cx).toPrecision(8).replace(/\.?0+$/, ''); }}
+        onblur={() => { reFocused = false; commitCoords(); reInput = (+ctrlState.cx).toPrecision(8).replace(/\.?0+$/, ''); }}
         oninput={(e) => (reInput = (e.target as HTMLInputElement).value)}
         onkeydown={(e) => onKeydown(e, commitCoords)}
       />
@@ -111,7 +123,7 @@
         type="text"
         value={imInput}
         onfocus={() => (imFocused = true)}
-        onblur={() => { imFocused = false; commitCoords(); imInput = (+viewerState.cy).toPrecision(8).replace(/\.?0+$/, ''); }}
+        onblur={() => { imFocused = false; commitCoords(); imInput = (+ctrlState.cy).toPrecision(8).replace(/\.?0+$/, ''); }}
         oninput={(e) => (imInput = (e.target as HTMLInputElement).value)}
         onkeydown={(e) => onKeydown(e, commitCoords)}
       />
@@ -125,21 +137,23 @@
           min="64"
           max="4096"
           step="4"
-          value={viewerState.maxIter}
+          value={ctrlState.maxIter}
           oninput={(e) => {
-            viewerState.maxIter = parseInt((e.target as HTMLInputElement).value);
+            if (!disableMaxIter) onIterChange?.(parseInt((e.target as HTMLInputElement).value));
           }}
           use:wheelSlider
-          class="flex-1 min-w-0 accent-blue-500"
+          disabled={disableMaxIter}
+          class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
         />
         <input
-          class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+          class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
           type="text"
           value={iterInput}
           onfocus={() => (iterFocused = true)}
-          onblur={() => { iterFocused = false; commitIter(); iterInput = viewerState.maxIter.toString(); }}
+          onblur={() => { iterFocused = false; commitIter(); iterInput = ctrlState.maxIter.toString(); }}
           oninput={(e) => (iterInput = (e.target as HTMLInputElement).value)}
           onkeydown={(e) => onKeydown(e, commitIter)}
+          disabled={disableMaxIter}
         />
       </div>
     </div>
@@ -152,21 +166,23 @@
           min="2"
           max="10"
           step="1"
-          value={viewerState.power}
+          value={ctrlState.power}
           oninput={(e) => {
-            viewerState.power = parseInt((e.target as HTMLInputElement).value);
+            if (!disablePower) onPowerChange?.(parseInt((e.target as HTMLInputElement).value));
           }}
           use:wheelSlider
-          class="flex-1 min-w-0 accent-blue-500"
+          disabled={disablePower}
+          class="flex-1 min-w-0 accent-blue-500 disabled:opacity-30"
         />
         <input
-          class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right"
+          class="w-16 bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none text-right disabled:opacity-30"
           type="text"
           value={powerInput}
           onfocus={() => (powerFocused = true)}
-          onblur={() => { powerFocused = false; commitPower(); powerInput = viewerState.power.toString(); }}
+          onblur={() => { powerFocused = false; commitPower(); powerInput = ctrlState.power.toString(); }}
           oninput={(e) => (powerInput = (e.target as HTMLInputElement).value)}
           onkeydown={(e) => onKeydown(e, commitPower)}
+          disabled={disablePower}
         />
       </div>
     </div>

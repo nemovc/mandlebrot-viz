@@ -15,6 +15,8 @@
   import { Code2, CircleUserRound } from 'lucide-svelte';
   import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
   import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
+  import { ViewerRecolorPool } from '$lib/rendering/worker/pools/viewerRecolorPool';
+  import { ViewerExportPool } from '$lib/rendering/worker/pools/viewerExportPool';
   import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
   let showExport = $state(false);
   let mapComponent = $state<MandelbrotMap>();
@@ -234,7 +236,14 @@
 
   <!-- Debug panel -->
   <div class="absolute bottom-3 left-3 z-[1000]">
-    <DebugPanel />
+    <DebugPanel
+      pools={[
+        { name: 'S2', pool: ViewerS2Pool.instance, textColor: 'text-blue-400', barColor: 'bg-blue-400' },
+        { name: 'S3', pool: ViewerS3Pool.instance, textColor: 'text-green-500', barColor: 'bg-green-500' },
+        { name: 'RC', pool: ViewerRecolorPool.instance, textColor: 'text-purple-400', barColor: 'bg-purple-400' },
+        { name: 'EX', pool: ViewerExportPool.instance, textColor: 'text-yellow-400', barColor: 'bg-yellow-400' }
+      ]}
+    />
   </div>
 
   <!-- Info bar -->
