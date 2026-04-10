@@ -432,9 +432,11 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
       );
       exportUrl = URL.createObjectURL(blob);
       exportPhase = 'done';
+      exportProgress = null;
     } catch (e: unknown) {
       if ((e as { name: string }).name !== 'AbortError') throw e;
       exportPhase = 'idle';
+      exportProgress = null;
     } finally {
       exportAbort = null;
     }
@@ -455,7 +457,6 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     URL.revokeObjectURL(exportUrl);
     exportUrl = '';
     exportPhase = 'idle';
-    exportProgress = null;
   }
 
   // Cancel export whenever the project is mutated
@@ -764,8 +765,10 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 {/if}
 
 <ExportVideoModal
-  open={exportPhase === 'done' && !!exportUrl}
+  open={exportPhase === 'exporting' || (exportPhase === 'done' && !!exportUrl)}
   {exportUrl}
+  progress={exportProgress}
   onSave={saveVideo}
   onReset={resetExport}
+  onCancel={cancelExport}
 />
