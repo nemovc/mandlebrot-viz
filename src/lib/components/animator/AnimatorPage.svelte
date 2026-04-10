@@ -261,8 +261,9 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     } else if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       triggerNew();
-    } else if (e.key === 'r' || e.key === 'R') {
-      loopPlayback = !loopPlayback;
+    } else if (e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+      toggleExplorer();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (!kfTrack) return;
@@ -726,7 +727,6 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     onExplorerToggle={toggleExplorer}
     onShortcuts={() => (showShortcuts = true)}
     {cacheReady}
-    {loopPlayback}
     {explorerOpen}
   />
 

@@ -12,9 +12,10 @@
       rows: [
         { keys: ['←', '→'], desc: 'Move ±1 frame' },
         { keys: ['Shift+←', 'Shift+→'], desc: 'Move ±1 second' },
-        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to prev / next keyframe' },
+        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to prev / next keyframe (or start / end)' },
         { keys: ['Home'], desc: 'Jump to start' },
-        { keys: ['End'], desc: 'Jump to end' }
+        { keys: ['End'], desc: 'Jump to end' },
+        { keys: ['E'], desc: 'Toggle explorer pane' }
       ]
     },
     {
@@ -32,8 +33,8 @@
       label: 'Playback',
       rows: [
         { keys: ['Space'], desc: 'Play / pause preview' },
-        { keys: ['R'], desc: 'Toggle loop' },
-        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to start / end (in preview)' },
+        { keys: ['R'], desc: 'Toggle loop (in playback modal)' },
+        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to start / end (in playback modal)' },
         { keys: ['Ctrl+Space'], desc: 'Generate WebM export (or cancel in progress)' }
       ]
     },

@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { animationState } from '$lib/stores/animationState.svelte';
   import { frameCache } from '$lib/utils/animator/frameCache.svelte';
-  import { Play, Pause, Repeat } from 'lucide-svelte';
+  import { Play, Pause, Repeat, StepBack, StepForward } from 'lucide-svelte';
   import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
 
   let { open = $bindable(false), loopPlayback = $bindable(true) } = $props();
@@ -64,6 +64,26 @@
   function close() {
     pause();
     open = false;
+  }
+
+  function stepBack(ctrl: boolean, shift: boolean) {
+    if (ctrl) {
+      animationState.currentFrame = 0;
+    } else if (shift) {
+      animationState.currentFrame = animationState.currentFrame - project.fps;
+    } else {
+      animationState.currentFrame = animationState.currentFrame - 1;
+    }
+  }
+
+  function stepForward(ctrl: boolean, shift: boolean) {
+    if (ctrl) {
+      animationState.currentFrame = totalFrames - 1;
+    } else if (shift) {
+      animationState.currentFrame = animationState.currentFrame + project.fps;
+    } else {
+      animationState.currentFrame = animationState.currentFrame + 1;
+    }
   }
 
   // Auto-play when modal opens; pause when it closes.
@@ -232,6 +252,14 @@
       <!-- Controls row -->
       <div class="flex items-center gap-2 text-[11px]">
         <button
+          onclick={(e) => stepBack(e.ctrlKey || e.metaKey, e.shiftKey)}
+          class="text-neutral-400 hover:text-white transition-colors"
+          title="Step back"
+        >
+          <StepBack size={16} />
+        </button>
+
+        <button
           onclick={() => (isPlaying ? pause() : play())}
           class="text-white hover:text-neutral-300 transition-colors"
           title="{isPlaying ? 'Pause' : 'Play'} (Space)"
@@ -241,6 +269,14 @@
           {:else}
             <Play size={16} />
           {/if}
+        </button>
+
+        <button
+          onclick={(e) => stepForward(e.ctrlKey || e.metaKey, e.shiftKey)}
+          class="text-neutral-400 hover:text-white transition-colors"
+          title="Step forward"
+        >
+          <StepForward size={16} />
         </button>
 
         <button
