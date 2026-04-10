@@ -55,7 +55,7 @@
     if (total === 0) return;
 
     const pool = AnimatorPreviewPool.instance;
-    const batchId = `preview-${Date.now()}`;
+    const batchId = `preview-${seq}`;
     const isHistogram = baseAlgorithm(colorConfig.algorithm) === 'histogram';
     const tileIters = new SvelteMap<string, Float32Array>();
     let passOneDone = 0;
