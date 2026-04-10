@@ -3,6 +3,7 @@
   import ToggleButton from '$lib/components/viewer/ToggleButton.svelte';
   import { savedProjects } from '$lib/stores/savedProjects.svelte';
   import type { AnimationProject } from '$lib/stores/animationState.svelte';
+  import DeleteModal from '$lib/components/ui/DeleteModal.svelte';
 
   let {
     project,
@@ -44,6 +45,7 @@
   let powerInput = $state(project.power.toString());
 
   let showLoadList = $state(false);
+  let showDeleteModal = $state(false);
   let pendingDelete = $state<string | null>(null);
 
   // Sync inputs when project changes
@@ -226,42 +228,40 @@
           <p class="text-xs text-neutral-600">No saved projects.</p>
         {:else}
           {#each savedProjects.all as entry (entry.name)}
-            {#if pendingDelete === entry.name}
-              <div class="flex items-center gap-1 px-1 py-0.5 rounded bg-neutral-800">
-                <span class="text-xs text-neutral-300 flex-1 truncate">Delete?</span>
-                <button
-                  class="text-xs px-1 py-0.5 rounded bg-red-700 text-white"
-                  onclick={() => {
-                    savedProjects.remove(entry.name);
-                    pendingDelete = null;
-                  }}>Yes</button
-                >
-                <button
-                  class="text-xs px-1 py-0.5 rounded border border-neutral-600 text-neutral-400"
-                  onclick={() => (pendingDelete = null)}>No</button
-                >
-              </div>
-            {:else}
-              <div class="relative group flex items-center gap-1">
-                <button
-                  class="flex-1 text-left px-1 py-0.5 rounded text-xs bg-neutral-800 text-neutral-300 hover:text-white transition-colors truncate"
-                  onclick={() => {
-                    onLoad(entry.project, entry.name);
-                    showLoadList = false;
-                  }}>{entry.name}</button
-                >
-                <button
-                  class="w-3.5 h-3.5 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 text-[9px] opacity-0 group-hover:opacity-100"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    pendingDelete = entry.name;
-                  }}>✕</button
-                >
-              </div>
-            {/if}
+            <div class="relative group flex items-center gap-1">
+              <button
+                class="flex-1 text-left px-1 py-0.5 rounded text-xs bg-neutral-800 text-neutral-300 hover:text-white transition-colors truncate"
+                onclick={() => {
+                  onLoad(entry.project, entry.name);
+                  showLoadList = false;
+                }}>{entry.name}</button
+              >
+              <button
+                class="w-3.5 h-3.5 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 text-[9px] opacity-0 group-hover:opacity-100"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  pendingDelete = entry.name;
+                  showDeleteModal = true;
+                }}>✕</button
+              >
+            </div>
           {/each}
         {/if}
       </div>
     {/if}
   </div>
 </CollapsiblePanel>
+
+<DeleteModal
+  bind:open={showDeleteModal}
+  itemName={pendingDelete ?? ''}
+  itemType="project"
+  onDelete={() => {
+    if (pendingDelete) {
+      savedProjects.remove(pendingDelete);
+      pendingDelete = null;
+      showDeleteModal = false;
+    }
+  }}
+  onCancel={() => (showDeleteModal = false)}
+/>

@@ -77,11 +77,15 @@
     onCancel?.();
   }
 
-  function handleWindowKeydown(e: KeyboardEvent) {
-    if (!open || e.key !== 'Enter') return;
-    e.preventDefault();
-    if (confirmOverwrite) commit();
-    else handleSave();
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (confirmOverwrite) commit();
+      else handleSave();
+    } else if (e.key === 'Escape' && confirmOverwrite) {
+      e.preventDefault();
+      confirmOverwrite = false;
+    }
   }
 
   function handleInput(e: Event) {
@@ -103,9 +107,7 @@
   );
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
-
-<Modal bind:open {title} onClose={onCancel} {actions}>
+<Modal bind:open {title} onClose={onCancel} {actions} onKeyDown={handleKeydown}>
   {#if confirmOverwrite}
     <p class="text-xs text-neutral-300">
       <span class="text-white font-medium">"{processed}"</span> already exists. Overwrite?

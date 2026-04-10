@@ -6,6 +6,7 @@
   import { scaleForZoom } from '$lib/utils/precision';
   import ToggleButton from './ToggleButton.svelte';
   import SaveModal from '$lib/components/ui/SaveModal.svelte';
+  import DeleteModal from '$lib/components/ui/DeleteModal.svelte';
 
   function isAt(loc: Location): boolean {
     if (viewerState.zoom !== loc.zoom) return false;
@@ -25,6 +26,7 @@
   } = $props();
 
   let showSaveModal = $state(false);
+  let showDeleteModal = $state(false);
   let pendingDelete = $state<string | null>(null);
 </script>
 
@@ -70,40 +72,22 @@
       {/if}
       <div class="grid grid-cols-2 gap-1">
         {#each savedLocations.all as loc (loc.name)}
-          {#if pendingDelete === loc.name}
-            <div
-              class="col-span-2 flex items-center gap-2 px-2 py-1 rounded bg-neutral-800 border border-neutral-700"
+          <div class="relative group">
+            <ToggleButton
+              active={isAt(loc)}
+              onclick={() => onNavigate(loc.re, loc.im, loc.zoom)}
+              class="w-full truncate">{loc.name}</ToggleButton
             >
-              <span class="text-xs text-neutral-300 flex-1 truncate">Delete "{loc.name}"?</span>
-              <button
-                class="text-xs px-2 py-0.5 rounded bg-red-700 border border-red-600 text-white hover:bg-red-600 transition-colors"
-                onclick={() => {
-                  savedLocations.remove(loc.name);
-                  pendingDelete = null;
-                }}>Yes</button
-              >
-              <button
-                class="text-xs px-2 py-0.5 rounded border border-neutral-600 text-neutral-400 hover:text-white transition-colors"
-                onclick={() => (pendingDelete = null)}>No</button
-              >
-            </div>
-          {:else}
-            <div class="relative group">
-              <ToggleButton
-                active={isAt(loc)}
-                onclick={() => onNavigate(loc.re, loc.im, loc.zoom)}
-                class="w-full truncate">{loc.name}</ToggleButton
-              >
-              <button
-                class="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-all opacity-0 group-hover:opacity-100 text-[10px] leading-none"
-                onclick={(e) => {
-                  e.stopPropagation();
-                  pendingDelete = loc.name;
-                }}
-                aria-label="Delete {loc.name}">✕</button
-              >
-            </div>
-          {/if}
+            <button
+              class="absolute top-0.5 right-0.5 w-4 h-4 flex items-center justify-center rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-all opacity-0 group-hover:opacity-100 text-[10px] leading-none"
+              onclick={(e) => {
+                e.stopPropagation();
+                pendingDelete = loc.name;
+                showDeleteModal = true;
+              }}
+              aria-label="Delete {loc.name}">✕</button
+            >
+          </div>
         {/each}
       </div>
     {/if}
@@ -132,4 +116,18 @@
       im: parseFloat(viewerState.cy),
       zoom: viewerState.zoom
     })}
+/>
+
+<DeleteModal
+  bind:open={showDeleteModal}
+  itemName={pendingDelete ?? ''}
+  itemType="location"
+  onDelete={() => {
+    if (pendingDelete) {
+      savedLocations.remove(pendingDelete);
+      pendingDelete = null;
+      showDeleteModal = false;
+    }
+  }}
+  onCancel={() => (showDeleteModal = false)}
 />
