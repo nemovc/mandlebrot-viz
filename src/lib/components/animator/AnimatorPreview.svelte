@@ -38,7 +38,6 @@
     const state = interpolateAll(project, frame);
 
     const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvasW, canvasH);
 
     const zoom = state.zoom;
     const cxCenter = parseFloat(state.cx);
@@ -66,7 +65,6 @@
         const tileCy = (cyCenter + (ty * TILE + TILE / 2 - canvasH / 2) * scale).toString();
         const id = `${batchId}-${tx}-${ty}`;
         activeCancels.push(() => pool.cancel(id));
-
         pool.submit(
           {
             id,
@@ -136,19 +134,27 @@
       h = availH;
       w = availH * ar;
     }
-    canvasW = Math.round(w);
-    canvasH = Math.round(h);
-    wrapper.style.width = `${canvasW}px`;
-    wrapper.style.height = `${canvasH}px`;
-    canvas.width = canvasW;
-    canvas.height = canvasH;
-    if (active) renderFrame(animationState.currentFrame);
+    const newW = Math.round(w);
+    const newH = Math.round(h);
+    // Only update if dimensions actually changed - prevents canvas clearing on every state change
+    if (newW !== canvasW || newH !== canvasH) {
+      canvasW = newW;
+      canvasH = newH;
+      wrapper.style.width = `${canvasW}px`;
+      wrapper.style.height = `${canvasH}px`;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      if (active) renderFrame(animationState.currentFrame);
+    }
   }
 
   // Re-size canvas when animation dimensions change
+  // The function itself checks if dimensions actually changed to avoid unnecessary canvas clears
+  const dimensionsKey = $derived(
+    `${animationState.project.width}x${animationState.project.height}`
+  );
   $effect(() => {
-    animationState.project.width;
-    animationState.project.height;
+    dimensionsKey;
     updateCanvasSize();
   });
 
