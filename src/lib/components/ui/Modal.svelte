@@ -23,6 +23,7 @@
     showX = true,
     actions = [],
     onClose,
+    onKeyDown,
     children
   }: {
     open?: boolean;
@@ -33,6 +34,8 @@
     actions?: ModalAction[];
     /** Called whenever the modal closes via built-in mechanisms (X, backdrop, Escape) */
     onClose?: () => void;
+    /** Optional custom keydown handler - called before built-in Escape/Enter handling */
+    onKeyDown?: (e: KeyboardEvent) => void;
     children: Snippet;
   } = $props();
 
@@ -51,6 +54,10 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    // Call custom handler first
+    onKeyDown?.(e);
+    if (e.defaultPrevented) return;
+
     if (closeOnEscape && e.key === 'Escape') {
       e.preventDefault();
       close();

@@ -253,8 +253,9 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
       e.preventDefault();
       if (exportPhase === 'exporting') {
         cancelExport();
+      } else {
+        startExport();
       }
-      startExport();
     } else if (e.key === ' ') {
       e.preventDefault();
       if (cacheReady) showPlayback = true;

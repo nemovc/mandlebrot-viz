@@ -36,6 +36,15 @@
     { label: 'Close export', callback: onReset },
     { label: 'Save WebM', color: 'blue' as const, callback: onSave, isDefault: true }
   ]);
+
+  function handleKeydown(e: KeyboardEvent) {
+    if ((e.key === ' ' || e.key === 'Spacebar') && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (isExporting) {
+        onCancel();
+      }
+    }
+  }
 </script>
 
 {#if isExporting}
@@ -47,6 +56,7 @@
     closeOnBackdrop={true}
     showX={true}
     actions={exportingActions}
+    onKeyDown={handleKeydown}
   >
     <div class="flex flex-col gap-4 w-[400px]">
       <div class="text-neutral-400 text-sm">{phaseText}</div>
@@ -75,6 +85,7 @@
     closeOnBackdrop={false}
     showX={false}
     actions={doneActions}
+    onKeyDown={handleKeydown}
   >
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
