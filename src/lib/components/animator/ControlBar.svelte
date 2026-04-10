@@ -136,14 +136,18 @@
 
   <!-- Scrub bar -->
   <div class="flex-1 flex items-center gap-2">
-    <div class="relative flex-1 h-1.5 bg-neutral-700 rounded cursor-pointer">
+    <div class="relative flex-1 h-6 cursor-pointer">
+      <!-- Visual bar background -->
+      <div class="absolute inset-y-1/2 -translate-y-1/2 left-0 right-0 h-1.5 bg-neutral-700 rounded"></div>
+      <!-- Click target (invisible, full height) -->
       <div
         bind:this={scrubBarEl}
-        class="absolute inset-0 rounded overflow-hidden"
+        class="absolute inset-0 rounded"
         onmousedown={handleScrubStart}
         ontouchstart={handleScrubStart}
-      >
-        <!-- Cached frame ranges -->
+      ></div>
+      <!-- Cached frame ranges (constrained to visual bar height) -->
+      <div class="absolute inset-y-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded overflow-hidden pointer-events-none">
         {#each cachedRanges as range (`${range.start}-${range.end}`)}
           <div
             class="absolute h-full bg-green-500/50"
