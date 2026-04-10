@@ -243,7 +243,7 @@
 			class="flex items-center gap-3 text-[11px] text-neutral-400 select-none bg-neutral-900/80 border border-neutral-700 rounded px-2 py-1"
 		>
 			<a
-				href="https://github.com/nemovc/mandlebrot-viz"
+				href="https://github.com/nemovc/mandelbrot-viz"
 				target="_blank"
 				rel="noopener noreferrer"
 				class="text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5"

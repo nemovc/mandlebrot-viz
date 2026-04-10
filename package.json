@@ -1,5 +1,5 @@
 {
-	"name": "mandlebrot-viz",
+	"name": "mandelbrot-viz",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
