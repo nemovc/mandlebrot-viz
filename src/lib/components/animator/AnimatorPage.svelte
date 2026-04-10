@@ -10,7 +10,8 @@
   import ExportProjectModal from './ExportProjectModal.svelte';
   import ImportProjectModal from './ImportProjectModal.svelte';
   import ExportVideoModal from './ExportVideoModal.svelte';
-  import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
+  import { ChevronLeft } from 'lucide-svelte';
+import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
   import { animationState, TRACK_LABELS, type EasingType } from '$lib/stores/animationState.svelte';
   import { exportWebM, type ExportProgress } from '$lib/utils/animator/videoExporter';
   import { interpolateTrack, interpolateAll } from '$lib/utils/animator/interpolation';
@@ -119,6 +120,26 @@
   $effect(() => {
     animationState.currentFrame;
     scheduleCache(false, 100);
+  });
+
+  // Sync project-wide settings to explorer (but not cx/cy/zoom)
+  $effect(() => {
+    if (!explorerOpen || !explorerState) return;
+    const project = animationState.project;
+    const frameState = interpolateAll(project, animationState.currentFrame);
+    // Only update if values actually differ (avoid infinite loop)
+    if (
+      explorerState.maxIter !== frameState.maxIter ||
+      explorerState.power !== frameState.power ||
+      JSON.stringify(explorerState.colors) !== JSON.stringify(frameState.colors)
+    ) {
+      explorerState = {
+        ...explorerState,
+        maxIter: frameState.maxIter,
+        power: frameState.power,
+        colors: frameState.colors
+      };
+    }
   });
 
   const cacheReady = $derived(frameCache.isReady);
@@ -455,9 +476,21 @@
 
   // ---- Explorer helpers ----
   function toggleExplorer() {
-    if (!explorerOpen && !explorerState) {
-      // First time opening - initialize with current frame state
-      explorerState = interpolateAll(animationState.project, animationState.currentFrame);
+    if (!explorerOpen) {
+      // Opening: initialize/reinitialize cx/cy/zoom from current frame
+      const frameState = interpolateAll(animationState.project, animationState.currentFrame);
+      if (explorerState) {
+        // Reopen: preserve independent cx/cy/zoom by syncing from current frame
+        explorerState = {
+          ...explorerState,
+          cx: frameState.cx,
+          cy: frameState.cy,
+          zoom: frameState.zoom
+        };
+      } else {
+        // First time opening - initialize with current frame state
+        explorerState = frameState;
+      }
     }
     explorerOpen = !explorerOpen;
   }
@@ -465,6 +498,7 @@
   function handleExplorerNavigate(re: number, im: number, zoom?: number) {
     if (explorerState) {
       explorerState = {
+        ...explorerState,
         cx: re.toString(),
         cy: im.toString(),
         zoom: zoom ?? explorerState.zoom
@@ -546,7 +580,9 @@
           <div style="width: {panelW}px; height: {panelH}px;">
             <AnimatorExplorer
               initialState={explorerState}
-              onUpdate={(s) => (explorerState = s)}
+              onUpdate={(s) => {
+                explorerState = { ...explorerState, ...s };
+              }}
               projectWidth={project.width}
               panelWidth={panelW}
               {syncSignal}
@@ -659,12 +695,19 @@
           </div>
           <button
             class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
-            title="Sync explorer to current frame"
+            title="Sync explorer position to current frame"
             onclick={() => {
-              explorerState = interpolateAll(animationState.project, animationState.currentFrame);
+              const frameState = interpolateAll(animationState.project, animationState.currentFrame);
+              explorerState = {
+                ...explorerState,
+                cx: frameState.cx,
+                cy: frameState.cy,
+                zoom: frameState.zoom
+              };
               syncSignal++;
             }}
           >
+            <ChevronLeft size={12} />
             Sync
           </button>
           <div class="flex-1"></div>
