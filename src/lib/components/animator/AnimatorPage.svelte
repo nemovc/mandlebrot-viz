@@ -30,6 +30,9 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
   import { AnimatorCachePool } from '$lib/rendering/worker/pools/animatorCachePool';
   import { AnimatorExportPool } from '$lib/rendering/worker/pools/animatorExportPool';
   import { AnimatorRecolorPool } from '$lib/rendering/worker/pools/animatorRecolorPool';
+  import { ViewerS2Pool } from '$lib/rendering/worker/pools/viewerS2Pool';
+  import { ViewerS3Pool } from '$lib/rendering/worker/pools/viewerS3Pool';
+  import { ViewerRecolorPool } from '$lib/rendering/worker/pools/viewerRecolorPool';
 
   let showShortcuts = $state(false);
   let showPlayback = $state(false);
@@ -185,11 +188,6 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     }
 
     if (inInput) return;
-
-    if (e.key === 'Escape' && explorerOpen) {
-      explorerOpen = false;
-      return;
-    }
 
     if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();
@@ -643,11 +641,19 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     <!-- Bottom-left: DebugPanel -->
     <div class="absolute bottom-3 left-3 z-[1000]">
       <DebugPanel
-        pools={[
-          { name: 'Preview', pool: AnimatorPreviewPool.instance, textColor: 'text-blue-400', barColor: 'bg-blue-400' },
-          { name: 'Cache', pool: AnimatorCachePool.instance, textColor: 'text-green-500', barColor: 'bg-green-500' },
-          { name: 'Recolor', pool: AnimatorRecolorPool.instance, textColor: 'text-purple-400', barColor: 'bg-purple-400' },
-          { name: 'Export', pool: AnimatorExportPool.instance, textColor: 'text-yellow-400', barColor: 'bg-yellow-400' }
+        pools={explorerOpen ? [
+          { name: 'PR', pool: AnimatorPreviewPool.instance, textColor: 'text-blue-400', barColor: 'bg-blue-400' },
+          { name: 'CA', pool: AnimatorCachePool.instance, textColor: 'text-green-500', barColor: 'bg-green-500' },
+          { name: 'RC', pool: AnimatorRecolorPool.instance, textColor: 'text-purple-400', barColor: 'bg-purple-400' },
+          { name: 'EX', pool: AnimatorExportPool.instance, textColor: 'text-yellow-400', barColor: 'bg-yellow-400' },
+          { name: 'S2', pool: ViewerS2Pool.instance, textColor: 'text-pink-400', barColor: 'bg-pink-400' },
+          { name: 'S3', pool: ViewerS3Pool.instance, textColor: 'text-cyan-400', barColor: 'bg-cyan-400' },
+          { name: 'VR', pool: ViewerRecolorPool.instance, textColor: 'text-orange-400', barColor: 'bg-orange-400' }
+        ] : [
+          { name: 'PR', pool: AnimatorPreviewPool.instance, textColor: 'text-blue-400', barColor: 'bg-blue-400' },
+          { name: 'CA', pool: AnimatorCachePool.instance, textColor: 'text-green-500', barColor: 'bg-green-500' },
+          { name: 'RC', pool: AnimatorRecolorPool.instance, textColor: 'text-purple-400', barColor: 'bg-purple-400' },
+          { name: 'EX', pool: AnimatorExportPool.instance, textColor: 'text-yellow-400', barColor: 'bg-yellow-400' }
         ]}
       />
     </div>
@@ -682,42 +688,43 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
       />
     </div>
 
-    <!-- Explorer info + sync bar -->
-    {#if explorerOpen && explorerState}
-      <div class="absolute bottom-0 left-0 right-0 h-7 bg-neutral-900 border-t border-neutral-800 text-[11px]">
-        <div class="flex items-center h-full gap-2 px-2">
-          <div class="flex-1 flex items-center justify-center gap-2 text-neutral-400">
-            <span class="text-neutral-500">Re:</span>
-            <span class="font-mono text-white">{parseFloat(explorerState.cx).toFixed(6)}</span>
-            <span class="text-neutral-700">|</span>
-            <span class="text-neutral-500">Im:</span>
-            <span class="font-mono text-white">{parseFloat(explorerState.cy).toFixed(6)}</span>
-            <span class="text-neutral-700">|</span>
-            <span class="text-neutral-500">Z:</span>
-            <span class="font-mono text-white">{explorerState.zoom.toFixed(3)}</span>
-          </div>
-          <button
-            class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
-            title="Sync explorer position to current frame"
-            onclick={() => {
-              const frameState = interpolateAll(animationState.project, animationState.currentFrame);
-              explorerState = {
-                ...explorerState,
-                cx: frameState.cx,
-                cy: frameState.cy,
-                zoom: frameState.zoom
-              };
-              syncSignal++;
-            }}
-          >
-            <ChevronLeft size={12} />
-            Sync
-          </button>
-          <div class="flex-1"></div>
-        </div>
-      </div>
-    {/if}
   </div>
+
+  <!-- Explorer info + sync bar (below preview, above control bar) -->
+  {#if explorerOpen && explorerState}
+    <div class="h-7 bg-neutral-900 border-t border-neutral-800 text-[11px]">
+      <div class="flex items-center h-full gap-2 px-2">
+        <div class="flex-1 flex items-center justify-center gap-2 text-neutral-400">
+          <span class="text-neutral-500">Re:</span>
+          <span class="font-mono text-white">{parseFloat(explorerState.cx).toFixed(6)}</span>
+          <span class="text-neutral-700">|</span>
+          <span class="text-neutral-500">Im:</span>
+          <span class="font-mono text-white">{parseFloat(explorerState.cy).toFixed(6)}</span>
+          <span class="text-neutral-700">|</span>
+          <span class="text-neutral-500">Z:</span>
+          <span class="font-mono text-white">{explorerState.zoom.toFixed(3)}</span>
+        </div>
+        <button
+          class="flex items-center gap-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded text-neutral-300 transition-colors shrink-0"
+          title="Sync explorer position to current frame"
+          onclick={() => {
+            const frameState = interpolateAll(animationState.project, animationState.currentFrame);
+            explorerState = {
+              ...explorerState,
+              cx: frameState.cx,
+              cy: frameState.cy,
+              zoom: frameState.zoom
+            };
+            syncSignal++;
+          }}
+        >
+          <ChevronLeft size={12} />
+          Sync
+        </button>
+        <div class="flex-1"></div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Control Bar (play, scrub, undo/redo, shortcuts) -->
   <ControlBar

@@ -34,8 +34,7 @@
       rows: [
         { keys: ['Space'], desc: 'Play / pause preview' },
         { keys: ['R'], desc: 'Toggle loop (in playback modal)' },
-        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to start / end (in playback modal)' },
-        { keys: ['Ctrl+Space'], desc: 'Generate WebM export (or cancel in progress)' }
+        { keys: ['Ctrl+←', 'Ctrl+→'], desc: 'Jump to start / end (in playback modal)' }
       ]
     },
     {
@@ -51,6 +50,7 @@
       label: 'General',
       rows: [
         { keys: ['Escape'], desc: 'Dismiss focused input' },
+        { keys: ['Ctrl+Space'], desc: 'Start / cancel WebM export' },
         { keys: ['?'], desc: 'Show / hide this reference' }
       ]
     }

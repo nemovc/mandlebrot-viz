@@ -150,6 +150,7 @@
   <CollapsiblePanel
     title="Color Scheme"
     position="top-right"
+    defaultOpen={false}
     oncollapse={() => {
       showPalettePanel = false;
       showEditor = false;

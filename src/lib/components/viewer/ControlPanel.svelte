@@ -85,7 +85,7 @@
 </script>
 
 <div class="flex flex-row items-start gap-2">
-  <CollapsiblePanel title="Position" position="top-left" oncollapse={() => (showLocations = false)}>
+  <CollapsiblePanel title="Position" position="top-left" defaultOpen={false} oncollapse={() => (showLocations = false)}>
   <div class="flex flex-col gap-3 p-3">
     <ToggleButton active={showLocations} onclick={() => (showLocations = !showLocations)} class="w-full" chevron="right">
       Locations
