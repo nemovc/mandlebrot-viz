@@ -22,6 +22,12 @@
   let mapComponent = $state<MandelbrotMap>();
 
   let inspectorActive = $state(false);
+
+  // Panel open state (controlled by keyboard shortcuts)
+  let positionOpen = $state(true);
+  let colorOpen = $state(true);
+  let debugOpen = $state(false);
+  let actionsOpen = $state(true);
   let inspectorLocked = $state(false);
   let inspectorRe = $state(0);
   let inspectorIm = $state(0);
@@ -156,9 +162,43 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
+    // Escape blurs focused inputs
+    if (e.key === 'Escape' && inInput) {
+      (e.target as HTMLElement).blur();
+      return;
+    }
+
+    // Inspector toggle (i/I)
     if (e.key === 'i' || e.key === 'I') {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (inInput) return;
       toggleInspector();
+      return;
+    }
+
+    // Panel toggles with Shift (P, C, D, A only - uppercase)
+    if (e.shiftKey && !inInput) {
+      if (e.key === 'P') {
+        e.preventDefault();
+        positionOpen = !positionOpen;
+        return;
+      }
+      if (e.key === 'C') {
+        e.preventDefault();
+        colorOpen = !colorOpen;
+        return;
+      }
+      if (e.key === 'D') {
+        e.preventDefault();
+        debugOpen = !debugOpen;
+        return;
+      }
+      if (e.key === 'A') {
+        e.preventDefault();
+        actionsOpen = !actionsOpen;
+        return;
+      }
     }
   }
 </script>
@@ -203,11 +243,11 @@
 
   <!-- HUD overlays -->
   <div class="absolute top-3 left-3 z-[1000] flex flex-col gap-2">
-    <ControlPanel onNavigate={(re, im, zoom) => mapComponent?.panTo(re, im, zoom)} />
+    <ControlPanel onNavigate={(re, im, zoom) => mapComponent?.panTo(re, im, zoom)} bind:open={positionOpen} />
   </div>
 
   <div class="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
-    <ColorSchemeEditor />
+    <ColorSchemeEditor bind:open={colorOpen} />
   </div>
 
   <!-- Zoom controls -->
@@ -231,6 +271,7 @@
       onExport={() => (showExport = true)}
       onToggleInspector={toggleInspector}
       {inspectorActive}
+      bind:open={actionsOpen}
     />
   </div>
 
@@ -243,6 +284,7 @@
         { name: 'RC', pool: ViewerRecolorPool.instance, textColor: 'text-purple-400', barColor: 'bg-purple-400' },
         { name: 'EX', pool: ViewerExportPool.instance, textColor: 'text-yellow-400', barColor: 'bg-yellow-400' }
       ]}
+      bind:open={debugOpen}
     />
   </div>
 

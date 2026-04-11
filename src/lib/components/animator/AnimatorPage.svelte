@@ -613,6 +613,7 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     <!-- Top-right: ColorSchemeEditor -->
     <div class="absolute top-3 right-3 z-[1000]">
       <ColorSchemeEditor
+        open={false}
         colors={{
           algorithm: project.algorithm,
           palette: project.palette,
@@ -661,6 +662,7 @@ import { keyboardLayer } from '$lib/stores/keyboardShortcuts.svelte';
     <!-- Bottom-right: ProjectPanel -->
     <div class="absolute bottom-3 right-3 z-[1000]">
       <ProjectPanel
+        open={false}
         project={project}
         projectName={activeProjectName}
         isDirty={animationState.isDirty}

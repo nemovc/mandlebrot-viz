@@ -14,7 +14,8 @@
     disablePower = false,
     ctrlState = viewerState,
     onIterChange = (v) => { viewerState.maxIter = v; },
-    onPowerChange = (v) => { viewerState.power = v; }
+    onPowerChange = (v) => { viewerState.power = v; },
+    open = $bindable(true)
   }: {
     onNavigate: (re: number, im: number, zoom?: number) => void;
     disableMaxIter?: boolean;
@@ -22,7 +23,10 @@
     ctrlState?: { cx: string; cy: string; zoom: number; maxIter: number; power: number };
     onIterChange?: (v: number) => void;
     onPowerChange?: (v: number) => void;
+    open?: boolean;
   } = $props();
+
+  let zoomInputRef = $state<HTMLInputElement | null>(null);
 
   // Local editable copies — only sync from store when not focused
   let reInput = $state(ctrlState.cx);
@@ -85,7 +89,7 @@
 </script>
 
 <div class="flex flex-row items-start gap-2">
-  <CollapsiblePanel title="Position" position="top-left" defaultOpen={false} oncollapse={() => (showLocations = false)}>
+  <CollapsiblePanel title="Position" position="top-left" bind:open focusRef={zoomInputRef} oncollapse={() => (showLocations = false)}>
   <div class="flex flex-col gap-3 p-3">
     <ToggleButton active={showLocations} onclick={() => (showLocations = !showLocations)} class="w-full" chevron="right">
       Locations
@@ -93,6 +97,7 @@
     <div>
       <div class="text-neutral-400 text-xs mb-1">Zoom level</div>
       <input
+        bind:this={zoomInputRef}
         class="w-full bg-neutral-800 text-white font-mono rounded px-2 py-1 text-xs border border-neutral-700 focus:border-blue-500 outline-none"
         type="text"
         value={zoomInput}

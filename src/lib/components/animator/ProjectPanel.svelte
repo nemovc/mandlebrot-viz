@@ -19,7 +19,8 @@
     onFramesChange,
     onWidthChange,
     onHeightChange,
-    onPowerChange
+    onPowerChange,
+    open = $bindable(false)
   }: {
     project: AnimationProject;
     projectName: string | null;
@@ -35,6 +36,7 @@
     onWidthChange?: (v: number) => void;
     onHeightChange?: (v: number) => void;
     onPowerChange?: (v: number) => void;
+    open?: boolean;
   } = $props();
 
   // Local editable copies
@@ -96,7 +98,7 @@
   const displayName = $derived(projectName ?? 'Unsaved Project');
 </script>
 
-<CollapsiblePanel title="Project" defaultOpen={false} position="bottom-right">
+<CollapsiblePanel title="Project" position="bottom-right" bind:open oncollapse={() => (showLoadList = false)}>
   <div class="flex flex-col gap-3 p-3">
     <!-- Project name display -->
     <div class="text-sm font-medium text-neutral-200 truncate text-center">

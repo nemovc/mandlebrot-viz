@@ -5,24 +5,34 @@
 
   let {
     title,
-    defaultOpen = true,
     position = 'bottom-left',
     oncollapse,
+    open = $bindable(true),
+    focusRef,
     children
   }: {
     title: string;
-    defaultOpen?: boolean;
     position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     oncollapse?: () => void;
+    open?: boolean;
+    focusRef?: HTMLElement | null;
     children?: Snippet;
   } = $props();
 
-  // svelte-ignore state_referenced_locally
-  let open = $state(defaultOpen);
+  let wasOpen = $state(open);
+
+  $effect(() => {
+    if (open && !wasOpen && focusRef) {
+      focusRef.focus();
+    }
+    if (!open && wasOpen) {
+      oncollapse?.();
+    }
+    wasOpen = open;
+  });
 
   function toggle() {
     open = !open;
-    if (!open) oncollapse?.();
   }
 
   const isTop = $derived(position.startsWith('top'));

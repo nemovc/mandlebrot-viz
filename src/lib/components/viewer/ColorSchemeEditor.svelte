@@ -26,7 +26,8 @@
     cyclePeriodValue,
     offsetValue,
     hasCyclePeriodKeyframe = true,
-    hasOffsetKeyframe = true
+    hasOffsetKeyframe = true,
+    open = $bindable(true)
   }: {
     colors?: ColorConfig;
     setColors?: (c: ColorConfig) => void;
@@ -36,7 +37,10 @@
     offsetValue?: number;
     hasCyclePeriodKeyframe?: boolean;
     hasOffsetKeyframe?: boolean;
+    open?: boolean;
   } = $props();
+
+  let algorithmRef = $state<HTMLSelectElement | null>(null);
 
   let showPalettePanel = $state(false);
   let showEditor = $state(false);
@@ -150,7 +154,8 @@
   <CollapsiblePanel
     title="Color Scheme"
     position="top-right"
-    defaultOpen={false}
+    bind:open
+    focusRef={algorithmRef}
     oncollapse={() => {
       showPalettePanel = false;
       showEditor = false;
@@ -189,6 +194,7 @@
       <div>
         <div class="text-neutral-400 text-xs mb-1">Algorithm</div>
         <select
+          bind:this={algorithmRef}
           class="w-full bg-neutral-800 text-white rounded px-2 py-1 text-xs border border-neutral-700"
           value={colors.algorithm}
           onchange={onAlgorithmChange}

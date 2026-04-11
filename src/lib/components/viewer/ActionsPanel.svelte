@@ -10,12 +10,16 @@
     onExport,
     onToggleInspector,
     inspectorActive = false,
+    open = $bindable(true)
   }: {
     onResetView: () => void;
     onExport: () => void;
     onToggleInspector: () => void;
     inspectorActive?: boolean;
+    open?: boolean;
   } = $props();
+
+  let resetRef = $state<HTMLButtonElement | null>(null);
 
   function getShareLink() {
     const encoded = encodeState(viewerState.toJSON(), debugState.toJSON());
@@ -23,9 +27,10 @@
   }
 </script>
 
-<CollapsiblePanel title="Actions" position="bottom-right">
+<CollapsiblePanel title="Actions" position="bottom-right" bind:open focusRef={resetRef}>
   <div class="flex flex-col gap-1.5 p-3">
     <button
+      bind:this={resetRef}
       class="w-full px-2 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white rounded transition-colors"
       onclick={onResetView}>Reset View</button
     >

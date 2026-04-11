@@ -23,7 +23,8 @@
     chevron,
     variant = 'blue',
     class: extraClass = '',
-    children
+    children,
+    buttonRef = $bindable(null)
   }: {
     active: boolean;
     onclick: () => void;
@@ -34,12 +35,14 @@
     variant?: keyof typeof VARIANTS;
     class?: string;
     children: Snippet;
+    buttonRef?: HTMLButtonElement | null;
   } = $props();
 
   const classes = $derived(VARIANTS[variant]);
 </script>
 
 <button
+  bind:this={buttonRef}
   class="flex items-center gap-1.5 text-left px-2 py-1 rounded text-xs transition-colors border {active
     ? classes.active
     : classes.inactive} {disabled ? 'opacity-40 cursor-not-allowed' : ''} {extraClass}"

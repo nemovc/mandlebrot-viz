@@ -18,14 +18,16 @@
   let {
     pools,
     title = 'Debug',
-    defaultOpen = false,
-    position = 'bottom-left'
+    position = 'bottom-left',
+    open = $bindable(false)
   }: {
     pools: PoolConfig[];
     title?: string;
-    defaultOpen?: boolean;
     position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    open?: boolean;
   } = $props();
+
+  let firstToggleRef = $state<HTMLButtonElement | null>(null);
 
   // Animator pools only appear once they've been instantiated (e.g. after visiting the animator)
   let memUsed = $state<number | null>(null);
@@ -47,11 +49,12 @@
   }
 </script>
 
-<CollapsiblePanel {title} {defaultOpen} {position}>
+<CollapsiblePanel {title} {position} bind:open focusRef={firstToggleRef}>
   <div class="flex flex-col gap-4 px-3 pb-3">
     <!-- Toggles -->
     <div class="flex flex-col gap-1.5 pt-3">
       <ToggleButton
+        bind:buttonRef={firstToggleRef}
         active={debugState.debugLogging}
         onclick={() => (debugState.debugLogging = !debugState.debugLogging)}
         checkbox>Debug logging</ToggleButton
